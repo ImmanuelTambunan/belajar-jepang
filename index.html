@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Belajar Jepang - Sakura Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #fff5f7; }
+        .sakura-bg { background: linear-gradient(135deg, #ffd1dc 0%, #ffafbd 100%); }
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="pb-24">
+    <div class="max-w-md mx-auto p-6">
+        <header class="text-center mb-8 pt-6">
+            <h1 class="text-3xl font-bold text-rose-600 mb-2">🌸 Nihongo Sakura</h1>
+            <p class="text-rose-400 italic text-sm">Mari belajar dengan semangat!</p>
+        </header>
+
+        <!-- Stats Dashboard -->
+        <div class="sakura-bg p-6 rounded-3xl shadow-lg mb-8 text-white">
+            <h2 class="font-bold mb-4 text-lg"><i class="fas fa-chart-line mr-2"></i> Progress Saya</h2>
+            <div class="grid grid-cols-2 gap-4 text-center">
+                <div class="bg-white/20 p-3 rounded-2xl">
+                    <p class="text-xs uppercase opacity-80">Kosa Kata</p>
+                    <p id="wordCount" class="text-2xl font-bold">0</p>
+                </div>
+                <div class="bg-white/20 p-3 rounded-2xl">
+                    <p class="text-xs uppercase opacity-80">Hiragana</p>
+                    <p id="kanaCount" class="text-2xl font-bold">0/46</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Section -->
+        <div class="bg-white p-6 rounded-3xl shadow-sm mb-8 border border-rose-100">
+            <h3 class="font-bold text-rose-600 mb-4 text-sm uppercase tracking-wider">Tambah Kosa Kata Baru</h3>
+            <input id="jpWord" type="text" placeholder="Kata (Kanji/Kana)" class="w-full p-3 border border-rose-100 rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-rose-300">
+            <input id="idWord" type="text" placeholder="Arti (Bahasa Indonesia)" class="w-full p-3 border border-rose-100 rounded-xl mb-4 focus:outline-none focus:ring-2 focus:ring-rose-300">
+            <button onclick="addWord()" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-xl transition-all shadow-md active:scale-95">
+                Simpan Kata 🌸
+            </button>
+        </div>
+
+        <!-- Vocabulary List -->
+        <div class="mb-8">
+            <h3 class="font-bold text-rose-800 mb-4 px-2">Daftar Kata Saya</h3>
+            <div id="wordList" class="space-y-3">
+                <!-- Items will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Nav -->
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm glass border border-white rounded-full p-2 flex justify-around shadow-2xl">
+        <button class="text-rose-500 p-3 bg-white rounded-full shadow-sm"><i class="fas fa-home"></i></button>
+        <button class="text-rose-300 p-3"><i class="fas fa-book-open"></i></button>
+        <button class="text-rose-300 p-3"><i class="fas fa-calendar-check"></i></button>
+        <button class="text-rose-300 p-3"><i class="fas fa-user-graduate"></i></button>
+    </div>
+
+    <script>
+        let words = JSON.parse(localStorage.getItem('nihongoWords') || '[]');
+
+        function updateUI() {
+            const list = document.getElementById('wordList');
+            const count = document.getElementById('wordCount');
+            list.innerHTML = '';
+            words.forEach((w, index) => {
+                list.innerHTML += `
+                    <div class="bg-white p-4 rounded-2xl flex justify-between items-center shadow-sm border-l-4 border-rose-400">
+                        <div>
+                            <p class="font-bold text-lg text-rose-700">${w.jp}</p>
+                            <p class="text-sm text-gray-500">${w.id}</p>
+                        </div>
+                        <button onclick="deleteWord(${index})" class="text-gray-300 hover:text-rose-500"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+            });
+            count.innerText = words.length;
+        }
+
+        function addWord() {
+            const jp = document.getElementById('jpWord').value;
+            const id = document.getElementById('idWord').value;
+            if (jp && id) {
+                words.push({ jp, id });
+                localStorage.setItem('nihongoWords', JSON.stringify(words));
+                document.getElementById('jpWord').value = '';
+                document.getElementById('idWord').value = '';
+                updateUI();
+            }
+        }
+
+        function deleteWord(index) {
+            words.splice(index, 1);
+            localStorage.setItem('nihongoWords', JSON.stringify(words));
+            updateUI();
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
