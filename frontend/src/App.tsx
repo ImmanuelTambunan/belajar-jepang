@@ -98,11 +98,11 @@ function App() {
           <span className="kanji-subtitle">日本語の空</span>
         </h1>
         <p className="subtitle">
-          Arsitektur Decoupled: Frontend React TypeScript + Backend Laravel 11 REST API di Docker
+          Arsitektur Decoupled: Frontend React TypeScript + Backend Laravel 11 REST API di Laragon
         </p>
       </header>
 
-      {/* DOCKER SERVICE CARDS */}
+      {/* SERVICE CARDS */}
       <div className="cards-grid">
         <div className="service-card frontend-card">
           <div className="card-badge">Port 5173</div>
@@ -110,7 +110,7 @@ function App() {
           <h3>Frontend SPA</h3>
           <p className="tech-stack">React 19 • Vite • TypeScript</p>
           <p className="description">
-            User Interface reaktif dengan Hot Module Replacement (HMR) aktif di Docker.
+            User Interface reaktif dengan Hot Module Replacement (HMR) aktif di terminal host.
           </p>
           <span className="status-indicator online">● Host: localhost:5173</span>
         </div>
@@ -119,7 +119,7 @@ function App() {
           <div className="card-badge">Port 8000</div>
           <div className="card-icon">🚀</div>
           <h3>Backend REST API</h3>
-          <p className="tech-stack">Laravel 11 • PHP 8.3 FPM • Nginx</p>
+          <p className="tech-stack">Laravel 11 • PHP CLI • Artisan Serve</p>
           <p className="description">
             API Gateway menyajikan endpoints JSON, autentikasi, dan dataset karakter.
           </p>
@@ -127,14 +127,14 @@ function App() {
         </div>
 
         <div className="service-card db-card">
-          <div className="card-badge">Port 3307</div>
+          <div className="card-badge">Port 3306</div>
           <div className="card-icon">🗄️</div>
           <h3>Database Server</h3>
-          <p className="tech-stack">MySQL 8.0 • utf8mb4</p>
+          <p className="tech-stack">Laragon MySQL • utf8mb4</p>
           <p className="description">
             Menyimpan tabel characters, readings, dan koordinat goresan SVG KanjiVG.
           </p>
-          <span className="status-indicator online">● Host: localhost:3307</span>
+          <span className="status-indicator online">● Host: localhost:3306</span>
         </div>
       </div>
 
@@ -262,7 +262,7 @@ function App() {
             <div className="alert-title">❌ Gagal Terhubung ke Backend API</div>
             <p>{errorMessage}</p>
             <small>
-              Pastikan container backend dan Nginx sudah berjalan via <code>docker compose up -d</code>.
+              Pastikan server backend sudah berjalan via <code>php artisan serve</code> di port 8000.
             </small>
           </div>
         )}
