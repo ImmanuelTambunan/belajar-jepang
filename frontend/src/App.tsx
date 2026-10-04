@@ -1,6 +1,28 @@
 import { useState } from 'react'
 import './App.css'
 
+interface CharacterStroke {
+  id: number
+  stroke_order: number
+  svg_path: string
+}
+
+interface CharacterReading {
+  id: number
+  romaji: string
+  meaning: string | null
+}
+
+interface CharacterItem {
+  id: number
+  character: string
+  type: string
+  strokes_count: number
+  jlpt_level: string | null
+  readings: CharacterReading[]
+  strokes: CharacterStroke[]
+}
+
 interface ApiHealthResponse {
   status: string
   message: string
@@ -12,6 +34,11 @@ function App() {
   const [apiData, setApiData] = useState<ApiHealthResponse | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [latency, setLatency] = useState<number | null>(null)
+
+  // Hiragana dataset state
+  const [hiraganaList, setHiraganaList] = useState<CharacterItem[]>([])
+  const [loadingHiragana, setLoadingHiragana] = useState(false)
+  const [selectedChar, setSelectedChar] = useState<CharacterItem | null>(null)
 
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
 
@@ -39,6 +66,25 @@ function App() {
       } else {
         setErrorMessage('Gagal menghubungi backend API')
       }
+    }
+  }
+
+  const fetchHiragana = async () => {
+    setLoadingHiragana(true)
+    try {
+      const response = await fetch(`${apiBaseUrl}/characters/hiragana`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const result = await response.json()
+      setHiraganaList(result.data || [])
+      if (result.data && result.data.length > 0) {
+        setSelectedChar(result.data[0])
+      }
+    } catch (err: unknown) {
+      alert('Gagal mengambil data Hiragana dari API: ' + (err instanceof Error ? err.message : ''))
+    } finally {
+      setLoadingHiragana(false)
     }
   }
 
@@ -75,7 +121,7 @@ function App() {
           <h3>Backend REST API</h3>
           <p className="tech-stack">Laravel 11 • PHP 8.3 FPM • Nginx</p>
           <p className="description">
-            API Gateway menyajikan endpoints JSON, autentikasi, dan logika bisnis.
+            API Gateway menyajikan endpoints JSON, autentikasi, dan dataset karakter.
           </p>
           <span className="status-indicator online">● Host: localhost:8000</span>
         </div>
@@ -86,11 +132,105 @@ function App() {
           <h3>Database Server</h3>
           <p className="tech-stack">MySQL 8.0 • utf8mb4</p>
           <p className="description">
-            Persistent volume data, siap untuk migrasi tabel kana, kosakata, dan pengguna.
+            Menyimpan tabel characters, readings, dan koordinat goresan SVG KanjiVG.
           </p>
           <span className="status-indicator online">● Host: localhost:3307</span>
         </div>
       </div>
+
+      {/* LIVE DATASET HIRAGANA (FASE 2) */}
+      <section className="hiragana-section">
+        <div className="section-head">
+          <div>
+            <h2>Karakter Hiragana Vokal (Dataset MySQL API)</h2>
+            <p className="text-muted">Data diambil dari endpoint: <code>/api/characters/hiragana</code></p>
+          </div>
+          <button
+            onClick={fetchHiragana}
+            disabled={loadingHiragana}
+            className="btn-primary"
+          >
+            {loadingHiragana ? 'Memuat Data...' : 'Muat Dataset Vokal (あ い う え お)'}
+          </button>
+        </div>
+
+        {hiraganaList.length > 0 && (
+          <div className="hiragana-content">
+            <div className="vowel-tabs">
+              {hiraganaList.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setSelectedChar(item)}
+                  className={`tab-btn ${selectedChar?.id === item.id ? 'active' : ''}`}
+                >
+                  <span className="tab-char">{item.character}</span>
+                  <span className="tab-romaji">{item.readings[0]?.romaji}</span>
+                </button>
+              ))}
+            </div>
+
+            {selectedChar && (
+              <div className="char-detail-card">
+                <div className="char-preview">
+                  <div className="svg-container">
+                    <svg viewBox="0 0 109 109" className="stroke-svg">
+                      {selectedChar.strokes.map((stroke, index) => {
+                        const colors = ['#0284c7', '#ec4899', '#10b981', '#f59e0b']
+                        const strokeColor = colors[index % colors.length]
+                        return (
+                          <path
+                            key={stroke.id}
+                            d={stroke.svg_path}
+                            stroke={strokeColor}
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            fill="none"
+                          />
+                        )
+                      })}
+                    </svg>
+                  </div>
+                  <div className="stroke-legend">
+                    {selectedChar.strokes.map((stroke, index) => {
+                      const colors = ['#0284c7', '#ec4899', '#10b981', '#f59e0b']
+                      const strokeColor = colors[index % colors.length]
+                      return (
+                        <span key={stroke.id} className="stroke-tag" style={{ borderColor: strokeColor, color: strokeColor }}>
+                          Goresan ke-{stroke.stroke_order}
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="char-info">
+                  <div className="badge-row">
+                    <span className="badge-type">{selectedChar.type.toUpperCase()}</span>
+                    <span className="badge-jlpt">{selectedChar.jlpt_level || 'N5'}</span>
+                    <span className="badge-strokes">{selectedChar.strokes_count} Goresan</span>
+                  </div>
+                  <h3 className="char-title">
+                    {selectedChar.character}
+                    <span className="char-romaji-large">/{selectedChar.readings[0]?.romaji}/</span>
+                  </h3>
+                  <p className="char-meaning">{selectedChar.readings[0]?.meaning}</p>
+
+                  <div className="stroke-list">
+                    <h4>Koordinat SVG Path (KanjiVG):</h4>
+                    {selectedChar.strokes.map((st) => (
+                      <div key={st.id} className="stroke-code-item">
+                        <span className="stroke-num">#{st.stroke_order}</span>
+                        <code>{st.svg_path}</code>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       {/* INTERACTIVE API HEALTHCHECK */}
       <section className="healthcheck-box">
@@ -132,34 +272,6 @@ function App() {
             Klik tombol di atas untuk memverifikasi komunikasi antara Vite React dan Laravel 11.
           </p>
         )}
-      </section>
-
-      {/* FEATURE ROADMAP */}
-      <section className="modules-section">
-        <h2>Modul Belajar yang Siap Dikembangkan</h2>
-        <div className="modules-grid">
-          <div className="module-item">
-            <span className="module-icon">🈁</span>
-            <div>
-              <h4>Kana Master</h4>
-              <p>Latihan interaktif Hiragana & Katakana dengan sistem pengenalan kartu & kuis cepat.</p>
-            </div>
-          </div>
-          <div className="module-item">
-            <span className="module-icon">📖</span>
-            <div>
-              <h4>Jurnal Kosa Kata</h4>
-              <p>Manajemen perbendaharaan kata: Kanji, Romaji, Arti Bahasa Indonesia, dan Level JLPT.</p>
-            </div>
-          </div>
-          <div className="module-item">
-            <span className="module-icon">📊</span>
-            <div>
-              <h4>Evaluasi & Statistik</h4>
-              <p>Pelacakan kemajuan harian, streak belajar, dan visualisasi retensi hafalan kosa kata.</p>
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* FOOTER */}
