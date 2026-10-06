@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
+import { StrokeCanvas } from './components/StrokeCanvas'
 
 interface CharacterStroke {
   id: number
@@ -88,6 +89,11 @@ function App() {
     }
   }
 
+  // Auto-fetch Hiragana on initial load
+  useEffect(() => {
+    fetchHiragana()
+  }, [])
+
   return (
     <div className="container">
       {/* HEADER */}
@@ -170,7 +176,8 @@ function App() {
             </div>
 
             {selectedChar && (
-              <div className="char-detail-card">
+              <>
+                <div className="char-detail-card">
                 <div className="char-preview">
                   <div className="svg-container">
                     <svg viewBox="0 0 109 109" className="stroke-svg">
@@ -227,7 +234,11 @@ function App() {
                   </div>
                 </div>
               </div>
-            )}
+
+              {/* FASE 3: Stroke-Order Animation & Tracing Canvas */}
+              <StrokeCanvas character={selectedChar} />
+            </>
+          )}
           </div>
         )}
       </section>
