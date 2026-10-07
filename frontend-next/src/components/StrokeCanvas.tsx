@@ -184,31 +184,31 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
   }
 
   return (
-    <div className="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-slate-100">
+    <div className="bg-white dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-lg dark:shadow-2xl text-slate-800 dark:text-slate-100 transition-colors duration-300">
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-6 border-b border-slate-800 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-6 border-b border-slate-200 dark:border-slate-800 gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <span className="text-3xl font-bold bg-gradient-to-r from-sky-400 via-indigo-300 to-rose-400 bg-clip-text text-transparent">
+            <span className="text-3xl font-bold bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-600 dark:from-sky-400 dark:via-indigo-300 dark:to-rose-400 bg-clip-text text-transparent">
               {character.character}
             </span>
-            <span className="text-lg text-slate-400 font-medium">
+            <span className="text-lg text-slate-500 dark:text-slate-400 font-medium">
               ({character.readings?.[0]?.romaji || '-'})
             </span>
-            <span className="text-xs px-2.5 py-1 rounded-full bg-sky-950/80 border border-sky-600/50 text-sky-300 font-medium">
+            <span className="text-xs px-2.5 py-1 rounded-full bg-sky-50 dark:bg-sky-950/80 border border-sky-200 dark:border-sky-600/50 text-sky-700 dark:text-sky-300 font-medium">
               筆順 Hitsujun Tracing
             </span>
           </div>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
             Praktek urutan menulis karakter Jepang dengan bantuan kotak kaligrafi (原稿用紙).
           </p>
         </div>
 
         {/* Counter Badge */}
-        <div className="inline-flex items-center self-start sm:self-center px-3.5 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-semibold text-sky-300">
+        <div className="inline-flex items-center self-start sm:self-center px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-sky-700 dark:text-sky-300">
           {isAnimating && activeStrokeIndex !== null ? (
-            <span className="flex items-center gap-2 text-amber-400 animate-pulse">
-              <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400 animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400"></span>
               Memutar Goresan #{activeStrokeIndex + 1} dari {sortedStrokes.length}
             </span>
           ) : (
@@ -221,7 +221,7 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Stage Area: Calligraphy Canvas (300 x 300) */}
         <div className="lg:col-span-5 flex flex-col items-center">
-          <div className="relative w-[300px] h-[300px] sm:w-[320px] sm:h-[320px] rounded-2xl overflow-hidden shadow-2xl border-2 border-slate-700 bg-white select-none touch-none">
+          <div className="relative w-[300px] h-[300px] sm:w-[320px] sm:h-[320px] rounded-2xl overflow-hidden shadow-xl border-2 border-slate-300 dark:border-slate-700 bg-white select-none touch-none">
             {/* LAYER 1: Calligraphy Grid (Genko Yoshi) */}
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none"
@@ -234,7 +234,7 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
                 height="296"
                 rx="12"
                 fill="#ffffff"
-                stroke="#e2e8f0"
+                stroke="#cbd5e1"
                 strokeWidth="2"
               />
               <rect
@@ -252,7 +252,7 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
                 y1="4"
                 x2="150"
                 y2="296"
-                stroke="#cbd5e1"
+                stroke="#94a3b8"
                 strokeWidth="1.2"
                 strokeDasharray="6,6"
               />
@@ -262,7 +262,7 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
                 y1="150"
                 x2="296"
                 y2="150"
-                stroke="#cbd5e1"
+                stroke="#94a3b8"
                 strokeWidth="1.2"
                 strokeDasharray="6,6"
               />
@@ -379,7 +379,7 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
             />
           </div>
 
-          <p className="text-xs text-slate-400 mt-3 text-center">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 text-center">
             💡 Goreskan kursor mouse, jari (touch screen), atau stylus di atas kanvas.
           </p>
         </div>
@@ -387,18 +387,18 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
         {/* Sidebar Controls Area */}
         <div className="lg:col-span-7 flex flex-col gap-5">
           {/* Section: Mode 1 - Animasi Goresan */}
-          <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/80">
-            <h4 className="text-sm font-semibold text-sky-300 uppercase tracking-wider flex items-center gap-2">
+          <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 transition-colors">
+            <h4 className="text-sm font-semibold text-sky-700 dark:text-sky-300 uppercase tracking-wider flex items-center gap-2">
               <span>▶</span> Mode 1: Animasi Urutan Goresan (Hitsujun)
             </h4>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
               Pelajari urutan resmi KanjiVG satu demi satu secara halus dan bertahap.
             </p>
             <div className="flex flex-wrap gap-3 mt-4">
               <button
                 onClick={playAnimation}
                 disabled={isAnimating}
-                className="px-4 py-2.5 rounded-xl font-medium text-sm transition-all shadow-lg flex items-center gap-2 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="px-4 py-2.5 rounded-xl font-medium text-sm transition-all shadow-md flex items-center gap-2 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isAnimating ? (
                   <>
@@ -418,7 +418,7 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
                   resetAnimationPaths()
                 }}
                 disabled={!isAnimating && activeStrokeIndex === null}
-                className="px-4 py-2.5 rounded-xl font-medium text-sm transition-all border border-slate-600 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                className="px-4 py-2.5 rounded-xl font-medium text-sm transition-all border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-sm"
               >
                 Reset Animasi
               </button>
@@ -426,11 +426,11 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
           </div>
 
           {/* Section: Mode 2 - Tracing & Menulis Mandiri */}
-          <div className="p-5 rounded-2xl bg-slate-800/60 border border-slate-700/80">
-            <h4 className="text-sm font-semibold text-rose-300 uppercase tracking-wider flex items-center gap-2">
+          <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 transition-colors">
+            <h4 className="text-sm font-semibold text-rose-700 dark:text-rose-300 uppercase tracking-wider flex items-center gap-2">
               <span>✏️</span> Mode 2: Tracing & Kuas Mandiri
             </h4>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
               Atur kuas kaligrafi dan latih ingatan goresan Anda.
             </p>
 
@@ -439,8 +439,8 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
                 onClick={() => setShowGuide(!showGuide)}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border cursor-pointer ${
                   showGuide
-                    ? 'bg-sky-500/20 border-sky-500 text-sky-300'
-                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
+                    ? 'bg-sky-50 dark:bg-sky-500/20 border-sky-400 dark:border-sky-500 text-sky-700 dark:text-sky-300'
+                    : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 {showGuide ? '👁️ Panduan Aktif' : '🙈 Panduan Disembunyikan'}
@@ -448,17 +448,17 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
 
               <button
                 onClick={clearCanvas}
-                className="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-rose-600/20 border border-rose-500/40 text-rose-300 hover:bg-rose-600 hover:text-white cursor-pointer"
+                className="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-rose-50 dark:bg-rose-600/20 border border-rose-300 dark:border-rose-500/40 text-rose-700 dark:text-rose-300 hover:bg-rose-600 hover:text-white cursor-pointer"
               >
                 🗑️ Hapus Coretan
               </button>
             </div>
 
             {/* Brush Settings */}
-            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-700/60">
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-200 dark:border-slate-700/60">
               {/* Color picker */}
               <div>
-                <span className="text-xs font-semibold text-slate-400 block mb-2">
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-2">
                   Warna Tinta:
                 </span>
                 <div className="flex items-center gap-2">
@@ -476,7 +476,7 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
                       style={{ backgroundColor: c.color }}
                       className={`w-7 h-7 rounded-full transition-transform cursor-pointer border-2 ${
                         brushColor === c.color
-                          ? 'border-white scale-110 shadow-md ring-2 ring-sky-400/50'
+                          ? 'border-sky-500 scale-110 shadow-md ring-2 ring-sky-400/50'
                           : 'border-transparent opacity-80 hover:opacity-100 hover:scale-105'
                       }`}
                     />
@@ -486,10 +486,10 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
 
               {/* Brush Width */}
               <div>
-                <span className="text-xs font-semibold text-slate-400 block mb-2">
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-2">
                   Tebal Kuas:
                 </span>
-                <div className="inline-flex rounded-xl bg-slate-900 p-1 border border-slate-700">
+                <div className="inline-flex rounded-xl bg-slate-200 dark:bg-slate-900 p-1 border border-slate-300 dark:border-slate-700">
                   {[
                     { label: 'Tipis', size: 4 },
                     { label: 'Sedang', size: 7 },
@@ -500,8 +500,8 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
                       onClick={() => setBrushWidth(s.size)}
                       className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                         brushWidth === s.size
-                          ? 'bg-sky-600 text-white shadow'
-                          : 'text-slate-400 hover:text-slate-200'
+                          ? 'bg-white dark:bg-sky-600 text-sky-700 dark:text-white shadow-sm'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                       }`}
                     >
                       {s.label}
@@ -513,8 +513,8 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
           </div>
 
           {/* Stroke Legend */}
-          <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800">
-            <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 transition-colors">
+            <h5 className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2">
               Daftar Goresan Terdaftar ({sortedStrokes.length}):
             </h5>
             <div className="flex flex-wrap gap-2">
@@ -523,8 +523,8 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
                   key={st.id}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                     activeStrokeIndex === i
-                      ? 'bg-sky-500/20 border-sky-400 text-sky-200 ring-1 ring-sky-400'
-                      : 'bg-slate-900/60 border-slate-800 text-slate-300'
+                      ? 'bg-sky-100 dark:bg-sky-500/20 border-sky-400 text-sky-800 dark:text-sky-200 ring-1 ring-sky-400'
+                      : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   <span
