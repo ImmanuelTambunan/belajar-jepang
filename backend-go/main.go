@@ -19,8 +19,11 @@ func main() {
 	db := config.ConnectDatabase()
 
 	// 2. Run AutoMigrate & Seeder
-	if err := database.AutoMigrateAndSeed(db); err != nil {
-		log.Printf("⚠️ Peringatan saat migrasi/seeding: %v", err)
+	if err := database.AutoMigrate(db); err != nil {
+		log.Printf("⚠️ Peringatan saat migrasi database: %v", err)
+	}
+	if err := database.SeedHiraganaDataset(db); err != nil {
+		log.Printf("⚠️ Peringatan saat seeding Hiragana dataset: %v", err)
 	}
 
 	// 3. Initialize Fiber App

@@ -10,19 +10,23 @@ import (
 )
 
 // GetHiraganaCharacters returns all hiragana characters with readings and ordered strokes.
+// Supports optional query parameter `?row=...` to filter by row_group (e.g. vowel, ka, sa, etc.).
 func GetHiraganaCharacters(c *fiber.Ctx) error {
 	var characters []models.Character
 
-	err := config.DB.
+	query := config.DB.
 		Preload("Readings").
 		Preload("Strokes", func(db *gorm.DB) *gorm.DB {
-			return db.Order("character_strokes.stroke_order ASC")
+			return db.Order("character_strokes.stroke_number ASC")
 		}).
-		Where("type = ?", "hiragana").
-		Order("id ASC").
-		Find(&characters).Error
+		Where("script_type = ? OR type = ?", "hiragana", "hiragana")
 
-	if err != nil {
+	// Optional query parameter ?row=... to filter by row_group
+	if row := c.Query("row"); row != "" {
+		query = query.Where("row_group = ?", row)
+	}
+
+	if err := query.Order("id ASC").Find(&characters).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Gagal mengambil data karakter Hiragana: " + err.Error(),
@@ -37,17 +41,21 @@ func GetHiraganaCharacters(c *fiber.Ctx) error {
 	})
 }
 
-// GetAllCharacters retrieves characters with optional type and jlpt_level filters.
+// GetAllCharacters retrieves characters with optional type, row, and jlpt_level filters.
 func GetAllCharacters(c *fiber.Ctx) error {
 	var characters []models.Character
 	query := config.DB.
 		Preload("Readings").
 		Preload("Strokes", func(db *gorm.DB) *gorm.DB {
-			return db.Order("character_strokes.stroke_order ASC")
+			return db.Order("character_strokes.stroke_number ASC")
 		})
 
 	if charType := c.Query("type"); charType != "" {
-		query = query.Where("type = ?", charType)
+		query = query.Where("script_type = ? OR type = ?", charType, charType)
+	}
+
+	if row := c.Query("row"); row != "" {
+		query = query.Where("row_group = ?", row)
 	}
 
 	if jlpt := c.Query("jlpt_level"); jlpt != "" {
@@ -68,7 +76,7 @@ func GetAllCharacters(c *fiber.Ctx) error {
 	})
 }
 
-// GetCharacterDetail retrieves a single character by ID or character literal.
+// GetCharacterDetail retrieves a single character by ID, symbol, or character literal.
 func GetCharacterDetail(c *fiber.Ctx) error {
 	idOrChar := c.Params("id")
 	var character models.Character
@@ -76,9 +84,9 @@ func GetCharacterDetail(c *fiber.Ctx) error {
 	err := config.DB.
 		Preload("Readings").
 		Preload("Strokes", func(db *gorm.DB) *gorm.DB {
-			return db.Order("character_strokes.stroke_order ASC")
+			return db.Order("character_strokes.stroke_number ASC")
 		}).
-		Where("id = ? OR character = ?", idOrChar, idOrChar).
+		Where("id = ? OR symbol = ? OR character = ?", idOrChar, idOrChar, idOrChar).
 		First(&character).Error
 
 	if err != nil {

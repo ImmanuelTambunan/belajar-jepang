@@ -27,10 +27,14 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
   // Palette for distinguishing strokes
   const strokeColors = ['#0284c7', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6']
 
-  // Sort strokes by stroke_order
-  const sortedStrokes = [...(character.strokes || [])].sort(
-    (a, b) => a.stroke_order - b.stroke_order
-  )
+  // Sort strokes by stroke_order or stroke_number
+  const sortedStrokes = [...(character.strokes || [])]
+    .map((s, idx) => ({
+      ...s,
+      stroke_order: s.stroke_order ?? s.stroke_number ?? idx + 1,
+      svg_path: s.svg_path || s.path_data || '',
+    }))
+    .sort((a, b) => a.stroke_order - b.stroke_order)
 
   // Extract starting coordinate from SVG path definition (e.g. M31.01,33...)
   const getStartPoint = (d: string): { x: number; y: number } => {
