@@ -16,4 +16,10 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/characters/hiragana", controllers.GetHiraganaCharacters)
 	api.Get("/characters", controllers.GetAllCharacters)
 	api.Get("/characters/:id", controllers.GetCharacterDetail)
+
+	// User progress & practice memorization endpoints
+	progress := api.Group("/progress")
+	progress.Get("/summary", controllers.GetProgressSummary)
+	progress.Post("/update", controllers.UpdateProgress)
+	progress.Get("/practice-queue", controllers.GetPracticeQueue)
 }

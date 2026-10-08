@@ -1,11 +1,22 @@
+'use client'
+
 import React from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { ThemeToggle } from './ThemeToggle'
 
 export const Header: React.FC = () => {
+  const pathname = usePathname()
+
+  const navLinks = [
+    { href: '/', label: 'Koleksi Huruf', icon: '🔤', desc: '46 Hiragana & Stroke Tracing' },
+    { href: '/practice', label: 'Latihan Hafalan', icon: '🧠', desc: 'Memorize Mode & Antrean Review' },
+  ]
+
   return (
-    <header className="relative text-center py-8 border-b border-slate-200 dark:border-slate-800 transition-colors">
+    <header className="relative text-center py-6 sm:py-8 border-b border-slate-200 dark:border-slate-800 transition-colors">
       {/* Top right floating Theme Toggle */}
-      <div className="absolute right-0 top-6 sm:top-8 z-20">
+      <div className="absolute right-0 top-4 sm:top-6 z-20">
         <ThemeToggle />
       </div>
 
@@ -26,11 +37,32 @@ export const Header: React.FC = () => {
         </span>
       </h1>
 
-      <p className="max-w-2xl mx-auto mt-3 text-sm sm:text-base text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
+      <p className="max-w-2xl mx-auto mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
         Platform Pembelajaran Hiragana Interaktif dengan Arsitektur Decoupled:
         <span className="text-slate-900 dark:text-slate-200 font-medium"> Next.js 16 (App Router + Tailwind)</span> di Frontend dan
         <span className="text-slate-900 dark:text-slate-200 font-medium"> Golang Fiber + GORM</span> di Backend.
       </p>
+
+      {/* Main Navigation Tabs */}
+      <nav className="flex items-center justify-center gap-2 mt-6">
+        {navLinks.map((link) => {
+          const isActive = pathname === link.href
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`px-4 sm:px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 border ${
+                isActive
+                  ? 'bg-sky-600 dark:bg-sky-500 text-white border-sky-600 dark:border-sky-500 shadow-md shadow-sky-600/25 ring-2 ring-sky-400/40'
+                  : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              <span>{link.icon}</span>
+              <span>{link.label}</span>
+            </Link>
+          )
+        })}
+      </nav>
     </header>
   )
 }

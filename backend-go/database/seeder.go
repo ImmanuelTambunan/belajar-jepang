@@ -27,6 +27,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&models.Character{},
 		&models.CharacterReading{},
 		&models.CharacterStroke{},
+		&models.UserCharacterProgress{},
 	)
 	if err != nil {
 		return fmt.Errorf("gagal migrasi: %w", err)

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import Link from 'next/link'
 import { CharacterData } from '@/types/character'
 import { Header } from '@/components/Header'
 import { ServiceCards } from '@/components/ServiceCards'
@@ -203,6 +204,29 @@ export default function Home() {
             </>
           )}
         </button>
+      </div>
+
+      {/* PRACTICE MODE CTA BANNER */}
+      <div className="mb-8 p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4 text-center sm:text-left">
+          <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl backdrop-blur-sm shrink-0">
+            🧠
+          </div>
+          <div>
+            <h3 className="text-base font-bold">
+              Siap Menguji Daya Ingat? Masuk ke Mode Latihan Hafalan!
+            </h3>
+            <p className="text-xs text-sky-100 mt-0.5">
+              Uji ingatan dengan active recall bertahap, audio ja-JP, dan kanvas tracing goresan untuk melatih memori otot.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/practice"
+          className="px-5 py-3 rounded-2xl bg-white text-indigo-700 hover:bg-slate-100 font-bold text-xs sm:text-sm whitespace-nowrap shadow-md transition active:scale-98 shrink-0"
+        >
+          Mulai Latihan Hafalan →
+        </Link>
       </div>
 
       {/* HIRAGANA ROW FILTER TABS */}
