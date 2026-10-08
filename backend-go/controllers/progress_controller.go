@@ -67,9 +67,10 @@ func GetProgressSummary(c *fiber.Ctx) error {
 
 // UpdateProgressRequest defines payload for updating practice progress.
 type UpdateProgressRequest struct {
-	CharacterID     uint   `json:"character_id"`
-	Status          string `json:"status"` // "learning" or "memorized"
-	IncrementReview *bool  `json:"increment_review"`
+	CharacterID     uint     `json:"character_id"`
+	Status          string   `json:"status"` // "learning" or "memorized"
+	IncrementReview *bool    `json:"increment_review"`
+	AccuracyScore   *float64 `json:"accuracy_score"`
 }
 
 // UpdateProgress saves or updates progress for a character.
@@ -126,6 +127,9 @@ func UpdateProgress(c *fiber.Ctx) error {
 	progress.Status = status
 	if req.IncrementReview == nil || *req.IncrementReview {
 		progress.ReviewCount++
+	}
+	if req.AccuracyScore != nil {
+		progress.AccuracyScore = req.AccuracyScore
 	}
 	now := time.Now()
 	progress.LastPracticedAt = &now
