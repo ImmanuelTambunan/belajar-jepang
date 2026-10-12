@@ -136,8 +136,12 @@ export const AudioSpeakerButton: React.FC<AudioSpeakerButtonProps> = ({
         )}
         <span>{isPlaying ? 'Memutar...' : label}</span>
         {activeSource && isPlaying && (
-          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/20 font-mono tracking-tight">
-            {activeSource === 'native' ? 'Native' : 'ja-JP'}
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/20 font-mono tracking-tight">
+            {activeSource === 'custom'
+              ? '✨ Kustom'
+              : activeSource === 'native'
+              ? 'Native'
+              : 'ja-JP'}
           </span>
         )}
       </button>
@@ -173,8 +177,12 @@ export const AudioSpeakerButton: React.FC<AudioSpeakerButtonProps> = ({
       )}
       <span>{isPlaying ? 'Sedang Memutar Pelafalan...' : label}</span>
       {isPlaying && activeSource && (
-        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/20 uppercase tracking-wider font-mono">
-          {activeSource === 'native' ? 'Audio Asli' : 'Web Speech ja-JP'}
+        <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/20 uppercase tracking-wider font-mono font-bold">
+          {activeSource === 'custom'
+            ? '✨ Suara Kustom'
+            : activeSource === 'native'
+            ? 'Audio Asli'
+            : 'Web Speech ja-JP'}
         </span>
       )}
     </button>

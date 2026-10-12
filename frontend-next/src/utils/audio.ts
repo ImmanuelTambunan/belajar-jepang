@@ -6,6 +6,8 @@
  * 3. Browser AudioContext & Autoplay policy protection
  */
 
+import { getCustomAudio } from './audioStorage'
+
 export interface CharacterAudioInput {
   symbol?: string
   character?: string
@@ -13,7 +15,7 @@ export interface CharacterAudioInput {
   readings?: Array<{ romaji?: string }>
 }
 
-export type AudioPlaybackSource = 'native' | 'speech'
+export type AudioPlaybackSource = 'custom' | 'native' | 'speech'
 
 export interface PlaybackOptions {
   rate?: number // Default: 0.85 for articulate learning pace
@@ -231,8 +233,9 @@ function playWebSpeech(
 
 /**
  * Plays character audio using layered approach:
- * 1. Checks `/audio/hiragana/{romaji}.mp3`
- * 2. If fails or not found, falls back to Web Speech API `ja-JP`
+ * 1. Priority 1 (Highest): Custom user-uploaded audio from IndexedDB
+ * 2. Priority 2: Static local file `/audio/hiragana/{romaji}.mp3`
+ * 3. Priority 3: Web Speech API `ja-JP`
  */
 export async function playCharacterAudio(
   input: CharacterAudioInput,
@@ -254,20 +257,89 @@ export async function playCharacterAudio(
   const textToSpeak = symbol || romaji
 
   // Helper to fallback to speech synthesis
-  const executeFallback = async (reason: string) => {
+  const executeSpeechFallback = async (reason: string) => {
     options.onFallback?.(reason)
     await playWebSpeech(textToSpeak, options)
   }
 
   // If romaji is not available, jump directly to Web Speech
   if (!romaji) {
-    await executeFallback('Romaji tidak ditemukan untuk file audio lokal')
+    await executeSpeechFallback('Romaji tidak ditemukan')
     return
   }
 
+  // =========================================================================
+  // LAYER 1: Custom User-Uploaded Audio in IndexedDB (Highest Priority)
+  // =========================================================================
+  try {
+    const customRecord = await getCustomAudio(romaji).catch(() => null)
+    if (customRecord && customRecord.blob) {
+      const blobUrl = URL.createObjectURL(customRecord.blob)
+      const customAudio = new Audio(blobUrl)
+      activeAudioElement = customAudio
+
+      const customPromise = new Promise<void>((resolve, reject) => {
+        let isCleanedUp = false
+
+        const cleanup = () => {
+          if (isCleanedUp) return
+          isCleanedUp = true
+          customAudio.removeEventListener('playing', onPlaying)
+          customAudio.removeEventListener('ended', onEnded)
+          customAudio.removeEventListener('error', onError)
+          URL.revokeObjectURL(blobUrl)
+        }
+
+        const onPlaying = () => {
+          isPlayingGlobally = true
+          options.onStart?.('custom')
+        }
+
+        const onEnded = () => {
+          cleanup()
+          if (activeAudioElement === customAudio) {
+            activeAudioElement = null
+          }
+          isPlayingGlobally = false
+          options.onEnd?.()
+          resolve()
+        }
+
+        const onError = () => {
+          cleanup()
+          reject(new Error('Gagal memutar audio kustom'))
+        }
+
+        customAudio.addEventListener('playing', onPlaying)
+        customAudio.addEventListener('ended', onEnded)
+        customAudio.addEventListener('error', onError)
+      })
+
+      const playPromise = customAudio.play()
+      if (playPromise !== undefined) {
+        await playPromise
+      }
+
+      await customPromise
+      return // Successfully played custom audio!
+    }
+  } catch (err: unknown) {
+    // Autoplay browser policy detection (NotAllowedError)
+    if (err instanceof Error && err.name === 'NotAllowedError') {
+      console.warn('Audio autoplay dihentikan oleh browser sebelum interaksi pengguna.')
+      isPlayingGlobally = false
+      activeAudioElement = null
+      options.onError?.(err)
+      return
+    }
+    // If custom audio fails, fall through to Layer 2
+  }
+
+  // =========================================================================
+  // LAYER 2: Native Audio Static File (/audio/hiragana/{romaji}.mp3)
+  // =========================================================================
   const audioPathMp3 = `${basePath}/${romaji}.mp3`
 
-  // Attempt Layer 1: Native Audio File Playback
   try {
     const audio = new Audio(audioPathMp3)
     activeAudioElement = audio
@@ -308,28 +380,28 @@ export async function playCharacterAudio(
       audio.addEventListener('error', onError)
     })
 
-    // Start playing
     const playPromise = audio.play()
     if (playPromise !== undefined) {
       await playPromise
     }
 
     await nativePromise
+    return // Successfully played native static audio!
   } catch (err: unknown) {
     // Autoplay browser policy detection (NotAllowedError)
     if (err instanceof Error && err.name === 'NotAllowedError') {
-      console.warn(
-        'Audio autoplay dihentikan oleh kebijakan browser sebelum interaksi pengguna.'
-      )
+      console.warn('Audio autoplay dihentikan oleh browser sebelum interaksi pengguna.')
       isPlayingGlobally = false
       activeAudioElement = null
       options.onError?.(err)
       return
     }
 
-    // Layer 1 failed (404, unsupported, network error) -> Seamlessly switch to Layer 2 Fallback
+    // =========================================================================
+    // LAYER 3: Web Speech API ja-JP (Fallback)
+    // =========================================================================
     try {
-      await executeFallback(
+      await executeSpeechFallback(
         err instanceof Error ? err.message : 'File audio lokal belum tersedia'
       )
     } catch {
