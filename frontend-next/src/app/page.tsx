@@ -60,19 +60,19 @@ const ROW_TABS: RowTab[] = [
   {
     id: 'all',
     label: 'Semua',
-    sublabel: '46 Huruf',
+    sublabel: '46 Karakter',
     rowGroups: ['vowel', 'ka', 'sa', 'ta', 'na', 'ha', 'ma', 'ya', 'ra', 'wa', 'n'],
   },
-  { id: 'vowel', label: 'Vokal', sublabel: 'A, I, U, E, O', rowGroups: ['vowel'] },
-  { id: 'ka', label: 'K', sublabel: 'Ka, Ki, Ku, Ke, Ko', rowGroups: ['ka'] },
-  { id: 'sa', label: 'S', sublabel: 'Sa, Shi, Su, Se, So', rowGroups: ['sa'] },
-  { id: 'ta', label: 'T', sublabel: 'Ta, Chi, Tsu, Te, To', rowGroups: ['ta'] },
-  { id: 'na', label: 'N', sublabel: 'Na, Ni, Nu, Ne, No', rowGroups: ['na'] },
-  { id: 'ha', label: 'H', sublabel: 'Ha, Hi, Fu, He, Ho', rowGroups: ['ha'] },
-  { id: 'ma', label: 'M', sublabel: 'Ma, Mi, Mu, Me, Mo', rowGroups: ['ma'] },
-  { id: 'ya', label: 'Y', sublabel: 'Ya, Yu, Yo', rowGroups: ['ya'] },
-  { id: 'ra', label: 'R', sublabel: 'Ra, Ri, Ru, Re, Ro', rowGroups: ['ra'] },
-  { id: 'wa_n', label: 'W/N', sublabel: 'Wa, Wo, N', rowGroups: ['wa', 'n'] },
+  { id: 'vowel', label: 'A', sublabel: 'A, I, U, E, O', rowGroups: ['vowel'] },
+  { id: 'ka', label: 'Ka', sublabel: 'Ka, Ki, Ku, Ke, Ko', rowGroups: ['ka'] },
+  { id: 'sa', label: 'Sa', sublabel: 'Sa, Shi, Su, Se, So', rowGroups: ['sa'] },
+  { id: 'ta', label: 'Ta', sublabel: 'Ta, Chi, Tsu, Te, To', rowGroups: ['ta'] },
+  { id: 'na', label: 'Na', sublabel: 'Na, Ni, Nu, Ne, No', rowGroups: ['na'] },
+  { id: 'ha', label: 'Ha', sublabel: 'Ha, Hi, Fu, He, Ho', rowGroups: ['ha'] },
+  { id: 'ma', label: 'Ma', sublabel: 'Ma, Mi, Mu, Me, Mo', rowGroups: ['ma'] },
+  { id: 'ya', label: 'Ya', sublabel: 'Ya, Yu, Yo', rowGroups: ['ya'] },
+  { id: 'ra', label: 'Ra', sublabel: 'Ra, Ri, Ru, Re, Ro', rowGroups: ['ra'] },
+  { id: 'wa_n', label: 'Wa/N', sublabel: 'Wa, Wo, N', rowGroups: ['wa', 'n'] },
 ]
 
 export default function Home() {
@@ -157,7 +157,7 @@ export default function Home() {
   }, [characters, activeTab])
 
   // Distinct palette colors for stroke segments
-  const strokeColors = ['#0284c7', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4']
+  const strokeColors = ['#0284c7', '#ec4899', '#10b981', '#f97316', '#8b5cf6', '#06b6d4']
 
   return (
     <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-colors duration-300">
@@ -418,10 +418,22 @@ export default function Home() {
       {/* HEALTH CHECKER INTERFACE */}
       <HealthChecker apiBaseUrl={apiBaseUrl} />
 
-      {/* FOOTER */}
+      {/* FOOTER & STATUS BAR */}
       <footer className="text-center py-10 mt-12 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 transition-colors">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-slate-850 border border-slate-200 dark:border-slate-750 mb-3 text-slate-700 dark:text-slate-300 font-medium shadow-sm">
+          <span
+            className={`w-2 h-2 rounded-full ${
+              isLiveApi ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+            }`}
+          />
+          <span>
+            {isLiveApi
+              ? `Terhubung ke Backend Golang Fiber (${characters.length} Karakter Hiragana Live)`
+              : `Mode Fallback Lokal (${characters.length} Karakter Hiragana)`}
+          </span>
+        </div>
         <p>
-          Nihongo Sora v2.0 • Proyek Belajar Bahasa Jepang (Hiragana 46 Karakter Lengkap)
+          Nihongo Sora v2.0 • Proyek Belajar Bahasa Jepang (Hiragana 46 Karakter Gojūon Lengkap)
         </p>
         <p className="mt-1 text-slate-500 dark:text-slate-400">
           Backend Golang Fiber + GORM • Frontend Next.js 16 (App Router + Tailwind CSS) • Native Laragon MySQL

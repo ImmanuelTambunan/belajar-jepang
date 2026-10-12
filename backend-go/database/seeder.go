@@ -28,6 +28,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&models.CharacterReading{},
 		&models.CharacterStroke{},
 		&models.UserCharacterProgress{},
+		&models.ExamResult{},
 	)
 	if err != nil {
 		return fmt.Errorf("gagal migrasi: %w", err)
@@ -90,7 +91,7 @@ func SeedHiraganaDataset(db *gorm.DB) error {
 		}
 
 		// FirstOrCreate based on symbol/character
-		if err := db.Where("symbol = ? OR character = ?", item.Symbol, item.Symbol).
+		if err := db.Where("`symbol` = ? OR `character` = ?", item.Symbol, item.Symbol).
 			Assign(models.Character{
 				Symbol:       item.Symbol,
 				Character:    item.Symbol,
@@ -106,6 +107,11 @@ func SeedHiraganaDataset(db *gorm.DB) error {
 			continue
 		}
 
+		if char.ID == 0 {
+			log.Printf("⚠️ Character %s ID bernilai 0 setelah FirstOrCreate, lewati relasi.", item.Symbol)
+			continue
+		}
+
 		// 2. Model CharacterReading: relasikan ke CharacterID dengan field romaji
 		readingMeaning := fmt.Sprintf("Karakter Hiragana %s (%s)", item.Symbol, item.Reading)
 		reading := models.CharacterReading{
@@ -114,7 +120,7 @@ func SeedHiraganaDataset(db *gorm.DB) error {
 			Meaning:     &readingMeaning,
 		}
 
-		if err := db.Where("character_id = ? AND romaji = ?", char.ID, item.Reading).
+		if err := db.Where("`character_id` = ? AND `romaji` = ?", char.ID, item.Reading).
 			Assign(models.CharacterReading{
 				CharacterID: char.ID,
 				Romaji:      item.Reading,
@@ -135,7 +141,7 @@ func SeedHiraganaDataset(db *gorm.DB) error {
 				SvgPath:      pathData,
 			}
 
-			if err := db.Where("character_id = ? AND (stroke_number = ? OR stroke_order = ?)", char.ID, strokeNum, strokeNum).
+			if err := db.Where("`character_id` = ? AND (`stroke_number` = ? OR `stroke_order` = ?)", char.ID, strokeNum, strokeNum).
 				Assign(models.CharacterStroke{
 					CharacterID:  char.ID,
 					StrokeNumber: strokeNum,

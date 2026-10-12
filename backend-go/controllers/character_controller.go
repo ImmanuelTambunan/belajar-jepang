@@ -17,16 +17,16 @@ func GetHiraganaCharacters(c *fiber.Ctx) error {
 	query := config.DB.
 		Preload("Readings").
 		Preload("Strokes", func(db *gorm.DB) *gorm.DB {
-			return db.Order("character_strokes.stroke_number ASC")
+			return db.Order("`character_strokes`.`stroke_number` ASC")
 		}).
-		Where("script_type = ? OR type = ?", "hiragana", "hiragana")
+		Where("`script_type` = ? OR `type` = ?", "hiragana", "hiragana")
 
 	// Optional query parameter ?row=... to filter by row_group
 	if row := c.Query("row"); row != "" {
-		query = query.Where("row_group = ?", row)
+		query = query.Where("`row_group` = ?", row)
 	}
 
-	if err := query.Order("id ASC").Find(&characters).Error; err != nil {
+	if err := query.Order("`characters`.`id` ASC").Find(&characters).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Gagal mengambil data karakter Hiragana: " + err.Error(),
@@ -47,22 +47,22 @@ func GetAllCharacters(c *fiber.Ctx) error {
 	query := config.DB.
 		Preload("Readings").
 		Preload("Strokes", func(db *gorm.DB) *gorm.DB {
-			return db.Order("character_strokes.stroke_number ASC")
+			return db.Order("`character_strokes`.`stroke_number` ASC")
 		})
 
 	if charType := c.Query("type"); charType != "" {
-		query = query.Where("script_type = ? OR type = ?", charType, charType)
+		query = query.Where("`script_type` = ? OR `type` = ?", charType, charType)
 	}
 
 	if row := c.Query("row"); row != "" {
-		query = query.Where("row_group = ?", row)
+		query = query.Where("`row_group` = ?", row)
 	}
 
 	if jlpt := c.Query("jlpt_level"); jlpt != "" {
-		query = query.Where("jlpt_level = ?", jlpt)
+		query = query.Where("`jlpt_level` = ?", jlpt)
 	}
 
-	if err := query.Order("id ASC").Find(&characters).Error; err != nil {
+	if err := query.Order("`characters`.`id` ASC").Find(&characters).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Gagal mengambil data karakter: " + err.Error(),
@@ -84,9 +84,9 @@ func GetCharacterDetail(c *fiber.Ctx) error {
 	err := config.DB.
 		Preload("Readings").
 		Preload("Strokes", func(db *gorm.DB) *gorm.DB {
-			return db.Order("character_strokes.stroke_number ASC")
+			return db.Order("`character_strokes`.`stroke_number` ASC")
 		}).
-		Where("id = ? OR symbol = ? OR character = ?", idOrChar, idOrChar, idOrChar).
+		Where("`id` = ? OR `symbol` = ? OR `character` = ?", idOrChar, idOrChar, idOrChar).
 		First(&character).Error
 
 	if err != nil {

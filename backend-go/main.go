@@ -44,9 +44,16 @@ func main() {
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
 		AllowCredentials: false,
 	}))
-
-	// 5. Register Routes
+// 5. Register Routes
 	routes.SetupRoutes(app)
+
+	// Route root / welcome
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{
+			"status":  "ok",
+			"message": "Nihongo Sora API Backend is running",
+		})
+	})
 
 	// 6. Start Server on Port 8000
 	port := config.GetEnv("PORT", "8000")

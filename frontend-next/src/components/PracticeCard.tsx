@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { CharacterData } from '@/types/character'
 import { UserProgress } from '@/types/progress'
+import { OverallAccuracyResult } from '@/types/accuracy'
 import { StrokeCanvas } from './StrokeCanvas'
 
 interface PracticeCardProps {
@@ -12,6 +13,7 @@ interface PracticeCardProps {
   onRepeatLater: (char: CharacterData) => Promise<void>
   onSkip: () => void
   isSubmitting: boolean
+  onSaveAccuracyScore?: (char: CharacterData, score: OverallAccuracyResult) => Promise<void> | void
 }
 
 export const PracticeCard: React.FC<PracticeCardProps> = ({
@@ -21,6 +23,7 @@ export const PracticeCard: React.FC<PracticeCardProps> = ({
   onRepeatLater,
   onSkip,
   isSubmitting,
+  onSaveAccuracyScore,
 }) => {
   // Reveal state for active recall
   const [isRevealed, setIsRevealed] = useState<boolean>(false)
@@ -73,6 +76,11 @@ export const PracticeCard: React.FC<PracticeCardProps> = ({
           {isMemorized && (
             <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1">
               <span>✓</span> Sudah Dihafal
+            </span>
+          )}
+          {currentProgress?.accuracy_score !== undefined && currentProgress?.accuracy_score !== null && (
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300 border border-sky-300 dark:border-sky-800 flex items-center gap-1">
+              <span>🎯</span> Skor: {currentProgress.accuracy_score}%
             </span>
           )}
         </div>
@@ -139,7 +147,16 @@ export const PracticeCard: React.FC<PracticeCardProps> = ({
           </p>
         </div>
 
-        <StrokeCanvas character={character} />
+        <StrokeCanvas
+          character={character}
+          onSaveScore={(scoreResult) => {
+            if (onSaveAccuracyScore) {
+              onSaveAccuracyScore(character, scoreResult)
+            }
+          }}
+          onNextCharacter={() => onMarkMemorized(character)}
+          isSubmitting={isSubmitting}
+        />
       </div>
 
       {/* ACTION NAVIGATION BUTTONS */}

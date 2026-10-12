@@ -3,6 +3,8 @@ export interface UserProgress {
   character_id: number
   status: 'learning' | 'memorized'
   review_count: number
+  accuracy_score?: number | null
+  accuracy_grade?: string | null
   last_practiced_at?: string | null
   created_at?: string
   updated_at?: string

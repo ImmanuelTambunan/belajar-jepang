@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { CharacterData } from '@/types/character'
 import { UserProgress, ProgressSummary, PracticeSessionStats } from '@/types/progress'
+import { OverallAccuracyResult } from '@/types/accuracy'
 import { Header } from '@/components/Header'
 import { PracticeStatsBar } from '@/components/PracticeStatsBar'
 import { PracticeCard } from '@/components/PracticeCard'
@@ -288,6 +289,46 @@ export default function PracticePage() {
     setCurrentIndex((prev) => prev + 1)
   }
 
+  // Action: Save tracing accuracy score to local progress and backend
+  const handleSaveAccuracyScore = async (
+    char: CharacterData,
+    evalResult: OverallAccuracyResult
+  ) => {
+    const charId = char.id
+    const existing = progressMap[charId] || {
+      character_id: charId,
+      status: 'learning',
+      review_count: 0,
+    }
+
+    const updated: UserProgress = {
+      ...existing,
+      character_id: charId,
+      accuracy_score: evalResult.score,
+      accuracy_grade: evalResult.grade,
+      last_practiced_at: new Date().toISOString(),
+    }
+
+    const nextMap = { ...progressMap, [charId]: updated }
+    saveLocalProgress(nextMap)
+
+    // Optional Backend Sync: send payload { character_id, accuracy_score }
+    if (isLiveApi) {
+      try {
+        await fetch(`${apiBaseUrl}/progress/update`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            character_id: charId,
+            accuracy_score: evalResult.score,
+          }),
+        })
+      } catch {
+        // silent fail to preserve smooth offline experience
+      }
+    }
+  }
+
   // Action: Restart Session
   const handleRestartSession = (mode: 'all' | 'unmemorized') => {
     setSessionStats({
@@ -350,6 +391,7 @@ export default function PracticePage() {
             onMarkMemorized={handleMarkMemorized}
             onRepeatLater={handleRepeatLater}
             onSkip={handleSkip}
+            onSaveAccuracyScore={handleSaveAccuracyScore}
             isSubmitting={isSubmitting}
           />
         )}

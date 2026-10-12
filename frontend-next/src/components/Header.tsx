@@ -11,6 +11,7 @@ export const Header: React.FC = () => {
   const navLinks = [
     { href: '/', label: 'Koleksi Huruf', icon: '🔤', desc: '46 Hiragana & Stroke Tracing' },
     { href: '/practice', label: 'Latihan Hafalan', icon: '🧠', desc: 'Memorize Mode & Antrean Review' },
+    { href: '/exam', label: 'Ujian Hafalan', icon: '📝', desc: 'Quiz Mode & Blind Tracing' },
   ]
 
   return (

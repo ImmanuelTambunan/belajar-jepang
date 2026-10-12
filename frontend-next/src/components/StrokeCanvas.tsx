@@ -1,13 +1,25 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { CharacterData } from '@/types/character'
+import { Point, OverallAccuracyResult } from '@/types/accuracy'
+import { evaluateAllStrokes } from '@/utils/strokeScorer'
+import { AccuracyScoreCard } from './AccuracyScoreCard'
+import { AccuracyVisualOverlay } from './AccuracyVisualOverlay'
 
 interface StrokeCanvasProps {
   character: CharacterData
+  onSaveScore?: (score: OverallAccuracyResult) => Promise<void> | void
+  onNextCharacter?: () => void
+  isSubmitting?: boolean
 }
 
-export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
+export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
+  character,
+  onSaveScore,
+  onNextCharacter,
+  isSubmitting = false,
+}) => {
   // Modes & toggles
   const [showGuide, setShowGuide] = useState<boolean>(true)
   const [isAnimating, setIsAnimating] = useState<boolean>(false)
@@ -20,12 +32,22 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
   const [isDrawing, setIsDrawing] = useState<boolean>(false)
   const lastPos = useRef<{ x: number; y: number } | null>(null)
 
+  // Recorded Strokes for Accuracy Algorithm
+  const [userStrokes, setUserStrokes] = useState<Point[][]>([])
+  const currentStrokePoints = useRef<Point[]>([])
+
+  // Evaluation & Scoring state
+  const [evaluation, setEvaluation] = useState<OverallAccuracyResult | null>(null)
+  const [showAccuracyOverlay, setShowAccuracyOverlay] = useState<boolean>(true)
+  const [autoEvaluate, setAutoEvaluate] = useState<boolean>(true)
+  const [isEvaluating, setIsEvaluating] = useState<boolean>(false)
+
   // SVG path references for animated playback
   const animatedPathRefs = useRef<Array<SVGPathElement | null>>([])
   const animationTimerRef = useRef<number | null>(null)
 
   // Palette for distinguishing strokes
-  const strokeColors = ['#0284c7', '#ec4899', '#10b981', '#f59e0b', '#8b5cf6']
+  const strokeColors = ['#0284c7', '#ec4899', '#10b981', '#f97316', '#8b5cf6']
 
   // Sort strokes by stroke_order or stroke_number
   const sortedStrokes = [...(character.strokes || [])]
@@ -45,14 +67,56 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
     return { x: 54.5, y: 54.5 }
   }
 
-  // Clear freehand canvas
-  const clearCanvas = () => {
+  // Redraw all committed strokes on the canvas
+  const redrawCanvasStrokes = useCallback(
+    (strokes: Point[][], color: string, width: number) => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      strokes.forEach((stroke) => {
+        if (stroke.length < 2) return
+        ctx.beginPath()
+        ctx.moveTo(stroke[0].x, stroke[0].y)
+        ctx.lineCap = 'round'
+        ctx.lineJoin = 'round'
+        ctx.strokeStyle = color
+        ctx.lineWidth = width
+        for (let i = 1; i < stroke.length; i++) {
+          ctx.lineTo(stroke[i].x, stroke[i].y)
+        }
+        ctx.stroke()
+      })
+    },
+    []
+  )
+
+  // Clear freehand canvas & reset stroke data
+  const handleClearCanvas = useCallback(() => {
     const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-  }
+    if (canvas) {
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+      }
+    }
+    setUserStrokes([])
+    currentStrokePoints.current = []
+    setEvaluation(null)
+  }, [])
+
+  // Undo the most recent stroke
+  const handleUndoLastStroke = useCallback(() => {
+    if (userStrokes.length === 0) return
+    const nextStrokes = userStrokes.slice(0, -1)
+    setUserStrokes(nextStrokes)
+    redrawCanvasStrokes(nextStrokes, brushColor, brushWidth)
+    if (evaluation) {
+      setEvaluation(null)
+    }
+  }, [userStrokes, brushColor, brushWidth, evaluation, redrawCanvasStrokes])
 
   // Reset animated paths to fully hidden
   const resetAnimationPaths = () => {
@@ -78,11 +142,11 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
 
   // Clear canvas & reset animations whenever character changes
   useEffect(() => {
-    clearCanvas()
+    handleClearCanvas()
     stopAnimation()
     resetAnimationPaths()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [character.id])
+  }, [character.id, character.character])
 
   // Play stroke order demo sequentially
   const playAnimation = () => {
@@ -121,7 +185,7 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
   }
 
   // Drawing event handlers using Pointer Events (mouse, touch, stylus)
-  const getCanvasCoordinates = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  const getCanvasCoordinates = (e: React.PointerEvent<HTMLCanvasElement>): Point => {
     const canvas = canvasRef.current
     if (!canvas) return { x: 0, y: 0 }
     const rect = canvas.getBoundingClientRect()
@@ -130,8 +194,34 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
     return {
       x: (e.clientX - rect.left) * scaleX,
       y: (e.clientY - rect.top) * scaleY,
+      t: Date.now(),
     }
   }
+
+  // Evaluate current user tracing against reference strokes
+  const handleEvaluateTracing = useCallback(
+    (strokesToScore = userStrokes) => {
+      if (strokesToScore.length === 0) return
+
+      setIsEvaluating(true)
+      try {
+        const refSvgPaths = sortedStrokes.map((s) => s.svg_path)
+        const result = evaluateAllStrokes(strokesToScore, refSvgPaths, 300)
+        setEvaluation(result)
+        setShowAccuracyOverlay(true)
+
+        // Trigger optional callback for backend synchronization
+        if (onSaveScore) {
+          onSaveScore(result)
+        }
+      } catch (err) {
+        console.error('Terjadi kesalahan saat menghitung akurasi coretan:', err)
+      } finally {
+        setIsEvaluating(false)
+      }
+    },
+    [sortedStrokes, userStrokes, onSaveScore]
+  )
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
@@ -140,6 +230,8 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
     setIsDrawing(true)
 
     const pos = getCanvasCoordinates(e)
+    currentStrokePoints.current = [pos]
+
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
@@ -160,6 +252,8 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
     if (!ctx) return
 
     const pos = getCanvasCoordinates(e)
+    currentStrokePoints.current.push(pos)
+
     ctx.beginPath()
     ctx.moveTo(
       lastPos.current ? lastPos.current.x : pos.x,
@@ -175,6 +269,7 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
   }
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return
     const canvas = canvasRef.current
     if (canvas) {
       try {
@@ -185,6 +280,20 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
     }
     setIsDrawing(false)
     lastPos.current = null
+
+    // Commit current stroke points if significant length
+    if (currentStrokePoints.current.length > 1) {
+      const updatedStrokes = [...userStrokes, currentStrokePoints.current]
+      setUserStrokes(updatedStrokes)
+      currentStrokePoints.current = []
+
+      // Auto-evaluate when all expected strokes are completed
+      if (autoEvaluate && updatedStrokes.length >= sortedStrokes.length) {
+        handleEvaluateTracing(updatedStrokes)
+      }
+    } else {
+      currentStrokePoints.current = []
+    }
   }
 
   return (
@@ -200,23 +309,34 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
               ({character.readings?.[0]?.romaji || '-'})
             </span>
             <span className="text-xs px-2.5 py-1 rounded-full bg-sky-50 dark:bg-sky-950/80 border border-sky-200 dark:border-sky-600/50 text-sky-700 dark:text-sky-300 font-medium">
-              筆順 Hitsujun Tracing
+              筆順 Hitsujun Tracing & Evaluasi Akurasi
             </span>
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-            Praktek urutan menulis karakter Jepang dengan bantuan kotak kaligrafi (原稿用紙).
+            Praktek urutan menulis karakter Jepang dengan penilaian akurasi kurva & arah goresan.
           </p>
         </div>
 
-        {/* Counter Badge */}
-        <div className="inline-flex items-center self-start sm:self-center px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-sky-700 dark:text-sky-300">
-          {isAnimating && activeStrokeIndex !== null ? (
-            <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400 animate-pulse">
-              <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400"></span>
-              Memutar Goresan #{activeStrokeIndex + 1} dari {sortedStrokes.length}
+        {/* Counter & Evaluation Quick Pill */}
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+          <div className="inline-flex items-center px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-sky-700 dark:text-sky-300">
+            {isAnimating && activeStrokeIndex !== null ? (
+              <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400 animate-pulse">
+                <span className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400"></span>
+                Memutar Goresan #{activeStrokeIndex + 1} dari {sortedStrokes.length}
+              </span>
+            ) : (
+              <span>
+                Coretan Anda: {userStrokes.length}/{sortedStrokes.length} Goresan
+              </span>
+            )}
+          </div>
+
+          {evaluation && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 animate-fade-in">
+              <span>★</span>
+              <span>Akurasi: {evaluation.score}% (Skor {evaluation.grade})</span>
             </span>
-          ) : (
-            <span>Total: {character.strokes_count} Goresan</span>
           )}
         </div>
       </div>
@@ -344,7 +464,11 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
                     <g
                       key={`badge-${stroke.id}`}
                       className="transition-transform duration-200"
-                      transform={isCurrent ? `scale(1.2) translate(${pt.x * -0.2}, ${pt.y * -0.2})` : undefined}
+                      transform={
+                        isCurrent
+                          ? `scale(1.2) translate(${pt.x * -0.2}, ${pt.y * -0.2})`
+                          : undefined
+                      }
                     >
                       <circle
                         cx={pt.x}
@@ -370,7 +494,15 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
                 })}
             </svg>
 
-            {/* LAYER 3: Interactive Freehand HTML5 Canvas */}
+            {/* LAYER 3: Visual Accuracy Feedback Overlay (Green / Orange / Red) */}
+            {evaluation && showAccuracyOverlay && (
+              <AccuracyVisualOverlay
+                strokeEvaluations={evaluation.strokeEvaluations}
+                canvasSize={300}
+              />
+            )}
+
+            {/* LAYER 4: Interactive Freehand HTML5 Canvas */}
             <canvas
               ref={canvasRef}
               width={300}
@@ -383,13 +515,72 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
             />
           </div>
 
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 text-center">
-            💡 Goreskan kursor mouse, jari (touch screen), atau stylus di atas kanvas.
-          </p>
+          {/* Quick Tracing Action Toolbar under Canvas */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-3 w-full max-w-[320px]">
+            <button
+              onClick={() => handleEvaluateTracing()}
+              disabled={userStrokes.length === 0 || isEvaluating}
+              className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white shadow-md shadow-sky-600/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5 transition-all active:scale-98"
+            >
+              {isEvaluating ? (
+                <>
+                  <span className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin"></span>
+                  <span>Menilai...</span>
+                </>
+              ) : (
+                <>
+                  <span>🎯</span>
+                  <span>
+                    Evaluasi ({userStrokes.length}/{sortedStrokes.length})
+                  </span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleUndoLastStroke}
+              disabled={userStrokes.length === 0}
+              title="Batalkan goresan terakhir (Undo)"
+              className="py-2 px-3 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition shadow-sm"
+            >
+              ↩️ Undo
+            </button>
+
+            <button
+              onClick={handleClearCanvas}
+              disabled={userStrokes.length === 0 && !evaluation}
+              title="Bersihkan kanvas dan hapus coretan"
+              className="py-2 px-3 rounded-xl text-xs font-semibold bg-rose-50 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-700/60 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition shadow-sm"
+            >
+              🗑️ Reset
+            </button>
+          </div>
+
+          <label className="flex items-center gap-2 mt-2.5 text-xs text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={autoEvaluate}
+              onChange={(e) => setAutoEvaluate(e.target.checked)}
+              className="w-3.5 h-3.5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+            />
+            <span>Evaluasi otomatis saat semua garis selesai</span>
+          </label>
         </div>
 
-        {/* Sidebar Controls Area */}
+        {/* Sidebar Controls & Evaluation Area */}
         <div className="lg:col-span-7 flex flex-col gap-5">
+          {/* Real-time / Completed Accuracy Card Display */}
+          {evaluation && (
+            <AccuracyScoreCard
+              evaluation={evaluation}
+              onRetry={handleClearCanvas}
+              onNext={onNextCharacter}
+              isSubmitting={isSubmitting}
+              showOverlay={showAccuracyOverlay}
+              onToggleOverlay={() => setShowAccuracyOverlay(!showAccuracyOverlay)}
+            />
+          )}
+
           {/* Section: Mode 1 - Animasi Goresan */}
           <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 transition-colors">
             <h4 className="text-sm font-semibold text-sky-700 dark:text-sky-300 uppercase tracking-wider flex items-center gap-2">
@@ -451,7 +642,7 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
               </button>
 
               <button
-                onClick={clearCanvas}
+                onClick={handleClearCanvas}
                 className="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-rose-50 dark:bg-rose-600/20 border border-rose-300 dark:border-rose-500/40 text-rose-700 dark:text-rose-300 hover:bg-rose-600 hover:text-white cursor-pointer"
               >
                 🗑️ Hapus Coretan
@@ -471,19 +662,23 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({ character }) => {
                     { label: 'Sumi Hitam', color: '#0f172a' },
                     { label: 'Merah Kuas', color: '#e11d48' },
                     { label: 'Bambu Hijau', color: '#059669' },
-                    { label: 'Sakura Pink', color: '#ec4899' },
+                    { label: 'Oranye Mikan', color: '#f97316' },
                   ].map((c) => (
                     <button
                       key={c.color}
                       title={c.label}
                       onClick={() => setBrushColor(c.color)}
                       style={{ backgroundColor: c.color }}
-                      className={`w-7 h-7 rounded-full transition-transform cursor-pointer border-2 ${
+                      className={`w-7 h-7 rounded-full transition-all cursor-pointer relative flex items-center justify-center ${
                         brushColor === c.color
-                          ? 'border-sky-500 scale-110 shadow-md ring-2 ring-sky-400/50'
-                          : 'border-transparent opacity-80 hover:opacity-100 hover:scale-105'
+                          ? 'scale-115 shadow-md ring-2 ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-800 ring-sky-500 dark:ring-sky-400 border-2 border-white dark:border-slate-900'
+                          : 'border-2 border-transparent opacity-80 hover:opacity-100 hover:scale-105'
                       }`}
-                    />
+                    >
+                      {brushColor === c.color && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-white shadow-xs" />
+                      )}
+                    </button>
                   ))}
                 </div>
               </div>

@@ -24,7 +24,7 @@ type ProgressSummaryResponse struct {
 func GetProgressSummary(c *fiber.Ctx) error {
 	var totalCharacters int64
 	config.DB.Model(&models.Character{}).
-		Where("script_type = ? OR type = ?", "hiragana", "hiragana").
+		Where("`script_type` = ? OR `type` = ?", "hiragana", "hiragana").
 		Count(&totalCharacters)
 
 	if totalCharacters == 0 {
@@ -158,16 +158,16 @@ func GetPracticeQueue(c *fiber.Ctx) error {
 		Joins("LEFT JOIN user_character_progress ON user_character_progress.character_id = characters.id").
 		Preload("Readings").
 		Preload("Strokes", func(db *gorm.DB) *gorm.DB {
-			return db.Order("character_strokes.stroke_number ASC")
+			return db.Order("`character_strokes`.`stroke_number` ASC")
 		}).
-		Where("characters.script_type = ? OR characters.type = ?", "hiragana", "hiragana")
+		Where("`characters`.`script_type` = ? OR `characters`.`type` = ?", "hiragana", "hiragana")
 
 	if row := c.Query("row"); row != "" {
-		query = query.Where("characters.row_group = ?", row)
+		query = query.Where("`characters`.`row_group` = ?", row)
 	}
 
 	if mode := c.Query("mode"); mode == "unmemorized" {
-		query = query.Where("user_character_progress.status IS NULL OR user_character_progress.status != ?", "memorized")
+		query = query.Where("`user_character_progress`.`status` IS NULL OR `user_character_progress`.`status` != ?", "memorized")
 	}
 
 	// Prioritize: unmemorized/learning first, least reviewed first, then character ID
