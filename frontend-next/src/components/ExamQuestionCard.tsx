@@ -1,8 +1,10 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ExamQuestion } from '@/types/exam'
 import { BlindTracingQuizCanvas } from './BlindTracingQuizCanvas'
+import { AudioSpeakerButton } from './AudioSpeakerButton'
+import { useCharacterAudio } from '@/hooks/useCharacterAudio'
 
 interface ExamQuestionCardProps {
   question: ExamQuestion
@@ -27,6 +29,9 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
   const [isAnswered, setIsAnswered] = useState<boolean>(false)
   const [timeLeft, setTimeLeft] = useState<number>(timerSeconds)
 
+  // Modular Layered Character Audio Hook
+  const { play: playAudio, isPlaying, activeSource } = useCharacterAudio()
+
   const targetChar = question.targetCharacter
   const targetRomaji = targetChar.readings?.[0]?.romaji || '-'
   const targetSymbol = targetChar.character || targetChar.symbol || ''
@@ -37,20 +42,6 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
     setIsAnswered(false)
     setTimeLeft(timerSeconds)
   }, [question.id, timerSeconds])
-
-  // Native Japanese Text-to-Speech
-  const playPronunciation = useCallback(() => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-    try {
-      window.speechSynthesis.cancel()
-      const utterance = new SpeechSynthesisUtterance(targetSymbol)
-      utterance.lang = 'ja-JP'
-      utterance.rate = 0.85
-      window.speechSynthesis.speak(utterance)
-    } catch {
-      // ignore audio errors
-    }
-  }, [targetSymbol])
 
   // Timer countdown hook
   useEffect(() => {
@@ -156,47 +147,70 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
 
       {/* QUESTION MAIN STAGE */}
       <div className="py-6 flex flex-col items-center justify-center">
-        {/* TIPE A: PROMPT ROMAJI */}
+        {/* TIPE A: PROMPT ROMAJI (Audio Listening + Romaji) */}
         {question.type === 'romaji_to_kana' && (
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-3">
               <span className="text-5xl sm:text-6xl font-black font-mono text-sky-600 dark:text-sky-400">
                 /{targetRomaji}/
               </span>
-              <button
-                onClick={playPronunciation}
-                title="Dengarkan pengucapan audio"
-                className="p-3 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-300 cursor-pointer shadow-sm transition"
-              >
-                🔊
-              </button>
+              <AudioSpeakerButton
+                character={targetChar}
+                isPlaying={isPlaying}
+                activeSource={activeSource}
+                onPlay={() => playAudio(targetChar)}
+                size="md"
+                variant="icon"
+                title="Dengarkan pengucapan audio asli / ja-JP"
+              />
             </div>
+            <p className="text-xs text-sky-600/80 dark:text-sky-400/80 mt-2 font-medium flex items-center justify-center gap-1.5">
+              <span>🎧</span>
+              <span>Dengarkan pelafalan huruf untuk mempermudah tebakan</span>
+            </p>
           </div>
         )}
 
-        {/* TIPE B: PROMPT KANA */}
+        {/* TIPE B: PROMPT KANA (Listening Question: Hear Kana, Guess Romaji) */}
         {question.type === 'kana_to_romaji' && (
           <div className="text-center mb-6">
-            <span className="text-7xl sm:text-8xl font-black text-slate-900 dark:text-white drop-shadow-sm select-none">
-              {targetSymbol}
-            </span>
+            <div className="inline-flex items-center gap-4">
+              <span className="text-7xl sm:text-8xl font-black text-slate-900 dark:text-white drop-shadow-sm select-none">
+                {targetSymbol}
+              </span>
+              <AudioSpeakerButton
+                character={targetChar}
+                isPlaying={isPlaying}
+                activeSource={activeSource}
+                onPlay={() => playAudio(targetChar)}
+                size="md"
+                variant="icon"
+                title="Dengarkan pelafalan audio penutur asli / ja-JP"
+              />
+            </div>
+            <p className="text-xs text-purple-600/80 dark:text-purple-400/80 mt-2 font-medium flex items-center justify-center gap-1.5">
+              <span>🎧</span>
+              <span>Uji Pendengaran: Dengarkan pelafalan lalu pilih cara baca Romajinya</span>
+            </p>
           </div>
         )}
 
         {/* TIPE C: PROMPT BLIND TRACING */}
         {question.type === 'blind_tracing' && (
           <div className="text-center mb-4">
-            <div className="inline-flex items-center gap-2 mb-2">
+            <div className="inline-flex items-center gap-3 mb-2">
               <span className="text-3xl font-black font-mono text-rose-600 dark:text-rose-400">
                 /{targetRomaji}/
               </span>
-              <button
-                onClick={playPronunciation}
-                title="Dengarkan pengucapan audio"
-                className="p-2 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs cursor-pointer"
-              >
-                🔊
-              </button>
+              <AudioSpeakerButton
+                character={targetChar}
+                isPlaying={isPlaying}
+                activeSource={activeSource}
+                onPlay={() => playAudio(targetChar)}
+                size="sm"
+                variant="icon"
+                title="Dengarkan pelafalan audio"
+              />
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Goreskan huruf Hiragana ini di kotak kaligrafi di bawah:

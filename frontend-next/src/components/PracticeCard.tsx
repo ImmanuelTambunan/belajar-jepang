@@ -5,6 +5,8 @@ import { CharacterData } from '@/types/character'
 import { UserProgress } from '@/types/progress'
 import { OverallAccuracyResult } from '@/types/accuracy'
 import { StrokeCanvas } from './StrokeCanvas'
+import { AudioSpeakerButton } from './AudioSpeakerButton'
+import { useCharacterAudio } from '@/hooks/useCharacterAudio'
 
 interface PracticeCardProps {
   character: CharacterData
@@ -27,33 +29,46 @@ export const PracticeCard: React.FC<PracticeCardProps> = ({
 }) => {
   // Reveal state for active recall
   const [isRevealed, setIsRevealed] = useState<boolean>(false)
-  const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false)
 
-  // Reset revealed state when character changes
+  // Modular Layered Audio Hook (Native Audio priority + Web Speech Fallback)
+  const { play, isPlaying, activeSource } = useCharacterAudio()
+  const [autoPlayAudio, setAutoPlayAudio] = useState<boolean>(true)
+
+  // Load autoplay preference from localStorage on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const stored = localStorage.getItem('nihongo_sora_practice_autoplay')
+      if (stored !== null) {
+        setAutoPlayAudio(stored === 'true')
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  // Toggle autoplay and persist setting
+  const handleToggleAutoPlay = (checked: boolean) => {
+    setAutoPlayAudio(checked)
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('nihongo_sora_practice_autoplay', String(checked))
+      } catch {
+        // ignore storage errors
+      }
+    }
+  }
+
+  // Trigger audio on character switch if autoplay is enabled
   useEffect(() => {
     setIsRevealed(false)
-  }, [character.id, character.character])
-
-  // Native Japanese Text-to-Speech using Web Speech API
-  const playPronunciation = useCallback(() => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
-
-    try {
-      window.speechSynthesis.cancel()
-      const textToSpeak = character.character || character.symbol || ''
-      const utterance = new SpeechSynthesisUtterance(textToSpeak)
-      utterance.lang = 'ja-JP'
-      utterance.rate = 0.85
-
-      setIsPlayingAudio(true)
-      utterance.onend = () => setIsPlayingAudio(false)
-      utterance.onerror = () => setIsPlayingAudio(false)
-
-      window.speechSynthesis.speak(utterance)
-    } catch {
-      setIsPlayingAudio(false)
+    if (autoPlayAudio) {
+      const timer = setTimeout(() => {
+        play(character)
+      }, 200)
+      return () => clearTimeout(timer)
     }
-  }, [character.character, character.symbol])
+  }, [character.id, character.character, autoPlayAudio, play])
 
   const romaji = character.readings?.[0]?.romaji || '-'
   const meaning =
@@ -85,9 +100,20 @@ export const PracticeCard: React.FC<PracticeCardProps> = ({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* TOGGLE: Auto-play on character switch */}
+          <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600 dark:text-slate-300 select-none bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 transition">
+            <input
+              type="checkbox"
+              checked={autoPlayAudio}
+              onChange={(e) => handleToggleAutoPlay(e.target.checked)}
+              className="w-3.5 h-3.5 rounded text-sky-600 focus:ring-sky-500 border-slate-300 dark:border-slate-600 cursor-pointer"
+            />
+            <span>🔊 Putar suara otomatis</span>
+          </label>
+
           <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-            Riwayat Latihan: <strong className="text-slate-900 dark:text-white">{reviewCount}x</strong>
+            Riwayat: <strong className="text-slate-900 dark:text-white">{reviewCount}x</strong>
           </span>
         </div>
       </div>
@@ -99,18 +125,31 @@ export const PracticeCard: React.FC<PracticeCardProps> = ({
             {character.character || character.symbol}
           </h2>
 
-          {/* Audio Button */}
-          <button
-            onClick={playPronunciation}
-            title="Dengarkan pengucapan (Audio ja-JP)"
-            className={`absolute -right-12 top-2 p-2.5 rounded-full border transition cursor-pointer shadow-sm ${
-              isPlayingAudio
-                ? 'bg-sky-500 text-white border-sky-500 scale-110 animate-pulse'
-                : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-200'
-            }`}
-          >
-            🔊
-          </button>
+          {/* Quick Corner Audio Button */}
+          <div className="absolute -right-12 top-2">
+            <AudioSpeakerButton
+              character={character}
+              isPlaying={isPlaying}
+              activeSource={activeSource}
+              onPlay={() => play(character)}
+              size="md"
+              variant="icon"
+              title="Dengarkan pengucapan audio"
+            />
+          </div>
+        </div>
+
+        {/* PROMINENT AUDIO BUTTON */}
+        <div className="mt-2 mb-4">
+          <AudioSpeakerButton
+            character={character}
+            isPlaying={isPlaying}
+            activeSource={activeSource}
+            onPlay={() => play(character)}
+            variant="button"
+            size="md"
+            label="Dengarkan Pelafalan"
+          />
         </div>
 
         {/* ACTIVE RECALL REVEAL BOX */}

@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { CharacterData } from '@/types/character'
 import { Point, OverallAccuracyResult } from '@/types/accuracy'
 import { evaluateAllStrokes } from '@/utils/strokeScorer'
+import { playCharacterAudio } from '@/utils/audio'
 import { AccuracyScoreCard } from './AccuracyScoreCard'
 import { AccuracyVisualOverlay } from './AccuracyVisualOverlay'
 
@@ -153,6 +154,9 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
     stopAnimation()
     setIsAnimating(true)
     resetAnimationPaths()
+
+    // Automatically trigger pronunciation audio alongside stroke demo
+    playCharacterAudio(character).catch(() => {})
 
     let currentIndex = 0
     const strokeDuration = 700 // ms per stroke
@@ -602,7 +606,7 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
                   </>
                 ) : (
                   <>
-                    <span>🎬 Putar Animasi</span>
+                    <span>🎬 Putar Animasi & Audio</span>
                   </>
                 )}
               </button>

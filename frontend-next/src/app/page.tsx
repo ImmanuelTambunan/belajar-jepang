@@ -7,6 +7,8 @@ import { Header } from '@/components/Header'
 import { ServiceCards } from '@/components/ServiceCards'
 import { StrokeCanvas } from '@/components/StrokeCanvas'
 import { HealthChecker } from '@/components/HealthChecker'
+import { AudioSpeakerButton } from '@/components/AudioSpeakerButton'
+import { useCharacterAudio } from '@/hooks/useCharacterAudio'
 import rawHiraganaData from '@/data/hiragana_46.json'
 
 interface RawHiraganaItem {
@@ -87,6 +89,9 @@ export default function Home() {
   const [loading, setLoading] = useState(false)
   const [isLiveApi, setIsLiveApi] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
+
+  // Character Audio Hook for Layered Native/Web Speech Playback
+  const { play: playAudio, isItemPlaying, activeSource } = useCharacterAudio()
 
   // Fetch Hiragana dataset from Golang Fiber Backend
   const fetchHiragana = useCallback(async () => {
@@ -279,17 +284,37 @@ export default function Home() {
               selectedChar?.id === item.id ||
               selectedChar?.character === item.character ||
               selectedChar?.symbol === item.symbol
+            const isPlaying = isItemPlaying(item)
 
             return (
-              <button
+              <div
                 key={item.id || item.character}
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelectedChar(item)}
-                className={`py-3 px-2 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center relative overflow-hidden group ${
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    setSelectedChar(item)
+                  }
+                }}
+                className={`py-3 px-2 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center relative overflow-hidden group select-none ${
                   isSelected
                     ? 'bg-gradient-to-b from-sky-50 to-indigo-50 dark:from-sky-500/20 dark:to-indigo-600/20 border-sky-500 text-slate-950 dark:text-white shadow-md dark:shadow-lg dark:shadow-sky-950 scale-105 ring-2 ring-sky-400/50'
                     : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-sky-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-850 shadow-sm dark:shadow-none'
                 }`}
               >
+                {/* Floating audio speaker button in top-right corner */}
+                <div className="absolute top-1.5 right-1.5 z-10">
+                  <AudioSpeakerButton
+                    character={item}
+                    isPlaying={isPlaying}
+                    onPlay={() => playAudio(item)}
+                    size="xs"
+                    stopPropagation={true}
+                    title={`Dengarkan pelafalan ${item.character || item.symbol} (/${item.readings?.[0]?.romaji || ''}/)`}
+                  />
+                </div>
+
                 <span className="text-2xl sm:text-3xl font-black mb-0.5 group-hover:scale-110 transition-transform">
                   {item.character || item.symbol}
                 </span>
@@ -299,7 +324,7 @@ export default function Home() {
                 <span className="text-[9px] text-slate-400 dark:text-slate-500">
                   {item.strokes_count || item.stroke_count || item.strokes?.length} Goresan
                 </span>
-              </button>
+              </div>
             )
           })}
         </div>
@@ -371,13 +396,25 @@ export default function Home() {
                   </span>
                 </div>
 
-                <div className="flex items-baseline gap-4">
-                  <h3 className="text-5xl font-black text-slate-900 dark:text-white">
-                    {selectedChar.character || selectedChar.symbol}
-                  </h3>
-                  <span className="text-2xl font-mono text-sky-600 dark:text-sky-400 font-semibold">
-                    /{selectedChar.readings?.[0]?.romaji}/
-                  </span>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-baseline gap-4">
+                    <h3 className="text-5xl font-black text-slate-900 dark:text-white">
+                      {selectedChar.character || selectedChar.symbol}
+                    </h3>
+                    <span className="text-2xl font-mono text-sky-600 dark:text-sky-400 font-semibold">
+                      /{selectedChar.readings?.[0]?.romaji}/
+                    </span>
+                  </div>
+
+                  <AudioSpeakerButton
+                    character={selectedChar}
+                    isPlaying={isItemPlaying(selectedChar)}
+                    activeSource={activeSource}
+                    onPlay={() => playAudio(selectedChar)}
+                    size="md"
+                    variant="badge"
+                    label="Putar Suara Pelafalan"
+                  />
                 </div>
 
                 <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 font-medium">
