@@ -27,4 +27,10 @@ func SetupRoutes(app *fiber.App) {
 	exam := api.Group("/exam")
 	exam.Post("/submit", controllers.SubmitExam)
 	exam.Get("/history", controllers.GetExamHistory)
+
+	// Analytics & Statistics Dashboard endpoints
+	analytics := api.Group("/analytics")
+	analytics.Get("/overview", controllers.GetAnalyticsOverview)
+	analytics.Get("/accuracy-by-row", controllers.GetAccuracyByRow)
+	analytics.Get("/exam-history", controllers.GetExamHistoryAnalytics)
 }

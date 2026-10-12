@@ -1,17 +1,40 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ThemeToggle } from './ThemeToggle'
+import { AudioManagerModal } from './AudioManagerModal'
+import { getAllCustomAudio } from '@/utils/audioStorage'
 
 export const Header: React.FC = () => {
   const pathname = usePathname()
+  const [isAudioModalOpen, setIsAudioModalOpen] = useState(false)
+  const [customAudioCount, setCustomAudioCount] = useState(0)
+
+  const updateCount = useCallback(async () => {
+    try {
+      const records = await getAllCustomAudio()
+      setCustomAudioCount(Object.keys(records).length)
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    updateCount()
+    const handleUpdate = () => updateCount()
+    window.addEventListener('nihongo_sora_custom_audio_updated', handleUpdate)
+    return () => {
+      window.removeEventListener('nihongo_sora_custom_audio_updated', handleUpdate)
+    }
+  }, [updateCount])
 
   const navLinks = [
     { href: '/', label: 'Koleksi Huruf', icon: '🔤', desc: '46 Hiragana & Stroke Tracing' },
     { href: '/practice', label: 'Latihan Hafalan', icon: '🧠', desc: 'Memorize Mode & Antrean Review' },
     { href: '/exam', label: 'Ujian Hafalan', icon: '📝', desc: 'Quiz Mode & Blind Tracing' },
+    { href: '/analytics', label: 'Dasbor Analitik', icon: '📊', desc: 'Statistik & Riwayat Belajar' },
   ]
 
   return (
@@ -45,7 +68,7 @@ export const Header: React.FC = () => {
       </p>
 
       {/* Main Navigation Tabs */}
-      <nav className="flex items-center justify-center gap-2 mt-6">
+      <nav className="flex items-center justify-center gap-2 mt-6 flex-wrap">
         {navLinks.map((link) => {
           const isActive = pathname === link.href
           return (
@@ -63,7 +86,28 @@ export const Header: React.FC = () => {
             </Link>
           )
         })}
+
+        {/* Audio Manager Modal Trigger */}
+        <button
+          type="button"
+          onClick={() => setIsAudioModalOpen(true)}
+          className="px-4 sm:px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 border bg-gradient-to-r from-purple-500/10 to-indigo-500/10 hover:from-purple-500/20 hover:to-indigo-500/20 border-purple-300 dark:border-purple-700/60 text-purple-700 dark:text-purple-300 cursor-pointer shadow-xs active:scale-98"
+        >
+          <span>🎙️</span>
+          <span>Studio Audio</span>
+          {customAudioCount > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-600 text-white shadow-xs">
+              {customAudioCount} Kustom
+            </span>
+          )}
+        </button>
       </nav>
+
+      {/* Audio Manager Modal */}
+      <AudioManagerModal
+        isOpen={isAudioModalOpen}
+        onClose={() => setIsAudioModalOpen(false)}
+      />
     </header>
   )
 }

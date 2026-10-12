@@ -8,6 +8,7 @@ import { ServiceCards } from '@/components/ServiceCards'
 import { StrokeCanvas } from '@/components/StrokeCanvas'
 import { HealthChecker } from '@/components/HealthChecker'
 import { AudioSpeakerButton } from '@/components/AudioSpeakerButton'
+import { AudioManagerModal } from '@/components/AudioManagerModal'
 import { useCharacterAudio } from '@/hooks/useCharacterAudio'
 import rawHiraganaData from '@/data/hiragana_46.json'
 
@@ -92,6 +93,8 @@ export default function Home() {
 
   // Character Audio Hook for Layered Native/Web Speech Playback
   const { play: playAudio, isItemPlaying, activeSource } = useCharacterAudio()
+  const [isAudioModalOpen, setIsAudioModalOpen] = useState(false)
+  const [modalRomaji, setModalRomaji] = useState('a')
 
   // Fetch Hiragana dataset from Golang Fiber Backend
   const fetchHiragana = useCallback(async () => {
@@ -396,8 +399,8 @@ export default function Home() {
                   </span>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="flex items-baseline gap-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-baseline gap-4 mr-2">
                     <h3 className="text-5xl font-black text-slate-900 dark:text-white">
                       {selectedChar.character || selectedChar.symbol}
                     </h3>
@@ -415,6 +418,19 @@ export default function Home() {
                     variant="badge"
                     label="Putar Suara Pelafalan"
                   />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalRomaji(selectedChar.readings?.[0]?.romaji || 'a')
+                      setIsAudioModalOpen(true)
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl border border-purple-300 dark:border-purple-700/70 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+                    title="Unggah atau ganti file rekaman suara kustom untuk huruf ini"
+                  >
+                    <span>🎙️</span>
+                    <span>Kustomisasi Suara Karakter</span>
+                  </button>
                 </div>
 
                 <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 font-medium">
@@ -476,6 +492,13 @@ export default function Home() {
           Backend Golang Fiber + GORM • Frontend Next.js 16 (App Router + Tailwind CSS) • Native Laragon MySQL
         </p>
       </footer>
+
+      {/* Audio Manager Modal */}
+      <AudioManagerModal
+        isOpen={isAudioModalOpen}
+        onClose={() => setIsAudioModalOpen(false)}
+        initialSelectedRomaji={modalRomaji}
+      />
     </main>
   )
 }
