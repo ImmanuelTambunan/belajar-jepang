@@ -35,6 +35,18 @@ export const BlindTracingQuizCanvas: React.FC<BlindTracingQuizCanvasProps> = ({
     }))
     .sort((a, b) => a.stroke_order - b.stroke_order)
 
+  const handleClear = () => {
+    const canvas = canvasRef.current
+    if (canvas) {
+      const ctx = canvas.getContext('2d')
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height)
+    }
+    setUserStrokes([])
+    currentStrokePoints.current = []
+    setEvaluation(null)
+    setHasSubmitted(false)
+  }
+
   // Reset state when character changes
   useEffect(() => {
     handleClear()
@@ -61,18 +73,6 @@ export const BlindTracingQuizCanvas: React.FC<BlindTracingQuizCanvasProps> = ({
       }
       ctx.stroke()
     })
-  }
-
-  const handleClear = () => {
-    const canvas = canvasRef.current
-    if (canvas) {
-      const ctx = canvas.getContext('2d')
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height)
-    }
-    setUserStrokes([])
-    currentStrokePoints.current = []
-    setEvaluation(null)
-    setHasSubmitted(false)
   }
 
   const handleUndo = () => {

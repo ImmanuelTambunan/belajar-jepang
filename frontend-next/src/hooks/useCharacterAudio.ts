@@ -9,7 +9,6 @@ import {
   playCharacterAudio,
   stopAllAudioPlayback,
   initVoiceCache,
-  getBestJapaneseVoice,
 } from '@/utils/audio'
 
 export interface UseCharacterAudioState {

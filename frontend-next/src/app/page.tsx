@@ -2,14 +2,24 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
+import {
+  Sparkles,
+  BookOpen,
+  PenTool,
+  Award,
+  BarChart3,
+  Settings,
+  ArrowRight,
+  CheckCircle2,
+  Target,
+  Flame,
+  RefreshCw,
+  Cpu,
+} from 'lucide-react'
 import { CharacterData } from '@/types/character'
-import { Header } from '@/components/Header'
-import { ServiceCards } from '@/components/ServiceCards'
-import { StrokeCanvas } from '@/components/StrokeCanvas'
-import { HealthChecker } from '@/components/HealthChecker'
-import { AudioSpeakerButton } from '@/components/AudioSpeakerButton'
-import { AudioManagerModal } from '@/components/AudioManagerModal'
+import { UserProgress } from '@/types/progress'
 import { useCharacterAudio } from '@/hooks/useCharacterAudio'
+import { AudioSpeakerButton } from '@/components/AudioSpeakerButton'
 import rawHiraganaData from '@/data/hiragana_46.json'
 
 interface RawHiraganaItem {
@@ -21,8 +31,7 @@ interface RawHiraganaItem {
   strokes: string[]
 }
 
-// Generate complete fallback dataset from hiragana_46.json (46 characters)
-const FALLBACK_HIRAGANA: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]).map(
+const FALLBACK_ALL: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]).map(
   (item, idx) => ({
     id: idx + 1,
     character: item.symbol,
@@ -38,7 +47,7 @@ const FALLBACK_HIRAGANA: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]
         id: idx + 1,
         character_id: idx + 1,
         romaji: item.reading,
-        meaning: `Huruf Hiragana ${item.symbol} (${item.reading})`,
+        meaning: `Karakter Hiragana ${item.symbol} (${item.reading})`,
       },
     ],
     strokes: item.strokes.map((st, sIdx) => ({
@@ -52,453 +61,531 @@ const FALLBACK_HIRAGANA: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]
   })
 )
 
-interface RowTab {
-  id: string
-  label: string
-  sublabel: string
-  rowGroups: string[]
-}
+const LOCAL_STORAGE_KEY = 'nihongo_sora_character_progress'
+const LOCAL_STORAGE_EXAM_KEY = 'nihongo_sora_exam_history'
 
-const ROW_TABS: RowTab[] = [
-  {
-    id: 'all',
-    label: 'Semua',
-    sublabel: '46 Karakter',
-    rowGroups: ['vowel', 'ka', 'sa', 'ta', 'na', 'ha', 'ma', 'ya', 'ra', 'wa', 'n'],
-  },
-  { id: 'vowel', label: 'A', sublabel: 'A, I, U, E, O', rowGroups: ['vowel'] },
-  { id: 'ka', label: 'Ka', sublabel: 'Ka, Ki, Ku, Ke, Ko', rowGroups: ['ka'] },
-  { id: 'sa', label: 'Sa', sublabel: 'Sa, Shi, Su, Se, So', rowGroups: ['sa'] },
-  { id: 'ta', label: 'Ta', sublabel: 'Ta, Chi, Tsu, Te, To', rowGroups: ['ta'] },
-  { id: 'na', label: 'Na', sublabel: 'Na, Ni, Nu, Ne, No', rowGroups: ['na'] },
-  { id: 'ha', label: 'Ha', sublabel: 'Ha, Hi, Fu, He, Ho', rowGroups: ['ha'] },
-  { id: 'ma', label: 'Ma', sublabel: 'Ma, Mi, Mu, Me, Mo', rowGroups: ['ma'] },
-  { id: 'ya', label: 'Ya', sublabel: 'Ya, Yu, Yo', rowGroups: ['ya'] },
-  { id: 'ra', label: 'Ra', sublabel: 'Ra, Ri, Ru, Re, Ro', rowGroups: ['ra'] },
-  { id: 'wa_n', label: 'Wa/N', sublabel: 'Wa, Wo, N', rowGroups: ['wa', 'n'] },
-]
-
-export default function Home() {
+export default function HomePage() {
   const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
-  const [characters, setCharacters] = useState<CharacterData[]>(FALLBACK_HIRAGANA)
-  const [selectedChar, setSelectedChar] = useState<CharacterData | null>(
-    FALLBACK_HIRAGANA[0]
-  )
-  const [activeTab, setActiveTab] = useState<string>('all')
-  const [loading, setLoading] = useState(false)
-  const [isLiveApi, setIsLiveApi] = useState(false)
-  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [progressMap, setProgressMap] = useState<Record<number, UserProgress>>({})
+  const [examCount, setExamCount] = useState<number>(0)
+  const [lastExamScore, setLastExamScore] = useState<number | null>(null)
+  const [isBackendLive, setIsBackendLive] = useState<boolean | null>(null)
+  const [isPinging, setIsPinging] = useState<boolean>(false)
+  const [latency, setLatency] = useState<number | null>(null)
 
-  // Character Audio Hook for Layered Native/Web Speech Playback
-  const { play: playAudio, isItemPlaying, activeSource } = useCharacterAudio()
-  const [isAudioModalOpen, setIsAudioModalOpen] = useState(false)
-  const [modalRomaji, setModalRomaji] = useState('a')
+  // Spotlight character
+  const [spotlightChar, setSpotlightChar] = useState<CharacterData>(FALLBACK_ALL[0])
+  const { play: playAudio, isItemPlaying } = useCharacterAudio()
 
-  // Fetch Hiragana dataset from Golang Fiber Backend
-  const fetchHiragana = useCallback(async () => {
-    setLoading(true)
-    setFetchError(null)
-
+  // Load user progress and exam history
+  const loadLocalData = useCallback(() => {
+    if (typeof window === 'undefined') return
     try {
-      const res = await fetch(`${apiBaseUrl}/characters/hiragana`)
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+      const storedProgress = localStorage.getItem(LOCAL_STORAGE_KEY)
+      if (storedProgress) {
+        setProgressMap(JSON.parse(storedProgress))
       }
-      const json = await res.json()
-      if (json.data && json.data.length > 0) {
-        // Normalize any missing fields for frontend compatibility
-        const normalized: CharacterData[] = json.data.map((c: CharacterData, idx: number) => ({
-          ...c,
-          character: c.character || c.symbol || '',
-          symbol: c.symbol || c.character || '',
-          strokes_count: c.strokes_count || c.stroke_count || c.strokes?.length || 0,
-          strokes: (c.strokes || []).map((s, sIdx) => ({
-            ...s,
-            stroke_order: s.stroke_order ?? s.stroke_number ?? sIdx + 1,
-            stroke_number: s.stroke_number ?? s.stroke_order ?? sIdx + 1,
-            svg_path: s.svg_path || s.path_data || '',
-            path_data: s.path_data || s.svg_path || '',
-          })),
-        }))
 
-        setCharacters(normalized)
-        // Keep current selected character if exists, else first
-        setSelectedChar((prev) => {
-          if (!prev) return normalized[0]
-          const match = normalized.find(
-            (item) => item.character === prev.character || item.symbol === prev.symbol
-          )
-          return match || normalized[0]
-        })
-        setIsLiveApi(true)
-      } else {
-        throw new Error('Endpoint tidak mengembalikan data karakter')
+      const storedExam = localStorage.getItem(LOCAL_STORAGE_EXAM_KEY)
+      if (storedExam) {
+        const exams = JSON.parse(storedExam)
+        if (Array.isArray(exams) && exams.length > 0) {
+          setExamCount(exams.length)
+          const last = exams[exams.length - 1]
+          setLastExamScore(Math.round(last.score_percentage || 0))
+        }
       }
-    } catch (err: unknown) {
-      setIsLiveApi(false)
-      if (err instanceof Error) {
-        setFetchError(err.message)
-      } else {
-        setFetchError('Gagal memuat data dari Golang backend.')
-      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  // Ping backend status
+  const pingBackend = useCallback(async () => {
+    setIsPinging(true)
+    const t0 = performance.now()
+    try {
+      const res = await fetch(`${apiBaseUrl}/health`)
+      const t1 = performance.now()
+      setLatency(Math.round(t1 - t0))
+      setIsBackendLive(res.ok)
+    } catch {
+      setIsBackendLive(false)
+      setLatency(null)
     } finally {
-      setLoading(false)
+      setIsPinging(false)
     }
   }, [apiBaseUrl])
 
   useEffect(() => {
-    fetchHiragana()
-  }, [fetchHiragana])
+    loadLocalData()
+    pingBackend()
 
-  // Filter characters according to selected row tab
-  const filteredCharacters = useMemo(() => {
-    const currentTabConfig = ROW_TABS.find((t) => t.id === activeTab)
-    if (!currentTabConfig || currentTabConfig.id === 'all') {
-      return characters
+    // Randomize spotlight character
+    const randIndex = Math.floor(Math.random() * FALLBACK_ALL.length)
+    setSpotlightChar(FALLBACK_ALL[randIndex])
+
+    const handleProgressChange = () => loadLocalData()
+    window.addEventListener('nihongo_sora_progress_updated', handleProgressChange)
+    window.addEventListener('storage', handleProgressChange)
+
+    return () => {
+      window.removeEventListener('nihongo_sora_progress_updated', handleProgressChange)
+      window.removeEventListener('storage', handleProgressChange)
     }
-    return characters.filter((c) => {
-      const group = (c.row_group || '').toLowerCase()
-      return currentTabConfig.rowGroups.includes(group)
-    })
-  }, [characters, activeTab])
+  }, [loadLocalData, pingBackend])
 
-  // Distinct palette colors for stroke segments
-  const strokeColors = ['#0284c7', '#ec4899', '#10b981', '#f97316', '#8b5cf6', '#06b6d4']
+  // Progress summary calculation
+  const stats = useMemo(() => {
+    const total = 46
+    let memorized = 0
+    let learning = 0
+    let totalScore = 0
+    let scoredCount = 0
+
+    Object.values(progressMap).forEach((p) => {
+      if (p.status === 'memorized') {
+        memorized++
+      } else if (p.status === 'learning') {
+        learning++
+      }
+      if (p.accuracy_score !== undefined && p.accuracy_score !== null) {
+        totalScore += p.accuracy_score
+        scoredCount++
+      }
+    })
+
+    const percent = Math.round((memorized / total) * 100)
+    const avgScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : 0
+
+    return {
+      total,
+      memorized,
+      learning: learning > 0 ? learning : total - memorized,
+      percent,
+      avgScore,
+      unmemorized: total - memorized,
+    }
+  }, [progressMap])
 
   return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-colors duration-300">
-      {/* HEADER WITH THEME TOGGLE */}
-      <Header />
-
-      {/* SERVICE ARCHITECTURE CARDS */}
-      <ServiceCards />
-
-      {/* STATUS BANNER */}
-      <div className="flex flex-col sm:flex-row items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 gap-4 mb-8 shadow-sm dark:shadow-none transition-colors">
-        <div className="flex items-center gap-3">
-          <span
-            className={`w-3 h-3 rounded-full ${
-              isLiveApi ? 'bg-emerald-500 dark:bg-emerald-400 animate-pulse' : 'bg-amber-500 dark:bg-amber-400'
-            }`}
-          />
-          <div>
-            <p className="text-sm font-semibold text-slate-900 dark:text-white">
-              {isLiveApi
-                ? `🟢 Terhubung ke Backend Golang Fiber (${characters.length} Karakter Hiragana Live)`
-                : `🟡 Mode Fallback Lokal (Menampilkan ${characters.length} Karakter Lengkap)`}
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Endpoint: <code className="text-sky-700 dark:text-sky-300 font-mono">{apiBaseUrl}/characters/hiragana</code>
-              {fetchError && ` • Info: ${fetchError}`}
-            </p>
-          </div>
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      {/* ========================================================================= */}
+      {/* 1. HERO SECTION */}
+      {/* ========================================================================= */}
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-sky-50 via-white to-slate-50 dark:from-slate-900/90 dark:via-slate-900/50 dark:to-slate-950 border border-slate-200/80 dark:border-slate-800/80 p-8 sm:p-12 mb-10 shadow-sm dark:shadow-none">
+        {/* Japanese Calligraphy Watermark in Background */}
+        <div className="absolute right-4 -bottom-10 pointer-events-none select-none text-[140px] sm:text-[220px] font-serif font-black text-slate-200/40 dark:text-slate-800/20 leading-none z-0">
+          空
         </div>
 
-        <button
-          onClick={fetchHiragana}
-          disabled={loading}
-          className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-sky-700 dark:text-sky-300 border border-slate-200 dark:border-slate-700 transition cursor-pointer flex items-center gap-2 whitespace-nowrap shadow-sm"
-        >
-          {loading ? (
-            <>
-              <span className="w-3 h-3 border-2 border-sky-500 dark:border-sky-300 border-t-transparent rounded-full animate-spin"></span>
-              <span>Memuat...</span>
-            </>
-          ) : (
-            <>
-              <span>🔄 Refresh Data API</span>
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* PRACTICE MODE CTA BANNER */}
-      <div className="mb-8 p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-600/20 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4 text-center sm:text-left">
-          <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl backdrop-blur-sm shrink-0">
-            🧠
+        <div className="relative z-10 max-w-3xl">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-100 dark:bg-sky-950/80 border border-sky-300 dark:border-sky-800 text-sky-800 dark:text-sky-300 text-xs font-bold mb-4 shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+            <span>Nihongo Sora v2.0 • Arsitektur Multi-Page Terstruktur</span>
           </div>
-          <div>
-            <h3 className="text-base font-bold">
-              Siap Menguji Daya Ingat? Masuk ke Mode Latihan Hafalan!
-            </h3>
-            <p className="text-xs text-sky-100 mt-0.5">
-              Uji ingatan dengan active recall bertahap, audio ja-JP, dan kanvas tracing goresan untuk melatih memori otot.
-            </p>
+
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+            Kuasai 46 Hiragana dengan{' '}
+            <span className="bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-500 dark:from-sky-400 dark:via-indigo-300 dark:to-rose-400 bg-clip-text text-transparent">
+              Presisi Kaligrafi Digital
+            </span>
+          </h1>
+
+          <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
+            Platform komprehensif pembelajaran bahasa Jepang berbasis decoupled stack:{' '}
+            <strong className="text-slate-800 dark:text-slate-100">Next.js 16</strong> di frontend dan{' '}
+            <strong className="text-slate-800 dark:text-slate-100">Golang Fiber + GORM</strong> di backend.
+            Dilengkapi simulasi goresan KanjiVG (Hitsujun), audio native pelafalan ja-JP, dan studio tracing interaktif.
+          </p>
+
+          {/* QUICK CTAs */}
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-8">
+            <Link
+              href="/practice"
+              className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-sm shadow-md shadow-sky-600/25 flex items-center gap-2 transition active:scale-98"
+            >
+              <PenTool className="w-4 h-4" />
+              <span>Lanjutkan Studio Tracing</span>
+              <ArrowRight className="w-4 h-4 ml-0.5" />
+            </Link>
+
+            <Link
+              href="/exam"
+              className="px-6 py-3.5 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-800 dark:text-white font-bold text-sm border border-slate-300 dark:border-slate-700 shadow-sm flex items-center gap-2 transition active:scale-98"
+            >
+              <Award className="w-4 h-4 text-amber-500" />
+              <span>Mulai Ujian Cepat</span>
+            </Link>
+
+            <Link
+              href="/learn"
+              className="px-5 py-3.5 rounded-2xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 text-sm font-semibold flex items-center gap-2 transition"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>Koleksi 46 Huruf</span>
+            </Link>
           </div>
-        </div>
-        <Link
-          href="/practice"
-          className="px-5 py-3 rounded-2xl bg-white text-indigo-700 hover:bg-slate-100 font-bold text-xs sm:text-sm whitespace-nowrap shadow-md transition active:scale-98 shrink-0"
-        >
-          Mulai Latihan Hafalan →
-        </Link>
-      </div>
-
-      {/* HIRAGANA ROW FILTER TABS */}
-      <section className="mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span>🎌</span> Koleksi Hiragana 46 Karakter (Gojūon)
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Kelompok baris: Vokal, Ka, Sa, Ta, Na, Ha, Ma, Ya, Ra, Wa/N
-            </p>
-          </div>
-          <span className="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium self-start sm:self-auto border border-slate-200 dark:border-slate-700">
-            Menampilkan {filteredCharacters.length} dari {characters.length} Huruf
-          </span>
-        </div>
-
-        {/* Tab / Grid Filter Buttons */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 mb-4">
-          {ROW_TABS.map((tab) => {
-            const isActive = activeTab === tab.id
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex flex-col items-center border ${
-                  isActive
-                    ? 'bg-sky-600 dark:bg-sky-500 text-white border-sky-600 dark:border-sky-500 shadow-sm shadow-sky-500/30'
-                    : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
-                }`}
-              >
-                <span className="leading-tight">{tab.label}</span>
-                <span
-                  className={`text-[10px] font-normal leading-tight ${
-                    isActive ? 'text-sky-100' : 'text-slate-400 dark:text-slate-500'
-                  }`}
-                >
-                  {tab.sublabel}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* CHARACTER GRID */}
-        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-8 lg:grid-cols-10 gap-2 sm:gap-2.5">
-          {filteredCharacters.map((item) => {
-            const isSelected =
-              selectedChar?.id === item.id ||
-              selectedChar?.character === item.character ||
-              selectedChar?.symbol === item.symbol
-            const isPlaying = isItemPlaying(item)
-
-            return (
-              <div
-                key={item.id || item.character}
-                role="button"
-                tabIndex={0}
-                onClick={() => setSelectedChar(item)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    setSelectedChar(item)
-                  }
-                }}
-                className={`py-3 px-2 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center relative overflow-hidden group select-none ${
-                  isSelected
-                    ? 'bg-gradient-to-b from-sky-50 to-indigo-50 dark:from-sky-500/20 dark:to-indigo-600/20 border-sky-500 text-slate-950 dark:text-white shadow-md dark:shadow-lg dark:shadow-sky-950 scale-105 ring-2 ring-sky-400/50'
-                    : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-sky-300 dark:hover:border-slate-700 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-850 shadow-sm dark:shadow-none'
-                }`}
-              >
-                {/* Floating audio speaker button in top-right corner */}
-                <div className="absolute top-1.5 right-1.5 z-10">
-                  <AudioSpeakerButton
-                    character={item}
-                    isPlaying={isPlaying}
-                    onPlay={() => playAudio(item)}
-                    size="xs"
-                    stopPropagation={true}
-                    title={`Dengarkan pelafalan ${item.character || item.symbol} (/${item.readings?.[0]?.romaji || ''}/)`}
-                  />
-                </div>
-
-                <span className="text-2xl sm:text-3xl font-black mb-0.5 group-hover:scale-110 transition-transform">
-                  {item.character || item.symbol}
-                </span>
-                <span className="text-[11px] font-mono uppercase tracking-wider text-sky-700 dark:text-sky-400 font-semibold">
-                  /{item.readings?.[0]?.romaji || '-'}/
-                </span>
-                <span className="text-[9px] text-slate-400 dark:text-slate-500">
-                  {item.strokes_count || item.stroke_count || item.strokes?.length} Goresan
-                </span>
-              </div>
-            )
-          })}
         </div>
       </section>
 
-      {/* SELECTED CHARACTER DETAIL & PREVIEW */}
-      {selectedChar && (
-        <section className="mb-10">
-          <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 mb-8 grid grid-cols-1 md:grid-cols-12 gap-8 items-center shadow-sm dark:shadow-none transition-colors">
-            {/* SVG Visual preview */}
-            <div className="md:col-span-4 flex flex-col items-center">
-              <div className="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-slate-700/80 p-4 flex items-center justify-center relative shadow-inner">
-                <svg viewBox="0 0 109 109" className="w-full h-full drop-shadow-md">
-                  {selectedChar.strokes.map((stroke, index) => {
-                    const strokeColor =
-                      strokeColors[index % strokeColors.length]
-                    return (
-                      <path
-                        key={stroke.id || index}
-                        d={stroke.svg_path || stroke.path_data}
-                        stroke={strokeColor}
-                        strokeWidth="5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        fill="none"
-                      />
-                    )
-                  })}
-                </svg>
-              </div>
+      {/* ========================================================================= */}
+      {/* 2. RINGKASAN PROGRES BELAJAR HARI INI */}
+      {/* ========================================================================= */}
+      <section className="mb-12">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Target className="w-5 h-5 text-sky-500" />
+              <span>Ringkasan Progres Belajar Hari Ini</span>
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              Pantau akumulasi hafalan, akurasi tracing kaligrafi, dan hasil ujian Anda.
+            </p>
+          </div>
 
-              {/* Stroke tags */}
-              <div className="flex flex-wrap gap-1.5 mt-3 justify-center">
-                {selectedChar.strokes.map((stroke, index) => {
-                  const strokeColor =
-                    strokeColors[index % strokeColors.length]
-                  return (
-                    <span
-                      key={stroke.id || index}
-                      className="text-[11px] font-mono px-2 py-0.5 rounded-md border font-semibold"
-                      style={{
-                        borderColor: `${strokeColor}55`,
-                        color: strokeColor,
-                        backgroundColor: `${strokeColor}15`,
-                      }}
-                    >
-                      Goresan #{stroke.stroke_order ?? stroke.stroke_number ?? index + 1}
-                    </span>
-                  )
-                })}
-              </div>
+          <Link
+            href="/analytics"
+            className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 self-start sm:self-auto"
+          >
+            <span>Lihat Statistik Lengkap</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Hafalan */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Penguasaan Huruf
+              </span>
+              <span className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="w-4 h-4" />
+              </span>
             </div>
-
-            {/* Information & Metadata */}
-            <div className="md:col-span-8 flex flex-col justify-between">
-              <div>
-                <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider uppercase bg-sky-100 dark:bg-sky-950 border border-sky-300 dark:border-sky-800 text-sky-800 dark:text-sky-300">
-                    {selectedChar.script_type || selectedChar.type || 'hiragana'}
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase bg-purple-100 dark:bg-purple-950 border border-purple-300 dark:border-purple-800 text-purple-800 dark:text-purple-300">
-                    Baris: {selectedChar.row_group || 'vowel'}
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 dark:bg-indigo-950 border border-indigo-300 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300">
-                    JLPT {selectedChar.jlpt_level || 'N5'}
-                  </span>
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300">
-                    {selectedChar.strokes_count || selectedChar.stroke_count || selectedChar.strokes?.length} Goresan
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-baseline gap-4 mr-2">
-                    <h3 className="text-5xl font-black text-slate-900 dark:text-white">
-                      {selectedChar.character || selectedChar.symbol}
-                    </h3>
-                    <span className="text-2xl font-mono text-sky-600 dark:text-sky-400 font-semibold">
-                      /{selectedChar.readings?.[0]?.romaji}/
-                    </span>
-                  </div>
-
-                  <AudioSpeakerButton
-                    character={selectedChar}
-                    isPlaying={isItemPlaying(selectedChar)}
-                    activeSource={activeSource}
-                    onPlay={() => playAudio(selectedChar)}
-                    size="md"
-                    variant="badge"
-                    label="Putar Suara Pelafalan"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setModalRomaji(selectedChar.readings?.[0]?.romaji || 'a')
-                      setIsAudioModalOpen(true)
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl border border-purple-300 dark:border-purple-700/70 bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
-                    title="Unggah atau ganti file rekaman suara kustom untuk huruf ini"
-                  >
-                    <span>🎙️</span>
-                    <span>Kustomisasi Suara Karakter</span>
-                  </button>
-                </div>
-
-                <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 font-medium">
-                  {selectedChar.readings?.[0]?.meaning ||
-                    `Karakter Hiragana ${selectedChar.character} (${selectedChar.readings?.[0]?.romaji})`}
-                </p>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-slate-900 dark:text-white">
+                  {stats.memorized}
+                </span>
+                <span className="text-sm font-semibold text-slate-400">
+                  / 46 Huruf
+                </span>
               </div>
-
-              {/* Stroke coordinates preview */}
-              <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
-                <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                  Koordinat KanjiVG SVG Path:
-                </h4>
-                <div className="space-y-1.5 max-h-32 overflow-y-auto pr-2">
-                  {selectedChar.strokes.map((st, sIdx) => (
-                    <div
-                      key={st.id || sIdx}
-                      className="flex items-center gap-2 text-xs font-mono bg-slate-50 dark:bg-slate-950/70 p-2 rounded-lg border border-slate-200 dark:border-slate-800/80"
-                    >
-                      <span className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-sky-700 dark:text-sky-300 text-[10px] font-bold">
-                        #{st.stroke_order ?? st.stroke_number ?? sIdx + 1}
-                      </span>
-                      <code className="text-slate-600 dark:text-slate-400 truncate select-all">
-                        {st.svg_path || st.path_data}
-                      </code>
-                    </div>
-                  ))}
-                </div>
+              {/* Progress Bar */}
+              <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-3 overflow-hidden">
+                <div
+                  className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${stats.percent}%` }}
+                />
               </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
+                {stats.percent}% kurikulum Hiragana Gojūon terkuasai
+              </p>
             </div>
           </div>
 
-          {/* INTERACTIVE STROKE CANVAS (CLIENT COMPONENT) */}
-          <StrokeCanvas character={selectedChar} />
-        </section>
-      )}
+          {/* Card 2: Sedang Dipelajari */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Perlu Diulang
+              </span>
+              <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
+                <Flame className="w-4 h-4" />
+              </span>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-slate-900 dark:text-white">
+                  {stats.unmemorized}
+                </span>
+                <span className="text-sm font-semibold text-slate-400">
+                  Karakter
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-3 font-medium">
+                Tersedia dalam antrean spaced repetition di Studio Tracing
+              </p>
+            </div>
+          </div>
 
-      {/* HEALTH CHECKER INTERFACE */}
-      <HealthChecker apiBaseUrl={apiBaseUrl} />
+          {/* Card 3: Rata-rata Skor Tracing */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Akurasi Tracing
+              </span>
+              <span className="p-2 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400">
+                <PenTool className="w-4 h-4" />
+              </span>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-slate-900 dark:text-white">
+                  {stats.avgScore > 0 ? `${stats.avgScore}%` : '-'}
+                </span>
+                <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">
+                  {stats.avgScore >= 80 ? 'Grade A' : stats.avgScore >= 60 ? 'Grade B' : 'Latihan'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-3 font-medium">
+                Skor algoritma presisi jarak Hausdorff & urutan goresan
+              </p>
+            </div>
+          </div>
 
-      {/* FOOTER & STATUS BAR */}
-      <footer className="text-center py-10 mt-12 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 transition-colors">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 dark:bg-slate-850 border border-slate-200 dark:border-slate-750 mb-3 text-slate-700 dark:text-slate-300 font-medium shadow-sm">
-          <span
-            className={`w-2 h-2 rounded-full ${
-              isLiveApi ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
-            }`}
-          />
-          <span>
-            {isLiveApi
-              ? `Terhubung ke Backend Golang Fiber (${characters.length} Karakter Hiragana Live)`
-              : `Mode Fallback Lokal (${characters.length} Karakter Hiragana)`}
-          </span>
+          {/* Card 4: Sesi Ujian Terakhir */}
+          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Riwayat Ujian
+              </span>
+              <span className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
+                <Award className="w-4 h-4" />
+              </span>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-slate-900 dark:text-white">
+                  {lastExamScore !== null ? `${lastExamScore}%` : '-'}
+                </span>
+                <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">
+                  {examCount} Kali Ujian
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-3 font-medium">
+                {examCount > 0 ? 'Tersimpan otomatis ke database' : 'Belum ada ujian diselesaikan'}
+              </p>
+            </div>
+          </div>
         </div>
-        <p>
-          Nihongo Sora v2.0 • Proyek Belajar Bahasa Jepang (Hiragana 46 Karakter Gojūon Lengkap)
-        </p>
-        <p className="mt-1 text-slate-500 dark:text-slate-400">
-          Backend Golang Fiber + GORM • Frontend Next.js 16 (App Router + Tailwind CSS) • Native Laragon MySQL
-        </p>
-      </footer>
+      </section>
 
-      {/* Audio Manager Modal */}
-      <AudioManagerModal
-        isOpen={isAudioModalOpen}
-        onClose={() => setIsAudioModalOpen(false)}
-        initialSelectedRomaji={modalRomaji}
-      />
+      {/* ========================================================================= */}
+      {/* 3. SPOTLIGHT KARAKTER HARI INI & QUICK PRACTICE */}
+      {/* ========================================================================= */}
+      <section className="mb-12 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-sky-500/10 border border-indigo-200/80 dark:border-indigo-800/60 flex flex-col lg:flex-row items-center justify-between gap-6">
+        <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+          {/* Big symbol preview */}
+          <div className="w-24 h-24 rounded-2xl bg-white dark:bg-slate-900 shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0">
+            <span className="text-5xl font-black text-slate-900 dark:text-white">
+              {spotlightChar.symbol}
+            </span>
+          </div>
+
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-[11px] font-bold mb-1">
+              <span>🌟</span>
+              <span>Karakter Rekomendasi Hari Ini</span>
+            </div>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+              Hiragana {spotlightChar.symbol} (/{spotlightChar.readings?.[0]?.romaji}/)
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+              Baris: <strong className="uppercase">{spotlightChar.row_group}</strong> • {spotlightChar.strokes_count} Goresan (Hitsujun) • JLPT N5
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <AudioSpeakerButton
+            character={spotlightChar}
+            isPlaying={isItemPlaying(spotlightChar)}
+            onPlay={() => playAudio(spotlightChar)}
+            size="md"
+            variant="badge"
+            label="Putar Suara"
+          />
+
+          <Link
+            href={`/practice?char=${spotlightChar.symbol}`}
+            className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm shadow-md transition flex items-center gap-2"
+          >
+            <PenTool className="w-4 h-4" />
+            <span>Latih Tracing Huruf Ini →</span>
+          </Link>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 4. MODUL & FITUR UTAMA (ARSIKTETUR MPA) */}
+      {/* ========================================================================= */}
+      <section className="mb-12">
+        <div className="mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+            Eksplorasi Modul Pembelajaran
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Pilih area pembelajaran yang ingin Anda dalami hari ini.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {/* 1. Koleksi Huruf */}
+          <Link
+            href="/learn"
+            className="group p-6 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-sky-400 dark:hover:border-sky-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-sky-100 dark:bg-sky-950/80 text-sky-600 dark:text-sky-400 flex items-center justify-center text-xl mb-4 group-hover:scale-105 transition-transform">
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                Koleksi Huruf (Gojūon)
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                Katalog lengkap 46 karakter vokal dan konsonan Hiragana. Lengkap dengan filter baris, pemutar audio native, dan animasi urutan goresan.
+              </p>
+            </div>
+            <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-sky-600 dark:text-sky-400">
+              <span>Buka Koleksi Huruf</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* 2. Studio Tracing */}
+          <Link
+            href="/practice"
+            className="group p-6 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl mb-4 group-hover:scale-105 transition-transform">
+                <PenTool className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                Studio Tracing Mandiri
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                Kanvas bebas distraksi untuk melatih memori otot (muscle memory). Pilihan warna kuas Sumi kaligrafi, evaluasi skor akurasi instan, dan alur bertahap.
+              </p>
+            </div>
+            <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-indigo-600 dark:text-indigo-400">
+              <span>Masuk Studio Tracing</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* 3. Arena Ujian */}
+          <Link
+            href="/exam"
+            className="group p-6 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-purple-400 dark:hover:border-purple-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-950/80 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl mb-4 group-hover:scale-105 transition-transform">
+                <Award className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                Arena Ujian Adaptif
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                Tantang ingatan Anda melalui 3 mode ujian: Tebak Romaji, Ujian Audio Mendengar, dan Blind Tracing tanpa panduan garis. Lengkap dengan timer.
+              </p>
+            </div>
+            <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-purple-600 dark:text-purple-400">
+              <span>Mulai Ujian</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* 4. Dasbor Analitik */}
+          <Link
+            href="/analytics"
+            className="group p-6 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl mb-4 group-hover:scale-105 transition-transform">
+                <BarChart3 className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                Dasbor Analitik Belajar
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                Pantau visualisasi retensi hafalan, persentase akurasi goresan per kelompok baris (A, Ka, Sa...), dan log riwayat hasil ujian berkala.
+              </p>
+            </div>
+            <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-emerald-600 dark:text-emerald-400">
+              <span>Buka Analitik</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* 5. Pengaturan & Audio Manager */}
+          <Link
+            href="/settings"
+            className="group p-6 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl mb-4 group-hover:scale-105 transition-transform">
+                <Settings className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                Pusat Preferensi & Audio
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                Studio kustomisasi suara karakter: upload rekaman audio per huruf ke IndexedDB, atur kecepatan ucapan Web Speech, dan preferensi aplikasi.
+              </p>
+            </div>
+            <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-amber-600 dark:text-amber-400">
+              <span>Buka Pengaturan</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* 6. Arsitektur Decoupled Card */}
+          <div className="p-6 rounded-3xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <span className="p-2.5 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                  <Cpu className="w-5 h-5" />
+                </span>
+                <button
+                  type="button"
+                  onClick={pingBackend}
+                  disabled={isPinging}
+                  className="px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sky-700 dark:text-sky-300 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isPinging ? 'animate-spin' : ''}`} />
+                  <span>Ping API</span>
+                </button>
+              </div>
+
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                Status Decoupled Backend
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Golang Fiber + GORM di port 8000
+              </p>
+
+              <div className="mt-3 space-y-1.5 text-xs font-mono">
+                <div className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800">
+                  <span className="text-slate-500">API Health:</span>
+                  <span className={`font-bold flex items-center gap-1.5 ${isBackendLive ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                    <span className={`w-2 h-2 rounded-full ${isBackendLive ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                    {isBackendLive ? '200 OK' : 'Offline / Standalone'}
+                  </span>
+                </div>
+                {latency !== null && (
+                  <div className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800">
+                    <span className="text-slate-500">Latensi REST:</span>
+                    <span className="font-bold text-sky-600 dark:text-sky-400">
+                      {latency} ms
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-400 mt-4">
+              Aplikasi tetap berjalan mulus dengan data cadangan lokal jika backend offline.
+            </p>
+          </div>
+        </div>
+      </section>
     </main>
   )
 }

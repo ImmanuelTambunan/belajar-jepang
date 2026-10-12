@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
-import { Header } from '@/components/Header'
 import {
   AnalyticsOverview,
   RowAccuracyMetric,
@@ -334,11 +333,8 @@ export default function AnalyticsDashboardPage() {
 
   return (
     <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-colors duration-300">
-      {/* GLOBAL HEADER */}
-      <Header />
-
       {/* DASHBOARD HERO HEADER & STATUS */}
-      <div className="mt-8 mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
+      <div className="mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">

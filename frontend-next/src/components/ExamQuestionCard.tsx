@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { ExamQuestion } from '@/types/exam'
 import { BlindTracingQuizCanvas } from './BlindTracingQuizCanvas'
 import { AudioSpeakerButton } from './AudioSpeakerButton'
@@ -43,6 +43,12 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
     setTimeLeft(timerSeconds)
   }, [question.id, timerSeconds])
 
+  const handleTimeout = useCallback(() => {
+    if (isAnswered) return
+    setIsAnswered(true)
+    onAnswerQuestion(question.id, false, undefined, 0)
+  }, [isAnswered, onAnswerQuestion, question.id])
+
   // Timer countdown hook
   useEffect(() => {
     if (timerSeconds <= 0 || isAnswered) return
@@ -60,13 +66,7 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [timerSeconds, isAnswered, question.id])
-
-  const handleTimeout = () => {
-    if (isAnswered) return
-    setIsAnswered(true)
-    onAnswerQuestion(question.id, false, undefined, 0)
-  }
+  }, [timerSeconds, isAnswered, handleTimeout])
 
   // Handle multiple-choice selection (Tipe A & B)
   const handleSelectOption = (optionId: number) => {

@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Volume2, Loader2, Sparkles } from 'lucide-react'
+import { Volume2, Loader2 } from 'lucide-react'
 import { CharacterAudioInput, AudioPlaybackSource } from '@/utils/audio'
 
 interface AudioSpeakerButtonProps {
@@ -17,6 +17,38 @@ interface AudioSpeakerButtonProps {
   className?: string
   title?: string
 }
+
+// Soundwave Equalizer Bars Component
+const SoundWaveBars: React.FC<{
+  barHeight?: string
+  barWidth?: string
+  size?: 'xs' | 'sm' | 'md' | 'lg'
+}> = ({
+  barHeight = 'h-3.5',
+  barWidth = 'w-0.5',
+  size = 'md',
+}) => (
+  <div
+    className="flex items-end justify-center gap-0.5"
+    style={{ height: size === 'xs' ? '12px' : size === 'sm' ? '14px' : '18px' }}
+    aria-label="Audio sedang diputar"
+  >
+    <span
+      className={`${barWidth} ${barHeight} bg-current rounded-full animate-soundwave-1 inline-block`}
+    />
+    <span
+      className={`${barWidth} ${barHeight} bg-current rounded-full animate-soundwave-2 inline-block`}
+    />
+    <span
+      className={`${barWidth} ${barHeight} bg-current rounded-full animate-soundwave-3 inline-block`}
+    />
+    {size !== 'xs' && (
+      <span
+        className={`${barWidth} ${barHeight} bg-current rounded-full animate-soundwave-4 inline-block`}
+      />
+    )}
+  </div>
+)
 
 export const AudioSpeakerButton: React.FC<AudioSpeakerButtonProps> = ({
   character,
@@ -43,30 +75,6 @@ export const AudioSpeakerButton: React.FC<AudioSpeakerButtonProps> = ({
     `Dengarkan pelafalan ${character.symbol || character.character || ''} (${
       character.romaji || character.readings?.[0]?.romaji || ''
     })`
-
-  // Soundwave Equalizer Bars Component
-  const SoundWaveBars = ({ barHeight = 'h-3.5', barWidth = 'w-0.5' }) => (
-    <div
-      className="flex items-end justify-center gap-0.5"
-      style={{ height: size === 'xs' ? '12px' : size === 'sm' ? '14px' : '18px' }}
-      aria-label="Audio sedang diputar"
-    >
-      <span
-        className={`${barWidth} ${barHeight} bg-current rounded-full animate-soundwave-1 inline-block`}
-      />
-      <span
-        className={`${barWidth} ${barHeight} bg-current rounded-full animate-soundwave-2 inline-block`}
-      />
-      <span
-        className={`${barWidth} ${barHeight} bg-current rounded-full animate-soundwave-3 inline-block`}
-      />
-      {size !== 'xs' && (
-        <span
-          className={`${barWidth} ${barHeight} bg-current rounded-full animate-soundwave-4 inline-block`}
-        />
-      )}
-    </div>
-  )
 
   // Variant 1: Compact Icon-Only (Ideal for character grid cards & small tags)
   if (variant === 'icon') {

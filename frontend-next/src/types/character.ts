@@ -7,6 +7,8 @@ export interface StrokeItem {
   path_data?: string
 }
 
+export type StrokeData = StrokeItem
+
 export interface CharacterReading {
   id?: number
   character_id?: number

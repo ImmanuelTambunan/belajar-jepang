@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { CharacterData } from '@/types/character'
 import { ExamConfig, ExamQuestion, ExamResultSummary } from '@/types/exam'
-import { Header } from '@/components/Header'
 import { ExamConfigCard } from '@/components/ExamConfigCard'
 import { ExamQuestionCard } from '@/components/ExamQuestionCard'
 import { ExamResultSummaryView } from '@/components/ExamResultSummaryView'
 import { generateExamQuestions, calculateExamGrade } from '@/utils/examGenerator'
+import { Award } from 'lucide-react'
 import rawHiraganaData from '@/data/hiragana_46.json'
 
 interface RawHiraganaItem {
@@ -92,7 +92,6 @@ export default function ExamPage() {
           }
         }
       } catch {
-        // use fallback data
         setIsLiveApi(false)
       }
     }
@@ -230,73 +229,81 @@ export default function ExamPage() {
   }, [currentIndex, questions.length])
 
   return (
-    <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-colors duration-300">
-      {/* HEADER WITH NAVIGATION */}
-      <Header />
-
-      <div className="mt-8">
-        {/* EXAM STATE 1: CONFIGURATION */}
-        {examState === 'config' && (
-          <ExamConfigCard
-            onStartExam={handleStartExam}
-            totalAvailableCharacters={allCharacters.length}
-          />
-        )}
-
-        {/* EXAM STATE 2: IN PROGRESS */}
-        {examState === 'in_progress' && questions.length > 0 && (
-          <div>
-            {/* Top Interactive Progress Bar */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
-                <span>
-                  Kemajuan Ujian: <strong className="text-slate-900 dark:text-white">{currentIndex + 1}</strong> dari{' '}
-                  {questions.length} Soal
-                </span>
-                <span className="font-mono font-bold text-sky-600 dark:text-sky-400">
-                  {progressPercent}%
-                </span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-sky-500 via-indigo-500 to-rose-500 transition-all duration-300 rounded-full"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Active Question Card */}
-            <ExamQuestionCard
-              question={questions[currentIndex]}
-              questionIndex={currentIndex}
-              totalQuestions={questions.length}
-              timerSeconds={currentConfig?.timerSecondsPerQuestion || 0}
-              onAnswerQuestion={handleAnswerQuestion}
-              onNextQuestion={handleNextQuestion}
-              isLastQuestion={currentIndex === questions.length - 1}
-            />
+    <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 transition-colors duration-300">
+      {/* PAGE HEADER */}
+      {examState === 'config' && (
+        <div className="mb-8">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 text-xs font-bold">
+              <Award className="w-3.5 h-3.5" />
+              <span>Evaluasi & Ujian Hafalan Adaptif</span>
+            </span>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
+              {isLiveApi ? '🟢 Database Live' : '🟡 Offline Fallback'}
+            </span>
           </div>
-        )}
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+            Arena Ujian Hiragana
+          </h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
+            Pilih mode kuis, jumlah soal, dan batasan waktu untuk menguji daya ingat aktif Anda. Skor akhir akan dikalkulasikan dan disimpan ke database analitik.
+          </p>
+        </div>
+      )}
 
-        {/* EXAM STATE 3: RESULT SUMMARY */}
-        {examState === 'summary' && examSummary && (
+      {/* EXAM STATE 1: CONFIGURATION */}
+      {examState === 'config' && (
+        <ExamConfigCard
+          onStartExam={handleStartExam}
+          totalAvailableCharacters={allCharacters.length}
+        />
+      )}
+
+      {/* EXAM STATE 2: IN PROGRESS */}
+      {examState === 'in_progress' && questions.length > 0 && (
+        <div className="animate-in fade-in duration-300">
+          {/* Top Interactive Progress Bar */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
+              <span>
+                Kemajuan Ujian: <strong className="text-slate-900 dark:text-white">{currentIndex + 1}</strong> dari{' '}
+                {questions.length} Soal
+              </span>
+              <span className="font-mono font-bold text-sky-600 dark:text-sky-400">
+                {progressPercent}%
+              </span>
+            </div>
+            <div className="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-500 transition-all duration-300 rounded-full"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Active Question Card */}
+          <ExamQuestionCard
+            question={questions[currentIndex]}
+            questionIndex={currentIndex}
+            totalQuestions={questions.length}
+            timerSeconds={currentConfig?.timerSecondsPerQuestion || 0}
+            onAnswerQuestion={handleAnswerQuestion}
+            onNextQuestion={handleNextQuestion}
+            isLastQuestion={currentIndex === questions.length - 1}
+          />
+        </div>
+      )}
+
+      {/* EXAM STATE 3: RESULT SUMMARY */}
+      {examState === 'summary' && examSummary && (
+        <div className="animate-in fade-in duration-300">
           <ExamResultSummaryView
             summary={examSummary}
             onRetakeExam={handleRetakeExam}
             onNewConfig={handleNewConfig}
           />
-        )}
-      </div>
-
-      {/* FOOTER */}
-      <footer className="text-center py-10 mt-12 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 transition-colors">
-        <p>
-          Nihongo Sora v2.0 • Modul Ujian Hafalan & Blind Tracing Challenge
-        </p>
-        <p className="mt-1">
-          Backend Golang Fiber + GORM (MySQL) • Frontend Next.js 16 (App Router)
-        </p>
-      </footer>
+        </div>
+      )}
     </main>
   )
 }

@@ -166,6 +166,56 @@ export function stopAllAudioPlayback(): void {
 }
 
 /**
+ * User Preferences for Audio & Speech Synthesis
+ */
+export interface AudioUserPreferences {
+  rate: number
+  pitch: number
+  selectedVoiceURI?: string
+}
+
+export function getAudioPreferences(): AudioUserPreferences {
+  if (typeof window === 'undefined') {
+    return { rate: 0.85, pitch: 1.0 }
+  }
+  try {
+    const rate = parseFloat(localStorage.getItem('nihongo_sora_voice_rate') || '0.85')
+    const pitch = parseFloat(localStorage.getItem('nihongo_sora_voice_pitch') || '1.0')
+    const selectedVoiceURI = localStorage.getItem('nihongo_sora_voice_uri') || undefined
+    return {
+      rate: isNaN(rate) ? 0.85 : rate,
+      pitch: isNaN(pitch) ? 1.0 : pitch,
+      selectedVoiceURI,
+    }
+  } catch {
+    return { rate: 0.85, pitch: 1.0 }
+  }
+}
+
+export function saveAudioPreferences(prefs: AudioUserPreferences): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem('nihongo_sora_voice_rate', prefs.rate.toString())
+    localStorage.setItem('nihongo_sora_voice_pitch', prefs.pitch.toString())
+    if (prefs.selectedVoiceURI) {
+      localStorage.setItem('nihongo_sora_voice_uri', prefs.selectedVoiceURI)
+    } else {
+      localStorage.removeItem('nihongo_sora_voice_uri')
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function getAllJapaneseVoices(): SpeechSynthesisVoice[] {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return []
+  if (cachedJapaneseVoices.length === 0) {
+    initVoiceCache()
+  }
+  return cachedJapaneseVoices
+}
+
+/**
  * Plays speech using Web Speech API fallback
  */
 function playWebSpeech(
@@ -185,10 +235,14 @@ function playWebSpeech(
 
       const utterance = new SpeechSynthesisUtterance(textToSpeak)
       utterance.lang = 'ja-JP'
-      utterance.rate = options.rate ?? 0.85
-      utterance.pitch = options.pitch ?? 1.0
+      const prefs = getAudioPreferences()
+      utterance.rate = options.rate ?? prefs.rate ?? 0.85
+      utterance.pitch = options.pitch ?? prefs.pitch ?? 1.0
 
-      const voice = getBestJapaneseVoice()
+      const customVoice = prefs.selectedVoiceURI
+        ? cachedJapaneseVoices.find((v) => v.voiceURI === prefs.selectedVoiceURI)
+        : null
+      const voice = customVoice || getBestJapaneseVoice()
       if (voice) {
         utterance.voice = voice
       }
