@@ -3,6 +3,7 @@
 import React from 'react'
 import { Volume2, Loader2 } from 'lucide-react'
 import { CharacterAudioInput, AudioPlaybackSource } from '@/utils/audio'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface AudioSpeakerButtonProps {
   character: CharacterAudioInput
@@ -58,11 +59,16 @@ export const AudioSpeakerButton: React.FC<AudioSpeakerButtonProps> = ({
   onPlay,
   size = 'md',
   variant = 'icon',
-  label = 'Dengarkan Pelafalan',
+  label,
   stopPropagation = true,
   className = '',
   title,
 }) => {
+  const { language } = useLanguage()
+
+  const defaultLabel = language === 'id' ? 'Dengarkan Pelafalan' : 'Listen Pronunciation'
+  const currentLabel = label || defaultLabel
+
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (stopPropagation) {
       e.stopPropagation()
@@ -81,9 +87,13 @@ export const AudioSpeakerButton: React.FC<AudioSpeakerButtonProps> = ({
 
   const tooltipTitle =
     title ||
-    `Dengarkan pelafalan ${character.symbol || character.character || ''} (${
-      character.romaji || character.readings?.[0]?.romaji || ''
-    })`
+    (language === 'id'
+      ? `Dengarkan pelafalan ${character.symbol || character.character || ''} (${
+          character.romaji || character.readings?.[0]?.romaji || ''
+        })`
+      : `Listen to pronunciation of ${character.symbol || character.character || ''} (${
+          character.romaji || character.readings?.[0]?.romaji || ''
+        })`)
 
   // Variant 1: Compact Icon-Only (Ideal for character grid cards & small tags)
   if (variant === 'icon') {
@@ -151,11 +161,11 @@ export const AudioSpeakerButton: React.FC<AudioSpeakerButtonProps> = ({
         ) : (
           <Volume2 size={14} />
         )}
-        <span>{isPlaying ? 'Memutar...' : label}</span>
+        <span>{isPlaying ? (language === 'id' ? 'Memutar...' : 'Playing...') : currentLabel}</span>
         {activeSource && isPlaying && (
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/20 font-mono tracking-tight">
             {activeSource === 'custom'
-              ? '✨ Kustom'
+              ? (language === 'id' ? '✨ Kustom' : '✨ Custom')
               : activeSource === 'native'
               ? 'Native'
               : 'ja-JP'}
@@ -192,13 +202,13 @@ export const AudioSpeakerButton: React.FC<AudioSpeakerButtonProps> = ({
       ) : (
         <Volume2 size={18} className="shrink-0 text-sky-500 dark:text-sky-400" />
       )}
-      <span>{isPlaying ? 'Sedang Memutar Pelafalan...' : label}</span>
+      <span>{isPlaying ? (language === 'id' ? 'Sedang Memutar Pelafalan...' : 'Playing Pronunciation...') : currentLabel}</span>
       {isPlaying && activeSource && (
         <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/20 uppercase tracking-wider font-mono font-bold">
           {activeSource === 'custom'
-            ? '✨ Suara Kustom'
+            ? (language === 'id' ? '✨ Suara Kustom' : '✨ Custom Audio')
             : activeSource === 'native'
-            ? 'Audio Asli'
+            ? (language === 'id' ? 'Audio Asli' : 'Native Audio')
             : 'Web Speech ja-JP'}
         </span>
       )}

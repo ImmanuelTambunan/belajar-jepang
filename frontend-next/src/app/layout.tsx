@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
+import { LanguageProvider } from '@/context/LanguageContext'
 import { GamificationProvider } from '@/context/GamificationContext'
 import { XPToastContainer } from '@/components/XPToastContainer'
 import { LevelUpModal } from '@/components/LevelUpModal'
@@ -26,15 +27,17 @@ export default function RootLayout({
           defaultTheme="dark"
           enableSystem={true}
         >
-          <GamificationProvider>
-            <div className="flex min-h-screen flex-col">
-              <Navbar />
-              <div className="flex-1 w-full animate-fade-in">{children}</div>
-              <Footer />
-            </div>
-            <XPToastContainer />
-            <LevelUpModal />
-          </GamificationProvider>
+          <LanguageProvider>
+            <GamificationProvider>
+              <div className="flex min-h-screen flex-col">
+                <Navbar />
+                <div className="flex-1 w-full animate-fade-in">{children}</div>
+                <Footer />
+              </div>
+              <XPToastContainer />
+              <LevelUpModal />
+            </GamificationProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>

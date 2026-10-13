@@ -6,6 +6,7 @@ import { BlindTracingQuizCanvas } from './BlindTracingQuizCanvas'
 import { AudioSpeakerButton } from './AudioSpeakerButton'
 import { useCharacterAudio } from '@/hooks/useCharacterAudio'
 import { CharacterAudioInput } from '@/utils/audio'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface ExamQuestionCardProps {
   question: ExamQuestion
@@ -26,6 +27,7 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
   onNextQuestion,
   isLastQuestion,
 }) => {
+  const { t } = useLanguage()
   const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null)
   const [isAnswered, setIsAnswered] = useState<boolean>(false)
   const [timeLeft, setTimeLeft] = useState<number>(timerSeconds)
@@ -103,21 +105,21 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
     switch (question.type) {
       case 'romaji_to_kana':
         return {
-          label: 'Tipe A: Romaji ➔ Kana',
+          label: t('exam.type_a_badge'),
           color: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20',
-          desc: 'Pilih simbol Kana yang cocok dengan Romaji berikut:',
+          desc: t('exam.type_a_desc'),
         }
       case 'kana_to_romaji':
         return {
-          label: 'Tipe B: Kana ➔ Romaji',
+          label: t('exam.type_b_badge'),
           color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
-          desc: 'Pilih cara baca Romaji yang benar untuk simbol Kana berikut:',
+          desc: t('exam.type_b_desc'),
         }
       case 'blind_tracing':
         return {
-          label: 'Tipe C: Tantangan Blind Tracing',
+          label: t('exam.type_c_badge'),
           color: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
-          desc: 'Tuliskan karakter ini di kanvas tanpa garis panduan (ingatan langsung):',
+          desc: t('exam.type_c_desc'),
         }
     }
   }
@@ -130,7 +132,7 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-slate-200 dark:border-slate-800 gap-3">
         <div className="flex items-center gap-2.5">
           <span className="px-3 py-1 rounded-full text-xs font-black bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-mono">
-            Soal #{questionIndex + 1} dari {totalQuestions}
+            {t('exam.question_progress', { current: questionIndex + 1, total: totalQuestions })}
           </span>
           <span className={`px-3 py-1 rounded-full text-xs font-bold border ${badgeInfo.color}`}>
             {badgeInfo.label}
@@ -148,7 +150,7 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
               }`}
             >
               <span>⏱️</span>
-              <span>{timeLeft} detik</span>
+              <span>{timeLeft} {t('exam.seconds')}</span>
             </span>
           </div>
         )}
@@ -179,7 +181,7 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
             </div>
             <p className="text-xs text-sky-600/80 dark:text-sky-400/80 mt-2 font-medium flex items-center justify-center gap-1.5">
               <span>🎧</span>
-              <span>Dengarkan pelafalan huruf untuk mempermudah tebakan</span>
+              <span>{t('exam.audio_hint_a')}</span>
             </p>
           </div>
         )}
@@ -203,7 +205,7 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
             </div>
             <p className="text-xs text-purple-600/80 dark:text-purple-400/80 mt-2 font-medium flex items-center justify-center gap-1.5">
               <span>🎧</span>
-              <span>Uji Pendengaran: Dengarkan pelafalan lalu pilih cara baca Romajinya</span>
+              <span>{t('exam.audio_hint_b')}</span>
             </p>
           </div>
         )}
@@ -226,7 +228,7 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
               />
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Goreskan huruf Hiragana ini di kotak kaligrafi di bawah:
+              {t('exam.audio_hint_c')}
             </p>
           </div>
         )}
@@ -322,7 +324,7 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
                 <span className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs">
                   ✓
                 </span>
-                <span>Jawaban Benar! ({targetSymbol} = /{targetRomaji}/)</span>
+                <span>{t('exam.answer_correct', { char: targetSymbol, romaji: targetRomaji })}</span>
               </div>
             ) : (
               <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-bold text-sm">
@@ -330,7 +332,7 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
                   ✕
                 </span>
                 <span>
-                  Kurang Tepat. Jawaban benar: <strong className="text-slate-900 dark:text-white">{targetSymbol} (/{targetRomaji}/)</strong>
+                  {t('exam.answer_wrong', { char: targetSymbol, romaji: targetRomaji })}
                 </span>
               </div>
             )}
@@ -341,7 +343,7 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
             type="button"
             className="w-full sm:w-auto px-6 py-3 rounded-2xl font-black text-sm bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white shadow-lg shadow-sky-600/25 cursor-pointer transition active:scale-98 flex items-center justify-center gap-2"
           >
-            <span>{isLastQuestion ? 'Lihat Hasil Ujian 🏁' : 'Soal Berikutnya ➔'}</span>
+            <span>{isLastQuestion ? t('exam.finish_btn') : t('exam.next_btn')}</span>
           </button>
         </div>
       )}

@@ -1,8 +1,7 @@
-'use client'
-
 import React from 'react'
 import { OverallAccuracyResult } from '@/types/accuracy'
 import { ACCURACY_TIERS } from '@/utils/strokeScorer'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface AccuracyScoreCardProps {
   evaluation: OverallAccuracyResult
@@ -21,6 +20,7 @@ export const AccuracyScoreCard: React.FC<AccuracyScoreCardProps> = ({
   showOverlay,
   onToggleOverlay,
 }) => {
+  const { t, language } = useLanguage()
   const { score, grade, stars, japaneseLabel, indonesianLabel, summaryMessage, strokeEvaluations } =
     evaluation
   const tier = ACCURACY_TIERS[grade]
@@ -68,7 +68,7 @@ export const AccuracyScoreCard: React.FC<AccuracyScoreCardProps> = ({
               {score}%
             </span>
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Akurasi
+              {t('common.accuracy')}
             </span>
           </div>
         </div>
@@ -79,9 +79,19 @@ export const AccuracyScoreCard: React.FC<AccuracyScoreCardProps> = ({
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${tier.badgeBg} ${tier.badgeBorder} ${tier.badgeText}`}
             >
-              <span className="text-sm font-black">Skor {grade}</span>
+              <span className="text-sm font-black">{language === 'id' ? `Skor ${grade}` : `Grade ${grade}`}</span>
               <span>•</span>
-              <span>{indonesianLabel}</span>
+              <span>
+                {language === 'en'
+                  ? grade === 'A'
+                    ? 'Perfect'
+                    : grade === 'B'
+                    ? 'Good'
+                    : grade === 'C'
+                    ? 'Fair'
+                    : 'Needs Practice'
+                  : indonesianLabel}
+              </span>
             </span>
 
             {/* Stars rating */}
@@ -98,7 +108,9 @@ export const AccuracyScoreCard: React.FC<AccuracyScoreCardProps> = ({
                   </span>
                 ))
               ) : (
-                <span className="text-xs text-slate-500 dark:text-slate-400">Belum Berbintang</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {language === 'en' ? 'No Stars' : 'Belum Berbintang'}
+                </span>
               )}
             </div>
           </div>
@@ -188,7 +200,15 @@ export const AccuracyScoreCard: React.FC<AccuracyScoreCardProps> = ({
           }`}
         >
           <span>🎯</span>
-          <span>{showOverlay ? 'Overlay Akurasi: Aktif' : 'Tampilkan Overlay Akurasi'}</span>
+          <span>
+            {showOverlay
+              ? language === 'en'
+                ? 'Accuracy Overlay: On'
+                : 'Overlay Akurasi: Aktif'
+              : language === 'en'
+              ? 'Show Accuracy Overlay'
+              : 'Tampilkan Overlay Akurasi'}
+          </span>
         </button>
 
         <div className="flex items-center gap-2.5">
@@ -197,7 +217,7 @@ export const AccuracyScoreCard: React.FC<AccuracyScoreCardProps> = ({
             type="button"
             className="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition cursor-pointer shadow-sm"
           >
-            🔄 Coba Lagi
+            🔄 {t('common.retry')}
           </button>
 
           {onNext && (
@@ -207,7 +227,7 @@ export const AccuracyScoreCard: React.FC<AccuracyScoreCardProps> = ({
               type="button"
               className="px-5 py-2 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white shadow-md shadow-sky-600/20 transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
             >
-              <span>Lanjut Karakter Berikutnya</span>
+              <span>{t('common.next')}</span>
               <span>➔</span>
             </button>
           )}

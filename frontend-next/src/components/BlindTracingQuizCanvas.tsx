@@ -5,6 +5,7 @@ import { CharacterData } from '@/types/character'
 import { Point, OverallAccuracyResult } from '@/types/accuracy'
 import { evaluateAllStrokes } from '@/utils/strokeScorer'
 import { AccuracyVisualOverlay } from './AccuracyVisualOverlay'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface BlindTracingQuizCanvasProps {
   character: CharacterData
@@ -17,6 +18,7 @@ export const BlindTracingQuizCanvas: React.FC<BlindTracingQuizCanvasProps> = ({
   onAnswerSubmit,
   disabled = false,
 }) => {
+  const { language } = useLanguage()
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [isDrawing, setIsDrawing] = useState<boolean>(false)
   const lastPos = useRef<{ x: number; y: number } | null>(null)
@@ -250,7 +252,7 @@ export const BlindTracingQuizCanvas: React.FC<BlindTracingQuizCanvasProps> = ({
             disabled={userStrokes.length === 0}
             className="flex-1 py-2 px-3 rounded-xl text-xs font-black bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white shadow-md shadow-sky-600/20 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all active:scale-98"
           >
-            ✓ Kirim Goresan ({userStrokes.length}/{sortedStrokes.length})
+            {language === 'id' ? '✓ Kirim Goresan' : '✓ Submit Strokes'} ({userStrokes.length}/{sortedStrokes.length})
           </button>
         </div>
       ) : (
@@ -262,9 +264,13 @@ export const BlindTracingQuizCanvas: React.FC<BlindTracingQuizCanvasProps> = ({
                 : 'bg-rose-50 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-300'
             }`}
           >
-            <span>Akurasi Bentuk: {evaluation?.score}%</span>
+            <span>{language === 'id' ? 'Akurasi Bentuk' : 'Shape Accuracy'}: {evaluation?.score}%</span>
             <span>•</span>
-            <span>{evaluation && evaluation.score >= 70 ? '✓ Tepat' : '✕ Kurang Tepat'}</span>
+            <span>
+              {evaluation && evaluation.score >= 70
+                ? (language === 'id' ? '✓ Tepat' : '✓ Accurate')
+                : (language === 'id' ? '✕ Kurang Tepat' : '✕ Needs Practice')}
+            </span>
           </span>
         </div>
       )}

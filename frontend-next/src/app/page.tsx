@@ -22,6 +22,7 @@ import { ExamResultSummary } from '@/types/exam'
 import { useCharacterAudio } from '@/hooks/useCharacterAudio'
 import { AudioSpeakerButton } from '@/components/AudioSpeakerButton'
 import { useGamification } from '@/context/GamificationContext'
+import { useLanguage } from '@/context/LanguageContext'
 import {
   getCharactersNeedingReview,
   getLatestExamFromStorage,
@@ -72,6 +73,7 @@ const LOCAL_STORAGE_EXAM_KEY = 'nihongo_sora_exam_history'
 
 export default function HomePage() {
   const { currentXP, dailyStreak, levelInfo } = useGamification()
+  const { t } = useLanguage()
   const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
@@ -213,21 +215,18 @@ export default function HomePage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-100 dark:bg-sky-950/80 border border-sky-300 dark:border-sky-800 text-sky-800 dark:text-sky-300 text-xs font-bold mb-4 shadow-xs">
             <Sparkles className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-            <span>Nihongo Sora v2.0 • Arsitektur Multi-Page Terstruktur</span>
+            <span>{t('home.badge')}</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-            Kuasai 46 Hiragana dengan{' '}
+            {t('home.hero_title_prefix')}{' '}
             <span className="bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-500 dark:from-sky-400 dark:via-indigo-300 dark:to-rose-400 bg-clip-text text-transparent">
-              Presisi Kaligrafi Digital
+              {t('home.hero_title_highlight')}
             </span>
           </h1>
 
           <p className="mt-4 text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
-            Platform komprehensif pembelajaran bahasa Jepang berbasis decoupled stack:{' '}
-            <strong className="text-slate-800 dark:text-slate-100">Next.js 16</strong> di frontend dan{' '}
-            <strong className="text-slate-800 dark:text-slate-100">Golang Fiber + GORM</strong> di backend.
-            Dilengkapi simulasi goresan KanjiVG (Hitsujun), audio native pelafalan ja-JP, dan studio tracing interaktif.
+            {t('home.hero_desc')}
           </p>
 
           {/* QUICK CTAs */}
@@ -237,7 +236,7 @@ export default function HomePage() {
               className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-sm shadow-md shadow-sky-600/25 flex items-center gap-2 transition active:scale-98"
             >
               <PenTool className="w-4 h-4" />
-              <span>Studio Tracing</span>
+              <span>{t('home.cta_practice')}</span>
               <ArrowRight className="w-4 h-4 ml-0.5" />
             </Link>
 
@@ -253,10 +252,10 @@ export default function HomePage() {
                   ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white shadow-amber-500/25 ring-2 ring-amber-400/40'
                   : 'bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 hover:bg-amber-100'
               }`}
-              title="Latihan Kilat Huruf Lemah: Langsung ke antrean karakter dengan akurasi < 70% atau salah di sesi ujian"
+              title={t('home.srs_alert_desc', { count: needsReviewList.length })}
             >
               <Flame className={`w-4 h-4 ${needsReviewList.length > 0 ? 'fill-white text-white animate-pulse' : 'text-amber-500'}`} />
-              <span>Latihan Kilat Huruf Lemah ({needsReviewList.length})</span>
+              <span>{t('home.srs_alert_btn')} ({needsReviewList.length})</span>
             </Link>
 
             <Link
@@ -264,7 +263,7 @@ export default function HomePage() {
               className="px-6 py-3.5 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-800 dark:text-white font-bold text-sm border border-slate-300 dark:border-slate-700 shadow-sm flex items-center gap-2 transition active:scale-98"
             >
               <Award className="w-4 h-4 text-amber-500" />
-              <span>Arena Ujian</span>
+              <span>{t('home.cta_exam')}</span>
             </Link>
 
             <Link
@@ -272,7 +271,7 @@ export default function HomePage() {
               className="px-5 py-3.5 rounded-2xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 text-sm font-semibold flex items-center gap-2 transition"
             >
               <BookOpen className="w-4 h-4" />
-              <span>Koleksi 46 Huruf</span>
+              <span>{t('home.cta_learn')}</span>
             </Link>
           </div>
         </div>
@@ -302,7 +301,7 @@ export default function HomePage() {
               <span>•</span>
               <span className="inline-flex items-center gap-1 font-bold text-orange-600 dark:text-orange-400">
                 <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500 animate-pulse" />
-                <span>Streak {dailyStreak} Hari Berturut-turut</span>
+                <span>Streak {dailyStreak} {t('nav.streak')}</span>
               </span>
             </div>
           </div>
@@ -488,13 +487,13 @@ export default function HomePage() {
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-[11px] font-bold mb-1">
               <span>🌟</span>
-              <span>Karakter Rekomendasi Hari Ini</span>
+              <span>{t('home.spotlight_badge')}</span>
             </div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-white">
               Hiragana {spotlightChar.symbol} (/{spotlightChar.readings?.[0]?.romaji}/)
             </h3>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
-              Baris: <strong className="uppercase">{spotlightChar.row_group}</strong> • {spotlightChar.strokes_count} Goresan (Hitsujun) • JLPT N5
+              {t('home.spotlight_row', { row: spotlightChar.row_group?.toUpperCase() || '' })} • {t('home.spotlight_strokes', { count: spotlightChar.strokes_count })} • JLPT N5
             </p>
           </div>
         </div>
@@ -506,7 +505,7 @@ export default function HomePage() {
             onPlay={() => handlePlayAudio(spotlightChar)}
             size="md"
             variant="badge"
-            label="Putar Suara"
+            label={t('home.spotlight_listen')}
           />
 
           <Link
@@ -514,7 +513,7 @@ export default function HomePage() {
             className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm shadow-md transition flex items-center gap-2"
           >
             <PenTool className="w-4 h-4" />
-            <span>Latih Tracing Huruf Ini →</span>
+            <span>{t('home.spotlight_practice_btn')} →</span>
           </Link>
         </div>
       </section>
@@ -524,11 +523,15 @@ export default function HomePage() {
       {/* ========================================================================= */}
       <section className="mb-12">
         <div className="mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 text-xs font-bold mb-2">
+            <span>✨</span>
+            <span>{t('home.features_badge')}</span>
+          </div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-            Eksplorasi Modul Pembelajaran
+            {t('home.features_title')}
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Pilih area pembelajaran yang ingin Anda dalami hari ini.
+            {t('home.features_desc')}
           </p>
         </div>
 
@@ -543,14 +546,14 @@ export default function HomePage() {
                 <BookOpen className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
-                Koleksi Huruf (Gojūon)
+                {t('home.card_learn_title')}
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
-                Katalog lengkap 46 karakter vokal dan konsonan Hiragana. Lengkap dengan filter baris, pemutar audio native, dan animasi urutan goresan.
+                {t('home.card_learn_desc')}
               </p>
             </div>
             <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-sky-600 dark:text-sky-400">
-              <span>Buka Koleksi Huruf</span>
+              <span>{t('home.cta_learn')}</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>
@@ -565,14 +568,14 @@ export default function HomePage() {
                 <PenTool className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                Studio Tracing Mandiri
+                {t('home.card_practice_title')}
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
-                Kanvas bebas distraksi untuk melatih memori otot (muscle memory). Pilihan warna kuas Sumi kaligrafi, evaluasi skor akurasi instan, dan alur bertahap.
+                {t('home.card_practice_desc')}
               </p>
             </div>
             <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-indigo-600 dark:text-indigo-400">
-              <span>Masuk Studio Tracing</span>
+              <span>{t('home.cta_practice')}</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>
@@ -587,14 +590,14 @@ export default function HomePage() {
                 <Award className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
-                Arena Ujian Adaptif
+                {t('home.card_exam_title')}
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
-                Tantang ingatan Anda melalui 3 mode ujian: Tebak Romaji, Ujian Audio Mendengar, dan Blind Tracing tanpa panduan garis. Lengkap dengan timer.
+                {t('home.card_exam_desc')}
               </p>
             </div>
             <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-purple-600 dark:text-purple-400">
-              <span>Mulai Ujian</span>
+              <span>{t('home.cta_exam')}</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>
@@ -609,14 +612,14 @@ export default function HomePage() {
                 <BarChart3 className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                Dasbor Analitik Belajar
+                {t('nav.analytics')}
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
-                Pantau visualisasi retensi hafalan, persentase akurasi goresan per kelompok baris (A, Ka, Sa...), dan log riwayat hasil ujian berkala.
+                {t('nav.analytics_sub')}
               </p>
             </div>
             <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-emerald-600 dark:text-emerald-400">
-              <span>Buka Analitik</span>
+              <span>{t('nav.analytics')}</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>
@@ -631,14 +634,14 @@ export default function HomePage() {
                 <Settings className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
-                Pusat Preferensi & Audio
+                {t('home.card_settings_title')}
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
-                Studio kustomisasi suara karakter: upload rekaman audio per huruf ke IndexedDB, atur kecepatan ucapan Web Speech, dan preferensi aplikasi.
+                {t('home.card_settings_desc')}
               </p>
             </div>
             <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-amber-600 dark:text-amber-400">
-              <span>Buka Pengaturan</span>
+              <span>{t('nav.settings')}</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>

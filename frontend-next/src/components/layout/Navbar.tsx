@@ -18,7 +18,9 @@ import {
   WifiOff,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { useGamification } from '@/context/GamificationContext'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface NavItem {
   href: string
@@ -27,52 +29,53 @@ interface NavItem {
   icon: React.ReactNode
 }
 
-const NAV_ITEMS: NavItem[] = [
-  {
-    href: '/',
-    label: 'Beranda',
-    sublabel: 'Dashboard',
-    icon: <Home className="w-4 h-4" />,
-  },
-  {
-    href: '/learn',
-    label: 'Koleksi Huruf',
-    sublabel: '46 Hiragana',
-    icon: <BookOpen className="w-4 h-4" />,
-  },
-  {
-    href: '/practice',
-    label: 'Studio Tracing',
-    sublabel: 'Latihan Tulis',
-    icon: <PenTool className="w-4 h-4" />,
-  },
-  {
-    href: '/exam',
-    label: 'Arena Ujian',
-    sublabel: 'Kuis & Evaluasi',
-    icon: <Award className="w-4 h-4" />,
-  },
-  {
-    href: '/analytics',
-    label: 'Dasbor Analitik',
-    sublabel: 'Statistik Belajar',
-    icon: <BarChart3 className="w-4 h-4" />,
-  },
-  {
-    href: '/settings',
-    label: 'Pengaturan & Audio',
-    sublabel: 'Audio Manager',
-    icon: <Settings className="w-4 h-4" />,
-  },
-]
-
 export const Navbar: React.FC = () => {
   const pathname = usePathname()
   const { dailyStreak, levelInfo } = useGamification()
+  const { t } = useLanguage()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isBackendLive, setIsBackendLive] = useState<boolean | null>(null)
   const [memorizedCount, setMemorizedCount] = useState<number>(0)
   const [isCheckingBackend, setIsCheckingBackend] = useState<boolean>(false)
+
+  const navItems: NavItem[] = [
+    {
+      href: '/',
+      label: t('nav.home'),
+      sublabel: t('nav.home_sub'),
+      icon: <Home className="w-4 h-4" />,
+    },
+    {
+      href: '/learn',
+      label: t('nav.learn'),
+      sublabel: t('nav.learn_sub'),
+      icon: <BookOpen className="w-4 h-4" />,
+    },
+    {
+      href: '/practice',
+      label: t('nav.practice'),
+      sublabel: t('nav.practice_sub'),
+      icon: <PenTool className="w-4 h-4" />,
+    },
+    {
+      href: '/exam',
+      label: t('nav.exam'),
+      sublabel: t('nav.exam_sub'),
+      icon: <Award className="w-4 h-4" />,
+    },
+    {
+      href: '/analytics',
+      label: t('nav.analytics'),
+      sublabel: t('nav.analytics_sub'),
+      icon: <BarChart3 className="w-4 h-4" />,
+    },
+    {
+      href: '/settings',
+      label: t('nav.settings'),
+      sublabel: t('nav.settings_sub'),
+      icon: <Settings className="w-4 h-4" />,
+    },
+  ]
 
   const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
@@ -212,7 +215,7 @@ export const Navbar: React.FC = () => {
 
           {/* DESKTOP NAVIGATION LINKS */}
           <nav className="hidden lg:flex items-center gap-1">
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const isActive =
                 item.href === '/'
                   ? pathname === '/'
@@ -243,21 +246,28 @@ export const Navbar: React.FC = () => {
             })}
           </nav>
 
-          {/* RIGHT SIDE TOOLS (BADGE, THEME TOGGLE, MOBILE BUTTON) */}
+          {/* RIGHT SIDE TOOLS (BADGE, LANGUAGE SWITCHER, THEME TOGGLE, MOBILE BUTTON) */}
           <div className="flex items-center gap-2 sm:gap-2.5">
             {/* Daily Streak Fire Badge */}
             <div
               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/60 text-orange-700 dark:text-orange-400 shadow-2xs"
-              title={`Daily Streak: ${dailyStreak} hari berlatih berturut-turut!`}
+              title={t('nav.streak_title', { count: dailyStreak })}
             >
               <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 animate-pulse" />
-              <span>{dailyStreak} Hari</span>
+              <span>{dailyStreak} {t('nav.streak')}</span>
             </div>
 
             {/* Level & XP Bar Badge */}
             <div
               className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-800 dark:text-indigo-300 shadow-2xs"
-              title={`Level ${levelInfo.level}: ${levelInfo.title} (${levelInfo.japaneseTitle}) • ${levelInfo.currentLevelXP}/${levelInfo.nextLevelXP} XP (${levelInfo.totalXP} XP Total)`}
+              title={t('nav.level_tooltip', {
+                level: levelInfo.level,
+                title: levelInfo.title,
+                japaneseTitle: levelInfo.japaneseTitle,
+                currentXP: levelInfo.currentLevelXP,
+                nextXP: levelInfo.nextLevelXP,
+                totalXP: levelInfo.totalXP,
+              })}
             >
               <span className="text-sm leading-none">{levelInfo.icon}</span>
               <span className="font-extrabold whitespace-nowrap">Lv.{levelInfo.level}</span>
@@ -276,14 +286,17 @@ export const Navbar: React.FC = () => {
             <Link
               href="/learn"
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition shadow-2xs"
-              title="Penguasaan Hiragana: Klik untuk melihat detail koleksi"
+              title={t('nav.memorized_title')}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-spin-slow" />
               <span>
-                <strong className="font-extrabold">{memorizedCount}</strong>/46
-                Hafal
+                <strong className="font-extrabold">{memorizedCount}</strong>/46{' '}
+                {t('nav.memorized')}
               </span>
             </Link>
+
+            {/* Language Switcher (ID / EN) */}
+            <LanguageSwitcher />
 
             {/* Dark/Light Theme Toggle */}
             <ThemeToggle />
@@ -293,7 +306,7 @@ export const Navbar: React.FC = () => {
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden p-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-              aria-label="Buka Menu Navigasi"
+              aria-label={t('nav.menu_open')}
             >
               {mobileMenuOpen ? (
                 <X className="w-5 h-5" />
@@ -325,7 +338,7 @@ export const Navbar: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-1 text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-100/60 dark:bg-orange-950/60 px-2 py-0.5 rounded-full">
                   <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500" />
-                  <span>{dailyStreak} Hari</span>
+                  <span>{dailyStreak} {t('nav.streak')}</span>
                 </div>
               </div>
               {/* XP progress bar */}
@@ -338,12 +351,12 @@ export const Navbar: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
                   <span className="font-mono">{levelInfo.currentLevelXP} / {levelInfo.nextLevelXP} XP ({levelInfo.totalXP} Total)</span>
-                  <span className="font-bold text-amber-600 dark:text-amber-400">{memorizedCount}/46 Hafal</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400">{memorizedCount}/46 {t('nav.memorized')}</span>
                 </div>
               </div>
             </div>
 
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const isActive =
                 item.href === '/'
                   ? pathname === '/'
@@ -393,11 +406,13 @@ export const Navbar: React.FC = () => {
                 ) : (
                   <>
                     <WifiOff className="w-3.5 h-3.5 text-amber-500" />
-                    <span>Mode Offline Standalone</span>
+                    <span>{t('nav.backend_offline')}</span>
                   </>
                 )}
               </span>
-              <span className="font-mono text-[10px]">Laragon MySQL</span>
+              <div className="flex items-center gap-2">
+                <LanguageSwitcher compact={true} />
+              </div>
             </div>
           </div>
         </div>

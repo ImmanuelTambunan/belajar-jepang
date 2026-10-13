@@ -2,8 +2,11 @@
 
 import React from 'react'
 import Link from 'next/link'
+import { useLanguage } from '@/context/LanguageContext'
 
 export const Footer: React.FC = () => {
+  const { t } = useLanguage()
+
   return (
     <footer className="mt-auto border-t border-slate-200 dark:border-slate-800/80 bg-white/50 dark:bg-slate-950/50 backdrop-blur-xs py-8 text-xs text-slate-500 dark:text-slate-400 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -17,7 +20,7 @@ export const Footer: React.FC = () => {
                 Nihongo Sora (日本語の空) • v2.0 MPA
               </p>
               <p className="text-[11px] text-slate-400">
-                Belajar Hiragana Tracing & Kaligrafi Interaktif
+                {t('footer.tagline')}
               </p>
             </div>
           </div>
@@ -27,43 +30,43 @@ export const Footer: React.FC = () => {
               href="/"
               className="hover:text-sky-600 dark:hover:text-sky-400 transition"
             >
-              Beranda
+              {t('footer.home')}
             </Link>
             <Link
               href="/learn"
               className="hover:text-sky-600 dark:hover:text-sky-400 transition"
             >
-              Koleksi Huruf
+              {t('footer.learn')}
             </Link>
             <Link
               href="/practice"
               className="hover:text-sky-600 dark:hover:text-sky-400 transition"
             >
-              Studio Tracing
+              {t('footer.practice')}
             </Link>
             <Link
               href="/exam"
               className="hover:text-sky-600 dark:hover:text-sky-400 transition"
             >
-              Arena Ujian
+              {t('footer.exam')}
             </Link>
             <Link
               href="/analytics"
               className="hover:text-sky-600 dark:hover:text-sky-400 transition"
             >
-              Analitik
+              {t('footer.analytics')}
             </Link>
             <Link
               href="/settings"
               className="hover:text-sky-600 dark:hover:text-sky-400 transition"
             >
-              Pengaturan & Audio
+              {t('footer.settings')}
             </Link>
           </div>
 
           <div className="text-center md:text-right text-[11px]">
-            <p>Next.js 16 App Router + Tailwind CSS</p>
-            <p className="text-slate-400">Golang Fiber REST API (:8000) • GORM</p>
+            <p>{t('footer.stack_info')}</p>
+            <p className="text-slate-400">{t('footer.backend_info')}</p>
           </div>
         </div>
       </div>

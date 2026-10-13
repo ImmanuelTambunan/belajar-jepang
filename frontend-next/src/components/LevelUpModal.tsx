@@ -2,10 +2,12 @@
 
 import React, { useEffect } from 'react'
 import { useGamification } from '@/context/GamificationContext'
+import { useLanguage } from '@/context/LanguageContext'
 import { Award, ChevronRight, Sparkles, X } from 'lucide-react'
 
 export const LevelUpModal: React.FC = () => {
   const { levelUpModal, dismissLevelUpModal } = useGamification()
+  const { t } = useLanguage()
 
   // Close on Escape key
   useEffect(() => {
@@ -54,14 +56,14 @@ export const LevelUpModal: React.FC = () => {
         {/* Heading */}
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-xs font-black tracking-widest uppercase mb-2">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>LEVEL UP! KENAIKAN LEVEL</span>
+          <span>{t('gamification.level_badge')}</span>
         </div>
 
         <h2
           id="levelup-title"
           className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1"
         >
-          Level {levelUpModal.newLevel} Diraih!
+          {t('gamification.level_reached', { level: levelUpModal.newLevel })}
         </h2>
 
         {/* Japanese Title Badge */}
@@ -75,8 +77,7 @@ export const LevelUpModal: React.FC = () => {
         </div>
 
         <p className="mt-4 text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-          Selamat! Dedikasi latihan kaligrafi Hiragana Anda membuahkan hasil.
-          Terus jaga konsistensi belajar Anda setiap hari!
+          {t('gamification.level_congrats')}
         </p>
 
         {/* Level Progression Indicator */}
@@ -94,7 +95,7 @@ export const LevelUpModal: React.FC = () => {
           onClick={dismissLevelUpModal}
           className="mt-6 w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white font-black text-sm shadow-lg shadow-amber-500/25 transition active:scale-98 cursor-pointer"
         >
-          Lanjutkan Belajar (Sugoi! ✨)
+          {t('gamification.level_continue')}
         </button>
       </div>
     </div>

@@ -8,6 +8,7 @@ import { ExamQuestionCard } from '@/components/ExamQuestionCard'
 import { ExamResultSummaryView } from '@/components/ExamResultSummaryView'
 import { generateExamQuestions, calculateExamGrade } from '@/utils/examGenerator'
 import { useGamification } from '@/context/GamificationContext'
+import { useLanguage } from '@/context/LanguageContext'
 import { Award } from 'lucide-react'
 import rawHiraganaData from '@/data/hiragana_46.json'
 
@@ -53,6 +54,7 @@ const LOCAL_STORAGE_EXAM_HISTORY = 'nihongo_sora_exam_history'
 
 export default function ExamPage() {
   const { awardXP } = useGamification()
+  const { t } = useLanguage()
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
   // Master character pool
@@ -141,10 +143,10 @@ export default function ExamPage() {
 
       // Gamification: Menjawab benar di mode ujian (/exam): +15 XP per soal
       if (isCorrect) {
-        awardXP(15, `Jawaban Ujian Benar (Soal #${currentIndex + 1})`)
+        awardXP(15, `${t('gamification.toast_exam_correct')} (#${currentIndex + 1})`)
       }
     },
-    [awardXP, currentIndex]
+    [awardXP, currentIndex, t]
   )
 
   // Advance to next question or complete exam
@@ -186,7 +188,7 @@ export default function ExamPage() {
 
     // Gamification: Sesi ujian selesai tanpa salah: Bonus +50 XP
     if (wrong === 0 && total > 0) {
-      awardXP(50, 'Sesi Ujian Sempurna! (Bonus Tanpa Salah ✨)')
+      awardXP(50, t('gamification.toast_exam_perfect'))
     }
 
     // 1. Save to LocalStorage
@@ -249,17 +251,17 @@ export default function ExamPage() {
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950/80 text-purple-800 dark:text-purple-300 text-xs font-bold">
               <Award className="w-3.5 h-3.5" />
-              <span>Evaluasi & Ujian Hafalan Adaptif</span>
+              <span>{t('exam.badge')}</span>
             </span>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
-              {isLiveApi ? '🟢 Database Live' : '🟡 Offline Fallback'}
+              {isLiveApi ? t('exam.live_db') : t('exam.offline_db')}
             </span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-            Arena Ujian Hiragana
+            {t('exam.title')}
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
-            Pilih mode kuis, jumlah soal, dan batasan waktu untuk menguji daya ingat aktif Anda. Skor akhir akan dikalkulasikan dan disimpan ke database analitik.
+            {t('exam.subtitle')}
           </p>
         </div>
       )}
@@ -279,8 +281,8 @@ export default function ExamPage() {
           <div className="mb-6">
             <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">
               <span>
-                Kemajuan Ujian: <strong className="text-slate-900 dark:text-white">{currentIndex + 1}</strong> dari{' '}
-                {questions.length} Soal
+                {t('exam.progress_label')}: <strong className="text-slate-900 dark:text-white">{currentIndex + 1}</strong> {t('exam.progress_of')}{' '}
+                {questions.length} {t('exam.progress_questions')}
               </span>
               <span className="font-mono font-bold text-sky-600 dark:text-sky-400">
                 {progressPercent}%

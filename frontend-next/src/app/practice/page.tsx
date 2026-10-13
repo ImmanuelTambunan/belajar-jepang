@@ -20,6 +20,7 @@ import { PracticeSummaryModal } from '@/components/PracticeSummaryModal'
 import { AudioSpeakerButton } from '@/components/AudioSpeakerButton'
 import { useCharacterAudio } from '@/hooks/useCharacterAudio'
 import { useGamification } from '@/context/GamificationContext'
+import { useLanguage } from '@/context/LanguageContext'
 import {
   evaluateCharacterReviewStatus,
   getCharactersNeedingReview,
@@ -81,6 +82,7 @@ const ROW_FILTERS = [
 const LOCAL_STORAGE_KEY = 'nihongo_sora_character_progress'
 
 function PracticeStudioContent() {
+  const { t } = useLanguage()
   const searchParams = useSearchParams()
   const initialCharParam = searchParams.get('char')
   const initialIdParam = searchParams.get('id')
@@ -472,7 +474,7 @@ function PracticeStudioContent() {
                 ? 'bg-sky-50 dark:bg-sky-950/60 border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-300'
                 : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
             }`}
-            title={sidebarOpen ? 'Sembunyikan Pemilih Huruf' : 'Tampilkan Pemilih Huruf'}
+            title={sidebarOpen ? t('common.close') : t('common.search')}
           >
             <Sidebar className="w-4 h-4" />
           </button>
@@ -496,7 +498,7 @@ function PracticeStudioContent() {
               </span>
               {isCurrentMemorized && (
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
-                  ✓ Hafal
+                  ✓ {t('common.mastered')}
                 </span>
               )}
               {currentAccuracy !== undefined && currentAccuracy !== null && (
@@ -510,7 +512,7 @@ function PracticeStudioContent() {
                   title={currentCharReviewStatus.label}
                 >
                   <Flame className="w-3 h-3 text-amber-600 fill-amber-500 animate-pulse" />
-                  <span>Perlu Diulang (SRS)</span>
+                  <span>{t('learn.filter_needs_review')} (SRS)</span>
                 </span>
               )}
             </div>
@@ -522,7 +524,7 @@ function PracticeStudioContent() {
               activeSource={activeSource}
               onPlay={() => handlePlayAudio(selectedChar)}
               size="sm"
-              title="Dengarkan pelafalan karakter ini"
+              title={t('learn.modal_listen')}
             />
           </div>
         </div>
@@ -534,7 +536,7 @@ function PracticeStudioContent() {
             type="button"
             onClick={handlePrevCharacter}
             className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition cursor-pointer"
-            title="Karakter Sebelumnya"
+            title={t('practice.prev_char')}
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -548,7 +550,7 @@ function PracticeStudioContent() {
             title="Ulangi karakter ini nanti"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Ulangi Nanti</span>
+            <span className="hidden md:inline">{t('common.retry')}</span>
           </button>
 
           {/* Mark Memorized */}
@@ -557,10 +559,10 @@ function PracticeStudioContent() {
             onClick={handleMarkMemorized}
             disabled={isSubmitting}
             className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
-            title="Tandai karakter sudah dihafal"
+            title={t('practice.mark_memorized')}
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Sudah Hafal</span>
+            <span>{t('common.mastered')}</span>
           </button>
 
           {/* Next Button */}
@@ -568,9 +570,9 @@ function PracticeStudioContent() {
             type="button"
             onClick={handleNextCharacter}
             className="p-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition cursor-pointer shadow-xs flex items-center gap-1"
-            title="Lanjut ke karakter berikutnya"
+            title={t('practice.next_char')}
           >
-            <span className="hidden sm:inline font-bold">Lanjut</span>
+            <span className="hidden sm:inline font-bold">{t('common.next')}</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
@@ -588,10 +590,10 @@ function PracticeStudioContent() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-sky-500" />
-                  <span>Daftar 46 Huruf</span>
+                  <span>{t('nav.learn_sub')}</span>
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                  {summary.memorized_count}/46 Hafal
+                  {summary.memorized_count}/46 {t('nav.memorized')}
                 </span>
               </div>
 
@@ -606,7 +608,7 @@ function PracticeStudioContent() {
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
                   }`}
                 >
-                  Semua ({allCharacters.length})
+                  {t('common.all')} ({allCharacters.length})
                 </button>
                 <button
                   type="button"
@@ -630,9 +632,9 @@ function PracticeStudioContent() {
                 className="w-full py-1.5 px-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
                 <option value="needs_review">
-                  ⚠️ Karakter Perlu Diulang ({needsReviewList.length})
+                  ⚠️ {t('practice.srs_drawer_title')} ({needsReviewList.length})
                 </option>
-                <option value="all">Baris: Semua Huruf (46)</option>
+                <option value="all">Baris: {t('learn.row_all')} (46)</option>
                 {ROW_FILTERS.filter((r) => r.id !== 'all').map((r) => (
                   <option key={r.id} value={r.id}>
                     Baris: {r.label}
@@ -649,17 +651,14 @@ function PracticeStudioContent() {
                     ✓
                   </div>
                   <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Tidak ada huruf lemah!
-                  </p>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Semua akurasi tracing ≥ 70% dan tidak ada kesalahan ujian.
+                    {t('practice.srs_all_good')}
                   </p>
                   <button
                     type="button"
                     onClick={() => setSelectedRowGroup('all')}
                     className="mt-2 text-xs font-bold text-sky-600 hover:underline cursor-pointer"
                   >
-                    Buka Semua Huruf
+                    {t('common.all')}
                   </button>
                 </div>
               ) : (

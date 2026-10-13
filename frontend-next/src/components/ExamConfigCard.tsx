@@ -1,7 +1,6 @@
-'use client'
-
 import React, { useState } from 'react'
 import { ExamConfig, ExamQuestionType } from '@/types/exam'
+import { useLanguage } from '@/context/LanguageContext'
 
 interface ExamConfigCardProps {
   onStartExam: (config: ExamConfig) => void
@@ -12,6 +11,7 @@ export const ExamConfigCard: React.FC<ExamConfigCardProps> = ({
   onStartExam,
   totalAvailableCharacters,
 }) => {
+  const { t, language } = useLanguage()
   const [questionCount, setQuestionCount] = useState<number>(10)
   const [rowGroup, setRowGroup] = useState<string>('all')
   const [enabledTypes, setEnabledTypes] = useState<ExamQuestionType[]>([
@@ -44,13 +44,13 @@ export const ExamConfigCard: React.FC<ExamConfigCardProps> = ({
       <div className="text-center max-w-xl mx-auto pb-6 border-b border-slate-200 dark:border-slate-800">
         <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 mb-2">
           <span>📝</span>
-          <span>Modul Ujian & Evaluasi Pemahaman</span>
+          <span>{t('exam.badge')}</span>
         </span>
         <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-          Pengaturan Sesi Ujian Hafalan
+          {t('exam.title')}
         </h2>
         <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5">
-          Uji kemampuan ingatan karakter Hiragana Anda melalui kombinasi soal tebak bacaan dan tantangan menulis tanpa panduan (Blind Tracing).
+          {t('exam.subtitle')}
         </p>
       </div>
 
@@ -58,13 +58,13 @@ export const ExamConfigCard: React.FC<ExamConfigCardProps> = ({
         {/* 1. JUMLAH SOAL */}
         <div>
           <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-2.5">
-            1. Jumlah Soal Ujian:
+            {t('exam.section_count')}
           </label>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { count: 10, label: '10 Soal', sub: 'Latihan Cepat' },
-              { count: 20, label: '20 Soal', sub: 'Standar Ujian' },
-              { count: 46, label: '46 Soal', sub: 'Seluruh Hiragana' },
+              { count: 10, label: t('exam.count_10'), sub: t('exam.count_10_sub') },
+              { count: 20, label: t('exam.count_20'), sub: t('exam.count_20_sub') },
+              { count: 46, label: t('exam.count_46'), sub: t('exam.count_46_sub') },
             ].map((opt) => (
               <button
                 key={opt.count}
@@ -86,15 +86,15 @@ export const ExamConfigCard: React.FC<ExamConfigCardProps> = ({
         {/* 2. CAKUPAN BARIS */}
         <div>
           <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-2.5">
-            2. Cakupan Baris Karakter:
+            {t('exam.section_row')}
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {[
-              { id: 'all', title: 'Semua Baris (46 Karakter)', sub: 'A ~ N lengkap' },
-              { id: 'vowel_ka', title: 'Vokal & Baris Ka (10)', sub: 'あ, い, う, え, お / か...' },
-              { id: 'sa_ta', title: 'Baris Sa & Ta (10)', sub: 'さ, し, す, せ, そ / た...' },
-              { id: 'na_ha_ma', title: 'Baris Na, Ha, Ma (15)', sub: 'な, は, ま kelompok' },
-              { id: 'ya_ra_wa_n', title: 'Baris Ya, Ra, Wa, N (11)', sub: 'や, ら, わ, ん kelompok' },
+              { id: 'all', title: language === 'en' ? 'All Rows (46 Kana)' : 'Semua Baris (46 Karakter)', sub: language === 'en' ? 'Full A ~ N curriculum' : 'A ~ N lengkap' },
+              { id: 'vowel_ka', title: language === 'en' ? 'Vowels & Ka Row (10)' : 'Vokal & Baris Ka (10)', sub: 'あ, い, う, え, お / か...' },
+              { id: 'sa_ta', title: language === 'en' ? 'Sa & Ta Rows (10)' : 'Baris Sa & Ta (10)', sub: 'さ, し, す, せ, そ / た...' },
+              { id: 'na_ha_ma', title: language === 'en' ? 'Na, Ha, Ma Rows (15)' : 'Baris Na, Ha, Ma (15)', sub: 'な, は, ま' },
+              { id: 'ya_ra_wa_n', title: language === 'en' ? 'Ya, Ra, Wa, N Rows (11)' : 'Baris Ya, Ra, Wa, N (11)', sub: 'や, ら, わ, ん' },
             ].map((r) => (
               <button
                 key={r.id}
@@ -123,27 +123,27 @@ export const ExamConfigCard: React.FC<ExamConfigCardProps> = ({
         {/* 3. KOMBINASI TIPE SOAL */}
         <div>
           <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-2.5">
-            3. Variasi Tipe Soal:
+            {t('exam.section_types')}
           </label>
           <div className="space-y-2">
             {[
               {
                 type: 'romaji_to_kana' as ExamQuestionType,
                 icon: '🔤',
-                title: 'Tipe A: Tebak Romaji ➔ Kana',
-                desc: 'Diberikan teks Romaji, pilih simbol Kana yang benar dari 4 opsi.',
+                title: t('exam.type_romaji_to_kana'),
+                desc: t('exam.type_romaji_to_kana_sub'),
               },
               {
                 type: 'kana_to_romaji' as ExamQuestionType,
                 icon: '📖',
-                title: 'Tipe B: Tebak Kana ➔ Romaji',
-                desc: 'Diberikan simbol Kana, pilih cara baca Romaji yang tepat.',
+                title: t('exam.type_kana_to_romaji'),
+                desc: t('exam.type_kana_to_romaji_sub'),
               },
               {
                 type: 'blind_tracing' as ExamQuestionType,
                 icon: '✍️',
-                title: 'Tipe C: Tantangan Blind Tracing',
-                desc: 'Tuliskan karakter langsung di kanvas kosong dari ingatan tanpa garis bantu.',
+                title: t('exam.type_blind_tracing'),
+                desc: t('exam.type_blind_tracing_sub'),
               },
             ].map((t) => {
               const isChecked = enabledTypes.includes(t.type)
@@ -179,13 +179,13 @@ export const ExamConfigCard: React.FC<ExamConfigCardProps> = ({
         {/* 4. TIMER PER SOAL */}
         <div>
           <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-2.5">
-            4. Pengatur Waktu (Timer per Soal):
+            {t('exam.section_timer')}
           </label>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { val: 0, label: 'Santai', sub: 'Tanpa Batas' },
-              { val: 15, label: '15 Detik', sub: 'Tantangan Cepat' },
-              { val: 30, label: '30 Detik', sub: 'Sedang' },
+              { val: 0, label: language === 'en' ? 'Relaxed' : 'Santai', sub: t('exam.timer_unlimited') },
+              { val: 15, label: '15s', sub: t('exam.timer_15s') },
+              { val: 30, label: '30s', sub: t('exam.timer_30s') },
             ].map((tm) => (
               <button
                 key={tm.val}
@@ -212,7 +212,7 @@ export const ExamConfigCard: React.FC<ExamConfigCardProps> = ({
             className="w-full py-4 rounded-2xl font-black text-sm sm:text-base bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-600 hover:from-sky-500 hover:via-indigo-500 hover:to-rose-500 text-white shadow-xl shadow-indigo-600/25 transition cursor-pointer flex items-center justify-center gap-2 active:scale-98"
           >
             <span>🚀</span>
-            <span>Mulai Ujian Sekarang ({questionCount} Soal)</span>
+            <span>{t('exam.start_btn')} ({questionCount} {language === 'en' ? 'Questions' : 'Soal'})</span>
           </button>
         </div>
       </div>

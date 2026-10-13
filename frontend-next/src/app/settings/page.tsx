@@ -16,7 +16,10 @@ import {
   Save,
   Check,
   Headphones,
+  Languages,
+  Sparkles,
 } from 'lucide-react'
+import { useLanguage } from '@/context/LanguageContext'
 import {
   saveCustomAudio,
   deleteCustomAudio,
@@ -62,10 +65,11 @@ const ROW_FILTERS = [
 ]
 
 export default function SettingsPage() {
+  const { language, setLanguage, t } = useLanguage()
   const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
-  const [activeTab, setActiveTab] = useState<'audio' | 'voice' | 'practice' | 'system'>('audio')
+  const [activeTab, setActiveTab] = useState<'language' | 'audio' | 'voice' | 'practice' | 'system'>('language')
 
   // Audio Manager State
   const [selectedRomaji, setSelectedRomaji] = useState<string>('a')
@@ -331,29 +335,30 @@ export default function SettingsPage() {
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 text-xs font-bold mb-2">
           <SettingsIcon className="w-3.5 h-3.5" />
-          <span>Pusat Preferensi & Konfigurasi Sistem</span>
+          <span>{t('settings.header_badge')}</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-          Pengaturan & Audio Manager
+          {t('settings.header_title')}
         </h1>
         <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
-          Kelola rekaman audio kustom untuk setiap huruf Hiragana, atur kecepatan pelafalan Web Speech API, preferensi studio latihan, serta verifikasi koneksi backend Golang Fiber.
+          {t('settings.header_desc')}
         </p>
       </div>
 
       {/* NAVIGATION TABS */}
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-4 mb-8 overflow-x-auto">
         {[
-          { id: 'audio', label: 'Audio Manager (IndexedDB)', icon: <Volume2 className="w-4 h-4" /> },
-          { id: 'voice', label: 'Kecepatan & Suara (Web Speech)', icon: <Sliders className="w-4 h-4" /> },
-          { id: 'practice', label: 'Preferensi Latihan', icon: <Headphones className="w-4 h-4" /> },
-          { id: 'system', label: 'Koneksi Backend & API', icon: <Cpu className="w-4 h-4" /> },
+          { id: 'language', label: t('settings.tab_language'), icon: <Languages className="w-4 h-4" /> },
+          { id: 'audio', label: t('settings.tab_audio'), icon: <Volume2 className="w-4 h-4" /> },
+          { id: 'voice', label: t('settings.tab_voice'), icon: <Sliders className="w-4 h-4" /> },
+          { id: 'practice', label: t('settings.tab_practice'), icon: <Headphones className="w-4 h-4" /> },
+          { id: 'system', label: t('settings.tab_system'), icon: <Cpu className="w-4 h-4" /> },
         ].map((tab) => {
           const isActive = activeTab === tab.id
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as 'audio' | 'voice' | 'practice' | 'system')}
+              onClick={() => setActiveTab(tab.id as 'language' | 'audio' | 'voice' | 'practice' | 'system')}
               className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-2 cursor-pointer whitespace-nowrap border ${
                 isActive
                   ? 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-500/20'
@@ -366,6 +371,107 @@ export default function SettingsPage() {
           )
         })}
       </div>
+
+      {/* ========================================================================= */}
+      {/* TAB 0: LANGUAGE SELECTION (BILINGUAL ID & EN) */}
+      {/* ========================================================================= */}
+      {activeTab === 'language' && (
+        <div className="max-w-3xl space-y-6 animate-in fade-in duration-200">
+          <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Languages className="w-5 h-5 text-amber-500" />
+              <span>{t('settings.lang_title')}</span>
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              {t('settings.lang_subtitle')}
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+              {/* Option 1: Bahasa Indonesia */}
+              <button
+                type="button"
+                onClick={() => setLanguage('id')}
+                className={`p-5 rounded-2xl border-2 text-left transition-all duration-200 flex flex-col justify-between relative cursor-pointer ${
+                  language === 'id'
+                    ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/30 shadow-md ring-2 ring-amber-400/40'
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-3xl">🇮🇩</span>
+                    {language === 'id' ? (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white flex items-center gap-1">
+                        <Check className="w-3 h-3" />
+                        <span>{t('settings.lang_active_badge')}</span>
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                        {t('settings.lang_id_badge')}
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="text-base font-black text-slate-900 dark:text-white">
+                    {t('settings.lang_id_name')}
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                    {t('settings.lang_id_desc')}
+                  </p>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between text-xs font-bold text-amber-600 dark:text-amber-400">
+                  <span>{language === 'id' ? '✓ Aktif' : t('settings.lang_switch_btn')}</span>
+                </div>
+              </button>
+
+              {/* Option 2: English */}
+              <button
+                type="button"
+                onClick={() => setLanguage('en')}
+                className={`p-5 rounded-2xl border-2 text-left transition-all duration-200 flex flex-col justify-between relative cursor-pointer ${
+                  language === 'en'
+                    ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/30 shadow-md ring-2 ring-amber-400/40'
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-3xl">🇬🇧</span>
+                    {language === 'en' ? (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white flex items-center gap-1">
+                        <Check className="w-3 h-3" />
+                        <span>{t('settings.lang_active_badge')}</span>
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                        {t('settings.lang_en_badge')}
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="text-base font-black text-slate-900 dark:text-white">
+                    {t('settings.lang_en_name')}
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+                    {t('settings.lang_en_desc')}
+                  </p>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between text-xs font-bold text-amber-600 dark:text-amber-400">
+                  <span>{language === 'en' ? '✓ Active' : t('settings.lang_switch_btn')}</span>
+                </div>
+              </button>
+            </div>
+
+            {/* Note Callout */}
+            <div className="mt-6 p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-start gap-3">
+              <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed font-medium">
+                {t('settings.lang_note')}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* TAB 1: AUDIO MANAGER (CUSTOM MP3 INDEXEDDB) */}
@@ -394,10 +500,10 @@ export default function SettingsPage() {
           <div className="p-5 rounded-3xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <span>🎙️</span> Database Rekaman Audio Mandiri
+                <span>🎙️</span> {t('settings.audio_title')}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Tersimpan di IndexedDB browser Anda: <strong className="text-amber-600 dark:text-amber-400 font-extrabold">{Object.keys(customAudioMap).length}</strong> dari 46 karakter memiliki rekaman kustom.
+                {t('settings.audio_desc', { count: Object.keys(customAudioMap).length })}
               </p>
             </div>
 
@@ -408,7 +514,7 @@ export default function SettingsPage() {
                 className="px-3.5 py-2 rounded-xl border border-rose-200 dark:border-rose-800/60 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Reset Semua Audio</span>
+                <span>{t('settings.audio_reset_all')}</span>
               </button>
             )}
           </div>
@@ -594,10 +700,10 @@ export default function SettingsPage() {
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Sliders className="w-5 h-5 text-amber-500" />
-              <span>Pengaturan Web Speech API (Pelafalan Cadangan)</span>
+              <span>{t('settings.voice_title')}</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Digunakan saat file native .mp3 belum tersedia atau saat pengguna memilih fallback suara browser.
+              {t('settings.voice_desc')}
             </p>
           </div>
 
@@ -605,14 +711,14 @@ export default function SettingsPage() {
           {voiceSavedMsg && (
             <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center gap-2">
               <Check className="w-4 h-4" />
-              <span>Pengaturan kecepatan & nada suara berhasil disimpan!</span>
+              <span>{t('settings.voice_saved')}</span>
             </div>
           )}
 
           {/* Voice Selector */}
           <div>
             <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">
-              Pilihan Suara Bahasa Jepang (ja-JP):
+              {t('settings.voice_select_label')}
             </label>
             {availableVoices.length > 0 ? (
               <select
@@ -637,7 +743,7 @@ export default function SettingsPage() {
           <div>
             <div className="flex items-center justify-between text-xs font-bold mb-2">
               <span className="text-slate-700 dark:text-slate-300">
-                Kecepatan Bicara (Speech Rate):
+                {t('settings.voice_rate_label')}
               </span>
               <span className="font-mono text-amber-600 dark:text-amber-400">{speechRate.toFixed(2)}x</span>
             </div>
@@ -661,7 +767,7 @@ export default function SettingsPage() {
           <div>
             <div className="flex items-center justify-between text-xs font-bold mb-2">
               <span className="text-slate-700 dark:text-slate-300">
-                Nada Bicara (Speech Pitch):
+                {t('settings.voice_pitch_label')}
               </span>
               <span className="font-mono text-amber-600 dark:text-amber-400">{speechPitch.toFixed(2)}</span>
             </div>
@@ -684,7 +790,7 @@ export default function SettingsPage() {
           {/* Test Audio Button */}
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
             <span className="text-xs text-slate-600 dark:text-slate-400">
-              Uji coba audio dengan kalimat: <strong>&quot;こんにちは、あいうえお&quot;</strong>
+              {t('settings.voice_test_phrase')}
             </span>
             <button
               type="button"
@@ -703,7 +809,7 @@ export default function SettingsPage() {
               className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 transition cursor-pointer"
             >
               <Play className="w-3.5 h-3.5" />
-              <span>Uji Suara</span>
+              <span>{t('settings.voice_test_btn')}</span>
             </button>
           </div>
 
@@ -715,14 +821,14 @@ export default function SettingsPage() {
               className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition flex items-center gap-2 shadow-xs cursor-pointer"
             >
               <Save className="w-4 h-4" />
-              <span>Simpan Preferensi Suara</span>
+              <span>{t('settings.voice_save_btn')}</span>
             </button>
             <button
               type="button"
               onClick={handleResetVoicePreferences}
               className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-semibold transition cursor-pointer"
             >
-              Reset Default
+              {t('settings.voice_reset_btn')}
             </button>
           </div>
         </div>
@@ -736,17 +842,17 @@ export default function SettingsPage() {
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Headphones className="w-5 h-5 text-amber-500" />
-              <span>Preferensi Studio Latihan & Tracing</span>
+              <span>{t('settings.practice_title')}</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Sesuaikan alur otomatisasi di Studio Tracing.
+              {t('settings.practice_autoplay_desc')}
             </p>
           </div>
 
           {resetDoneMsg && (
             <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center gap-2">
               <Check className="w-4 h-4" />
-              <span>Seluruh progres latihan dan riwayat ujian berhasil direset.</span>
+              <span>{t('settings.practice_reset_done')}</span>
             </div>
           )}
 
@@ -754,10 +860,10 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
             <div>
               <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                Putar Audio Otomatis (Autoplay)
+                {t('settings.practice_autoplay_title')}
               </p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Otomatis melafalkan karakter saat berpindah huruf di Studio Tracing.
+                {t('settings.practice_autoplay_desc')}
               </p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -774,10 +880,10 @@ export default function SettingsPage() {
           {/* Reset Progress Section */}
           <div className="p-4 rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/20">
             <h4 className="text-xs font-bold text-rose-800 dark:text-rose-300 uppercase tracking-wider mb-1">
-              Zona Berbahaya: Reset Data Belajar
+              {t('settings.practice_danger_title')}
             </h4>
             <p className="text-xs text-rose-700/80 dark:text-rose-400/80 mb-3">
-              Menghapus seluruh status hafalan, skor akurasi latihan, dan log ujian yang tersimpan secara lokal di browser.
+              {t('settings.practice_danger_desc')}
             </p>
 
             {!confirmResetProgress ? (
@@ -786,7 +892,7 @@ export default function SettingsPage() {
                 onClick={() => setConfirmResetProgress(true)}
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition cursor-pointer shadow-xs"
               >
-                Reset Semua Progres Belajar
+                {t('settings.practice_reset_btn')}
               </button>
             ) : (
               <div className="flex items-center gap-3">
@@ -795,14 +901,14 @@ export default function SettingsPage() {
                   onClick={handleResetAllProgress}
                   className="px-4 py-2 rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold transition cursor-pointer"
                 >
-                  Konfirmasi Hapus Sekarang
+                  {t('settings.practice_reset_confirm_btn')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setConfirmResetProgress(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300"
+                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer"
                 >
-                  Batal
+                  {t('settings.practice_cancel_btn')}
                 </button>
               </div>
             )}
@@ -818,10 +924,10 @@ export default function SettingsPage() {
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Cpu className="w-5 h-5 text-amber-500" />
-              <span>Konektivitas Arsitektur Decoupled</span>
+              <span>{t('settings.system_decoupled_title')}</span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Frontend Next.js terhubung langsung ke REST API Golang Fiber pada port 8000.
+              {t('settings.system_decoupled_desc')}
             </p>
           </div>
 
@@ -849,7 +955,7 @@ export default function SettingsPage() {
               className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition flex items-center gap-2 shadow-xs cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${backendPingStatus === 'loading' ? 'animate-spin' : ''}`} />
-              <span>{backendPingStatus === 'loading' ? 'Menghubungkan...' : 'Ping Endpoint Health (/api/health)'}</span>
+              <span>{backendPingStatus === 'loading' ? 'Menghubungkan...' : t('settings.system_ping_btn')}</span>
             </button>
           </div>
 
@@ -857,7 +963,7 @@ export default function SettingsPage() {
           {backendPingStatus === 'success' && (
             <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs">
               <div className="flex items-center justify-between font-bold mb-2">
-                <span>🟢 Golang Fiber Terhubung Normal!</span>
+                <span>{t('settings.system_ping_success')}</span>
                 {backendLatency !== null && <span className="font-mono">Latensi: {backendLatency}ms</span>}
               </div>
               <pre className="p-3 rounded-xl bg-slate-900 text-emerald-300 font-mono text-[11px] overflow-x-auto">
@@ -868,9 +974,9 @@ export default function SettingsPage() {
 
           {backendPingStatus === 'error' && (
             <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs">
-              <div className="font-bold mb-1">❌ Gagal Terhubung ke Backend Golang</div>
+              <div className="font-bold mb-1">{t('settings.system_ping_error')}</div>
               <p className="text-[11px] mb-2">
-                Pastikan backend sedang berjalan di port 8000. Aplikasi saat ini beroperasi menggunakan mode fallback lokal.
+                {t('settings.system_ping_error_desc')}
               </p>
               <pre className="p-2 rounded-lg bg-slate-900 text-rose-300 font-mono text-[10px]">
                 {JSON.stringify(backendResponse, null, 2)}
