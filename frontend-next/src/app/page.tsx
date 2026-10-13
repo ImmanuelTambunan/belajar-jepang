@@ -18,8 +18,14 @@ import {
 } from 'lucide-react'
 import { CharacterData } from '@/types/character'
 import { UserProgress } from '@/types/progress'
+import { ExamResultSummary } from '@/types/exam'
 import { useCharacterAudio } from '@/hooks/useCharacterAudio'
 import { AudioSpeakerButton } from '@/components/AudioSpeakerButton'
+import { useGamification } from '@/context/GamificationContext'
+import {
+  getCharactersNeedingReview,
+  getLatestExamFromStorage,
+} from '@/utils/srs'
 import rawHiraganaData from '@/data/hiragana_46.json'
 
 interface RawHiraganaItem {
@@ -65,10 +71,12 @@ const LOCAL_STORAGE_KEY = 'nihongo_sora_character_progress'
 const LOCAL_STORAGE_EXAM_KEY = 'nihongo_sora_exam_history'
 
 export default function HomePage() {
+  const { currentXP, dailyStreak, levelInfo } = useGamification()
   const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
   const [progressMap, setProgressMap] = useState<Record<number, UserProgress>>({})
+  const [latestExam, setLatestExam] = useState<ExamResultSummary | null>(null)
   const [examCount, setExamCount] = useState<number>(0)
   const [lastExamScore, setLastExamScore] = useState<number | null>(null)
   const [isBackendLive, setIsBackendLive] = useState<boolean | null>(null)
@@ -79,6 +87,18 @@ export default function HomePage() {
   const [spotlightChar, setSpotlightChar] = useState<CharacterData>(FALLBACK_ALL[0])
   const { play: playAudio, isItemPlaying } = useCharacterAudio()
 
+  // Safe audio playback handler wrapped in try-catch
+  const handlePlayAudio = useCallback(
+    async (char: CharacterData) => {
+      try {
+        await playAudio(char)
+      } catch (err) {
+        console.warn('HomePage audio playback error:', err)
+      }
+    },
+    [playAudio]
+  )
+
   // Load user progress and exam history
   const loadLocalData = useCallback(() => {
     if (typeof window === 'undefined') return
@@ -88,13 +108,16 @@ export default function HomePage() {
         setProgressMap(JSON.parse(storedProgress))
       }
 
+      setLatestExam(getLatestExamFromStorage())
+
       const storedExam = localStorage.getItem(LOCAL_STORAGE_EXAM_KEY)
       if (storedExam) {
         const exams = JSON.parse(storedExam)
         if (Array.isArray(exams) && exams.length > 0) {
           setExamCount(exams.length)
-          const last = exams[exams.length - 1]
-          setLastExamScore(Math.round(last.score_percentage || 0))
+          const last = exams[0] || exams[exams.length - 1]
+          const sc = last.score ?? last.score_percentage ?? 0
+          setLastExamScore(Math.round(sc))
         }
       }
     } catch {
@@ -170,6 +193,11 @@ export default function HomePage() {
     }
   }, [progressMap])
 
+  // Characters requiring review based on SRS criteria
+  const needsReviewList = useMemo(() => {
+    return getCharactersNeedingReview(FALLBACK_ALL, progressMap, latestExam)
+  }, [progressMap, latestExam])
+
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       {/* ========================================================================= */}
@@ -209,8 +237,26 @@ export default function HomePage() {
               className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-sm shadow-md shadow-sky-600/25 flex items-center gap-2 transition active:scale-98"
             >
               <PenTool className="w-4 h-4" />
-              <span>Lanjutkan Studio Tracing</span>
+              <span>Studio Tracing</span>
               <ArrowRight className="w-4 h-4 ml-0.5" />
+            </Link>
+
+            {/* Tombol Latihan Kilat Huruf Lemah */}
+            <Link
+              href={
+                needsReviewList.length > 0
+                  ? `/practice?filter=needs_review&char=${needsReviewList[0].symbol || needsReviewList[0].character}`
+                  : '/practice?filter=needs_review'
+              }
+              className={`px-6 py-3.5 rounded-2xl font-bold text-sm shadow-md flex items-center gap-2 transition active:scale-98 ${
+                needsReviewList.length > 0
+                  ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white shadow-amber-500/25 ring-2 ring-amber-400/40'
+                  : 'bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 hover:bg-amber-100'
+              }`}
+              title="Latihan Kilat Huruf Lemah: Langsung ke antrean karakter dengan akurasi < 70% atau salah di sesi ujian"
+            >
+              <Flame className={`w-4 h-4 ${needsReviewList.length > 0 ? 'fill-white text-white animate-pulse' : 'text-amber-500'}`} />
+              <span>Latihan Kilat Huruf Lemah ({needsReviewList.length})</span>
             </Link>
 
             <Link
@@ -218,7 +264,7 @@ export default function HomePage() {
               className="px-6 py-3.5 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-800 dark:text-white font-bold text-sm border border-slate-300 dark:border-slate-700 shadow-sm flex items-center gap-2 transition active:scale-98"
             >
               <Award className="w-4 h-4 text-amber-500" />
-              <span>Mulai Ujian Cepat</span>
+              <span>Arena Ujian</span>
             </Link>
 
             <Link
@@ -233,7 +279,55 @@ export default function HomePage() {
       </section>
 
       {/* ========================================================================= */}
-      {/* 2. RINGKASAN PROGRES BELAJAR HARI INI */}
+      {/* 2. STATUS GAMIFIKASI & DAILY STREAK BANNER */}
+      {/* ========================================================================= */}
+      <section className="mb-10 p-6 rounded-3xl bg-gradient-to-r from-sky-500/10 via-indigo-500/10 to-amber-500/10 border border-indigo-200/80 dark:border-indigo-800/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 shadow-xs">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-md shadow-indigo-500/20 shrink-0">
+            <span>{levelInfo.icon}</span>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                Level {levelInfo.level}: {levelInfo.title}
+              </span>
+              <span className="text-xs font-serif text-slate-400 dark:text-slate-500">
+                ({levelInfo.japaneseTitle})
+              </span>
+            </div>
+            <div className="flex items-center gap-3 mt-1 text-xs text-slate-600 dark:text-slate-400">
+              <span className="font-semibold">
+                Akumulasi: <strong className="text-indigo-600 dark:text-indigo-400 font-extrabold">{currentXP} XP</strong>
+              </span>
+              <span>•</span>
+              <span className="inline-flex items-center gap-1 font-bold text-orange-600 dark:text-orange-400">
+                <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500 animate-pulse" />
+                <span>Streak {dailyStreak} Hari Berturut-turut</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Level XP Progress Bar */}
+        <div className="md:w-72 flex flex-col justify-center">
+          <div className="flex items-center justify-between text-xs font-bold mb-1.5">
+            <span className="text-slate-600 dark:text-slate-400">Progres Level {levelInfo.level + 1}</span>
+            <span className="font-mono text-indigo-600 dark:text-indigo-400">{levelInfo.currentLevelXP} / {levelInfo.nextLevelXP} XP</span>
+          </div>
+          <div className="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-indigo-500 via-sky-500 to-amber-500 rounded-full transition-all duration-500"
+              style={{ width: `${levelInfo.percentage}%` }}
+            />
+          </div>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+            +{100 - levelInfo.currentLevelXP} XP lagi untuk kenaikan level
+          </span>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 3. RINGKASAN PROGRES BELAJAR HARI INI */}
       {/* ========================================================================= */}
       <section className="mb-12">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
@@ -289,28 +383,41 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Card 2: Sedang Dipelajari */}
+          {/* Card 2: Karakter Perlu Diulang (SRS) */}
           <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                Perlu Diulang
+                Perlu Diulang (SRS)
               </span>
               <span className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
-                <Flame className="w-4 h-4" />
+                <Flame className="w-4 h-4 fill-amber-500" />
               </span>
             </div>
             <div>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-black text-slate-900 dark:text-white">
-                  {stats.unmemorized}
+                  {needsReviewList.length}
                 </span>
                 <span className="text-sm font-semibold text-slate-400">
-                  Karakter
+                  Huruf Lemah
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-3 font-medium">
-                Tersedia dalam antrean spaced repetition di Studio Tracing
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
+                {needsReviewList.length > 0
+                  ? 'Akurasi < 70% atau salah di sesi ujian'
+                  : 'Semua huruf aman terkontrol lancar'}
               </p>
+              <Link
+                href={
+                  needsReviewList.length > 0
+                    ? `/practice?filter=needs_review&char=${needsReviewList[0].symbol || needsReviewList[0].character}`
+                    : '/practice?filter=needs_review'
+                }
+                className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline"
+              >
+                <span>Latihan Kilat</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
             </div>
           </div>
 
@@ -396,7 +503,7 @@ export default function HomePage() {
           <AudioSpeakerButton
             character={spotlightChar}
             isPlaying={isItemPlaying(spotlightChar)}
-            onPlay={() => playAudio(spotlightChar)}
+            onPlay={() => handlePlayAudio(spotlightChar)}
             size="md"
             variant="badge"
             label="Putar Suara"

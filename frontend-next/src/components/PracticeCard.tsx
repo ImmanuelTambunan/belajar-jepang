@@ -7,6 +7,7 @@ import { OverallAccuracyResult } from '@/types/accuracy'
 import { StrokeCanvas } from './StrokeCanvas'
 import { AudioSpeakerButton } from './AudioSpeakerButton'
 import { useCharacterAudio } from '@/hooks/useCharacterAudio'
+import { useGamification } from '@/context/GamificationContext'
 
 interface PracticeCardProps {
   character: CharacterData
@@ -27,6 +28,7 @@ export const PracticeCard: React.FC<PracticeCardProps> = ({
   isSubmitting,
   onSaveAccuracyScore,
 }) => {
+  const { awardXP } = useGamification()
   // Reveal state for active recall
   const [isRevealed, setIsRevealed] = useState<boolean>(false)
 
@@ -59,12 +61,27 @@ export const PracticeCard: React.FC<PracticeCardProps> = ({
     }
   }
 
+  // Safe audio play handler wrapped in try-catch
+  const handlePlayAudio = useCallback(async () => {
+    try {
+      await play(character)
+    } catch (err) {
+      console.warn('PracticeCard audio error:', err)
+    }
+  }, [play, character])
+
   // Trigger audio on character switch if autoplay is enabled
   useEffect(() => {
     setIsRevealed(false)
     if (autoPlayAudio) {
       const timer = setTimeout(() => {
-        play(character)
+        try {
+          play(character).catch((err) => {
+            console.warn('Autoplay audio notice:', err)
+          })
+        } catch (err) {
+          console.warn('Autoplay audio error:', err)
+        }
       }, 200)
       return () => clearTimeout(timer)
     }
@@ -131,7 +148,7 @@ export const PracticeCard: React.FC<PracticeCardProps> = ({
               character={character}
               isPlaying={isPlaying}
               activeSource={activeSource}
-              onPlay={() => play(character)}
+              onPlay={handlePlayAudio}
               size="md"
               variant="icon"
               title="Dengarkan pengucapan audio"
@@ -145,7 +162,7 @@ export const PracticeCard: React.FC<PracticeCardProps> = ({
             character={character}
             isPlaying={isPlaying}
             activeSource={activeSource}
-            onPlay={() => play(character)}
+            onPlay={handlePlayAudio}
             variant="button"
             size="md"
             label="Dengarkan Pelafalan"
@@ -189,6 +206,12 @@ export const PracticeCard: React.FC<PracticeCardProps> = ({
         <StrokeCanvas
           character={character}
           onSaveScore={(scoreResult) => {
+            if (scoreResult.score >= 70) {
+              awardXP(
+                10,
+                `Presisi Tracing ${character.character || character.symbol} (${scoreResult.score}%)`
+              )
+            }
             if (onSaveAccuracyScore) {
               onSaveAccuracyScore(character, scoreResult)
             }

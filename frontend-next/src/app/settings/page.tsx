@@ -294,7 +294,9 @@ export default function SettingsPage() {
     try {
       localStorage.removeItem('nihongo_sora_character_progress')
       localStorage.removeItem('nihongo_sora_exam_history')
+      localStorage.removeItem('nihongo_sora_gamification')
       window.dispatchEvent(new Event('nihongo_sora_progress_updated'))
+      window.dispatchEvent(new Event('nihongo_sora_gamification_updated'))
       setConfirmResetProgress(false)
       setResetDoneMsg(true)
       setTimeout(() => setResetDoneMsg(false), 3000)

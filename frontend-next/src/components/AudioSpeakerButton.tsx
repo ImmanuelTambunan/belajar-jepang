@@ -9,7 +9,7 @@ interface AudioSpeakerButtonProps {
   isPlaying?: boolean
   isLoading?: boolean
   activeSource?: AudioPlaybackSource | null
-  onPlay: (char: CharacterAudioInput) => void
+  onPlay: (char: CharacterAudioInput) => void | Promise<void>
   size?: 'xs' | 'sm' | 'md' | 'lg'
   variant?: 'icon' | 'badge' | 'button'
   label?: string
@@ -67,7 +67,16 @@ export const AudioSpeakerButton: React.FC<AudioSpeakerButtonProps> = ({
     if (stopPropagation) {
       e.stopPropagation()
     }
-    onPlay(character)
+    try {
+      const result = onPlay(character)
+      if (result && typeof (result as Promise<unknown>).catch === 'function') {
+        ;(result as Promise<unknown>).catch((err) => {
+          console.warn('AudioSpeakerButton playback notice:', err)
+        })
+      }
+    } catch (err) {
+      console.warn('AudioSpeakerButton playback error:', err)
+    }
   }
 
   const tooltipTitle =

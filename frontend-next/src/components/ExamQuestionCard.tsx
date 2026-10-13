@@ -5,6 +5,7 @@ import { ExamQuestion } from '@/types/exam'
 import { BlindTracingQuizCanvas } from './BlindTracingQuizCanvas'
 import { AudioSpeakerButton } from './AudioSpeakerButton'
 import { useCharacterAudio } from '@/hooks/useCharacterAudio'
+import { CharacterAudioInput } from '@/utils/audio'
 
 interface ExamQuestionCardProps {
   question: ExamQuestion
@@ -42,6 +43,18 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
     setIsAnswered(false)
     setTimeLeft(timerSeconds)
   }, [question.id, timerSeconds])
+
+  // Safe audio playback handler wrapped in try-catch
+  const handlePlayAudio = useCallback(
+    async (char: CharacterAudioInput) => {
+      try {
+        await playAudio(char)
+      } catch (err) {
+        console.warn('ExamQuestionCard audio playback error:', err)
+      }
+    },
+    [playAudio]
+  )
 
   const handleTimeout = useCallback(() => {
     if (isAnswered) return
@@ -158,7 +171,7 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
                 character={targetChar}
                 isPlaying={isPlaying}
                 activeSource={activeSource}
-                onPlay={() => playAudio(targetChar)}
+                onPlay={() => handlePlayAudio(targetChar)}
                 size="md"
                 variant="icon"
                 title="Dengarkan pengucapan audio asli / ja-JP"
@@ -182,7 +195,7 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
                 character={targetChar}
                 isPlaying={isPlaying}
                 activeSource={activeSource}
-                onPlay={() => playAudio(targetChar)}
+                onPlay={() => handlePlayAudio(targetChar)}
                 size="md"
                 variant="icon"
                 title="Dengarkan pelafalan audio penutur asli / ja-JP"
@@ -206,7 +219,7 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
                 character={targetChar}
                 isPlaying={isPlaying}
                 activeSource={activeSource}
-                onPlay={() => playAudio(targetChar)}
+                onPlay={() => handlePlayAudio(targetChar)}
                 size="sm"
                 variant="icon"
                 title="Dengarkan pelafalan audio"

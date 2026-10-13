@@ -13,10 +13,12 @@ import {
   Menu,
   X,
   Sparkles,
+  Flame,
   Wifi,
   WifiOff,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { useGamification } from '@/context/GamificationContext'
 
 interface NavItem {
   href: string
@@ -66,6 +68,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname()
+  const { dailyStreak, levelInfo } = useGamification()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isBackendLive, setIsBackendLive] = useState<boolean | null>(null)
   const [memorizedCount, setMemorizedCount] = useState<number>(0)
@@ -241,7 +244,34 @@ export const Navbar: React.FC = () => {
           </nav>
 
           {/* RIGHT SIDE TOOLS (BADGE, THEME TOGGLE, MOBILE BUTTON) */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Daily Streak Fire Badge */}
+            <div
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/60 text-orange-700 dark:text-orange-400 shadow-2xs"
+              title={`Daily Streak: ${dailyStreak} hari berlatih berturut-turut!`}
+            >
+              <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 animate-pulse" />
+              <span>{dailyStreak} Hari</span>
+            </div>
+
+            {/* Level & XP Bar Badge */}
+            <div
+              className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-800 dark:text-indigo-300 shadow-2xs"
+              title={`Level ${levelInfo.level}: ${levelInfo.title} (${levelInfo.japaneseTitle}) • ${levelInfo.currentLevelXP}/${levelInfo.nextLevelXP} XP (${levelInfo.totalXP} XP Total)`}
+            >
+              <span className="text-sm leading-none">{levelInfo.icon}</span>
+              <span className="font-extrabold whitespace-nowrap">Lv.{levelInfo.level}</span>
+              <div className="w-14 h-2 bg-indigo-200/80 dark:bg-indigo-900/80 rounded-full overflow-hidden shrink-0">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 to-sky-500 rounded-full transition-all duration-300"
+                  style={{ width: `${levelInfo.percentage}%` }}
+                />
+              </div>
+              <span className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 hidden xl:inline">
+                {levelInfo.currentLevelXP} XP
+              </span>
+            </div>
+
             {/* Quick Character Mastery Badge */}
             <Link
               href="/learn"
@@ -279,17 +309,38 @@ export const Navbar: React.FC = () => {
       {mobileMenuOpen && (
         <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl animate-in slide-in-from-top-2 duration-200 shadow-xl">
           <div className="max-w-7xl mx-auto px-4 py-4 space-y-1.5">
-            {/* Mobile Mastery summary card */}
-            <div className="p-3 mb-2 rounded-2xl bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-950/40 dark:to-indigo-950/40 border border-sky-200 dark:border-sky-800/60 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-500" />
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  Target Hiragana:
-                </span>
+            {/* Mobile Gamification & Mastery summary card */}
+            <div className="p-3 mb-2 rounded-2xl bg-gradient-to-r from-sky-50 via-indigo-50 to-amber-50 dark:from-sky-950/40 dark:via-indigo-950/40 dark:to-amber-950/40 border border-sky-200 dark:border-sky-800/60 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base">{levelInfo.icon}</span>
+                  <div>
+                    <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+                      Lv.{levelInfo.level} {levelInfo.title}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-serif ml-1">
+                      {levelInfo.japaneseTitle}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-100/60 dark:bg-orange-950/60 px-2 py-0.5 rounded-full">
+                  <Flame className="w-3.5 h-3.5 fill-orange-500 text-orange-500" />
+                  <span>{dailyStreak} Hari</span>
+                </div>
               </div>
-              <span className="text-xs font-black text-sky-700 dark:text-sky-300">
-                {memorizedCount} dari 46 Karakter Hafal
-              </span>
+              {/* XP progress bar */}
+              <div className="space-y-1">
+                <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-indigo-500 to-sky-500 rounded-full"
+                    style={{ width: `${levelInfo.percentage}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                  <span className="font-mono">{levelInfo.currentLevelXP} / {levelInfo.nextLevelXP} XP ({levelInfo.totalXP} Total)</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400">{memorizedCount}/46 Hafal</span>
+                </div>
+              </div>
             </div>
 
             {NAV_ITEMS.map((item) => {

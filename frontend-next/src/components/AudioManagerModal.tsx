@@ -471,12 +471,18 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
                 {/* Live Play Current Active Sound */}
                 <button
                   type="button"
-                  onClick={() =>
-                    playLiveAudio({
-                      symbol: selectedChar.symbol,
-                      romaji: selectedChar.romaji,
-                    })
-                  }
+                  onClick={() => {
+                    try {
+                      playLiveAudio({
+                        symbol: selectedChar.symbol,
+                        romaji: selectedChar.romaji,
+                      }).catch((err) => {
+                        console.warn('AudioManagerModal live test audio notice:', err)
+                      })
+                    } catch (err) {
+                      console.warn('AudioManagerModal live test audio error:', err)
+                    }
+                  }}
                   className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-slate-750 shadow-xs cursor-pointer flex items-center gap-1.5 transition active:scale-95"
                 >
                   <Volume2 size={15} />

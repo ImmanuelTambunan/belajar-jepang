@@ -7,6 +7,7 @@ import { ExamConfigCard } from '@/components/ExamConfigCard'
 import { ExamQuestionCard } from '@/components/ExamQuestionCard'
 import { ExamResultSummaryView } from '@/components/ExamResultSummaryView'
 import { generateExamQuestions, calculateExamGrade } from '@/utils/examGenerator'
+import { useGamification } from '@/context/GamificationContext'
 import { Award } from 'lucide-react'
 import rawHiraganaData from '@/data/hiragana_46.json'
 
@@ -51,6 +52,7 @@ const FALLBACK_ALL: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]).map
 const LOCAL_STORAGE_EXAM_HISTORY = 'nihongo_sora_exam_history'
 
 export default function ExamPage() {
+  const { awardXP } = useGamification()
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
   // Master character pool
@@ -136,8 +138,13 @@ export default function ExamPage() {
             : q
         )
       )
+
+      // Gamification: Menjawab benar di mode ujian (/exam): +15 XP per soal
+      if (isCorrect) {
+        awardXP(15, `Jawaban Ujian Benar (Soal #${currentIndex + 1})`)
+      }
     },
-    []
+    [awardXP, currentIndex]
   )
 
   // Advance to next question or complete exam
@@ -177,6 +184,11 @@ export default function ExamPage() {
     setExamSummary(summary)
     setExamState('summary')
 
+    // Gamification: Sesi ujian selesai tanpa salah: Bonus +50 XP
+    if (wrong === 0 && total > 0) {
+      awardXP(50, 'Sesi Ujian Sempurna! (Bonus Tanpa Salah ✨)')
+    }
+
     // 1. Save to LocalStorage
     if (typeof window !== 'undefined') {
       try {
@@ -187,6 +199,7 @@ export default function ExamPage() {
           LOCAL_STORAGE_EXAM_HISTORY,
           JSON.stringify(historyList.slice(0, 30))
         )
+        window.dispatchEvent(new Event('nihongo_sora_progress_updated'))
       } catch {
         // ignore storage errors
       }
@@ -209,7 +222,7 @@ export default function ExamPage() {
     } catch {
       // silent fail in offline mode
     }
-  }, [currentIndex, questions, startTime, apiBaseUrl])
+  }, [currentIndex, questions, startTime, apiBaseUrl, awardXP])
 
   // Retake exam with the same configuration
   const handleRetakeExam = useCallback(() => {

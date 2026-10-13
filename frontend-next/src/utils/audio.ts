@@ -218,15 +218,16 @@ export function getAllJapaneseVoices(): SpeechSynthesisVoice[] {
 /**
  * Plays speech using Web Speech API fallback
  */
-function playWebSpeech(
+export function playWebSpeech(
   textToSpeak: string,
-  options: PlaybackOptions
+  options: PlaybackOptions = {}
 ): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<void>((resolve) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       const err = new Error('Web Speech API tidak didukung di browser ini.')
+      console.warn(err.message)
       options.onError?.(err)
-      reject(err)
+      resolve()
       return
     }
 
@@ -269,20 +270,44 @@ function playWebSpeech(
           resolve()
           return
         }
+        console.warn(`Web Speech Synthesis notice: ${e.error}`)
         const err = new Error(`Web Speech Error: ${e.error}`)
         options.onError?.(err)
-        reject(err)
+        resolve()
       }
 
       window.speechSynthesis.speak(utterance)
     } catch (err: unknown) {
       isPlayingGlobally = false
       activeSpeechUtterance = null
+      console.warn('Web Speech Synthesis error:', err)
       const errorObj = err instanceof Error ? err : new Error(String(err))
       options.onError?.(errorObj)
-      reject(errorObj)
+      resolve()
     }
   })
+}
+
+/**
+ * Speaks a Japanese character or text using Web Speech API (speechSynthesis ja-JP)
+ */
+export async function speakWithWebSpeech(
+  character: CharacterAudioInput | string,
+  options: PlaybackOptions = {}
+): Promise<void> {
+  const { symbol, romaji } =
+    typeof character === 'string'
+      ? extractCharacterAudioInfo({ character })
+      : extractCharacterAudioInfo(character)
+
+  const textToSpeak =
+    symbol ||
+    (typeof character === 'string'
+      ? character
+      : character.character || character.symbol || romaji)
+
+  if (!textToSpeak) return
+  await playWebSpeech(textToSpeak, options)
 }
 
 /**
@@ -308,12 +333,11 @@ export async function playCharacterAudio(
   }
 
   const basePath = options.nativeBasePath || '/audio/hiragana'
-  const textToSpeak = symbol || romaji
 
   // Helper to fallback to speech synthesis
   const executeSpeechFallback = async (reason: string) => {
     options.onFallback?.(reason)
-    await playWebSpeech(textToSpeak, options)
+    await speakWithWebSpeech(input, options)
   }
 
   // If romaji is not available, jump directly to Web Speech
@@ -332,12 +356,13 @@ export async function playCharacterAudio(
       const customAudio = new Audio(blobUrl)
       activeAudioElement = customAudio
 
-      const customPromise = new Promise<void>((resolve, reject) => {
-        let isCleanedUp = false
+      let isCustomCleanedUp = false
+      let customSucceeded = false
 
+      await new Promise<void>((resolve) => {
         const cleanup = () => {
-          if (isCleanedUp) return
-          isCleanedUp = true
+          if (isCustomCleanedUp) return
+          isCustomCleanedUp = true
           customAudio.removeEventListener('playing', onPlaying)
           customAudio.removeEventListener('ended', onEnded)
           customAudio.removeEventListener('error', onError)
@@ -345,6 +370,7 @@ export async function playCharacterAudio(
         }
 
         const onPlaying = () => {
+          customSucceeded = true
           isPlayingGlobally = true
           options.onStart?.('custom')
         }
@@ -361,21 +387,40 @@ export async function playCharacterAudio(
 
         const onError = () => {
           cleanup()
-          reject(new Error('Gagal memutar audio kustom'))
+          if (activeAudioElement === customAudio) {
+            activeAudioElement = null
+          }
+          isPlayingGlobally = false
+          console.warn('Audio kustom gagal dimuat, melanjutkan ke layer audio berikutnya.')
+          resolve()
         }
 
         customAudio.addEventListener('playing', onPlaying)
         customAudio.addEventListener('ended', onEnded)
         customAudio.addEventListener('error', onError)
+
+        const playPromise = customAudio.play()
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            if (err instanceof Error && err.name === 'NotAllowedError') {
+              cleanup()
+              console.warn('Audio autoplay dihentikan oleh browser sebelum interaksi pengguna.')
+              isPlayingGlobally = false
+              if (activeAudioElement === customAudio) {
+                activeAudioElement = null
+              }
+              options.onError?.(err)
+              resolve()
+              return
+            }
+            onError()
+          })
+        }
       })
 
-      const playPromise = customAudio.play()
-      if (playPromise !== undefined) {
-        await playPromise
+      if (customSucceeded) {
+        return // Successfully played custom audio!
       }
-
-      await customPromise
-      return // Successfully played custom audio!
     }
   } catch (err: unknown) {
     // Autoplay browser policy detection (NotAllowedError)
@@ -398,9 +443,31 @@ export async function playCharacterAudio(
     const audio = new Audio(audioPathMp3)
     activeAudioElement = audio
 
-    const nativePromise = new Promise<void>((resolve, reject) => {
-      let isCleanedUp = false
+    let isCleanedUp = false
+    let fallbackExecuted = false
 
+    const triggerFallbackSafely = async (reason: string) => {
+      if (fallbackExecuted) return
+      fallbackExecuted = true
+
+      if (activeAudioElement === audio) {
+        activeAudioElement = null
+      }
+      isPlayingGlobally = false
+
+      console.warn(
+        `File native audio tidak ditemukan atau gagal dimuat (${audioPathMp3}). Mengalihkan otomatis ke Web Speech Synthesis fallback.`,
+        reason
+      )
+
+      try {
+        await executeSpeechFallback(reason)
+      } catch (fallbackErr) {
+        console.warn('Fallback Web Speech API gagal:', fallbackErr)
+      }
+    }
+
+    await new Promise<void>((resolve) => {
       const cleanup = () => {
         if (isCleanedUp) return
         isCleanedUp = true
@@ -424,23 +491,43 @@ export async function playCharacterAudio(
         resolve()
       }
 
-      const onError = () => {
+      const onError = async () => {
         cleanup()
-        reject(new Error(`Gagal memuat native audio: ${audioPathMp3}`))
+        await triggerFallbackSafely(`Native audio error event (404/format): ${audioPathMp3}`)
+        resolve()
       }
 
       audio.addEventListener('playing', onPlaying)
       audio.addEventListener('ended', onEnded)
       audio.addEventListener('error', onError)
+
+      const playPromise = audio.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(async (playErr: unknown) => {
+          cleanup()
+
+          // Autoplay browser policy detection (NotAllowedError)
+          if (playErr instanceof Error && playErr.name === 'NotAllowedError') {
+            console.warn('Audio autoplay dihentikan oleh browser sebelum interaksi pengguna.')
+            isPlayingGlobally = false
+            if (activeAudioElement === audio) {
+              activeAudioElement = null
+            }
+            options.onError?.(playErr)
+            resolve()
+            return
+          }
+
+          // Format error, 404, or abort
+          await triggerFallbackSafely(
+            playErr instanceof Error ? playErr.message : `Gagal memutar native audio: ${audioPathMp3}`
+          )
+          resolve()
+        })
+      }
     })
 
-    const playPromise = audio.play()
-    if (playPromise !== undefined) {
-      await playPromise
-    }
-
-    await nativePromise
-    return // Successfully played native static audio!
+    return // Handled successfully (either native played or fallback resolved)
   } catch (err: unknown) {
     // Autoplay browser policy detection (NotAllowedError)
     if (err instanceof Error && err.name === 'NotAllowedError') {
@@ -459,7 +546,12 @@ export async function playCharacterAudio(
         err instanceof Error ? err.message : 'File audio lokal belum tersedia'
       )
     } catch {
-      // Handled in playWebSpeech
+      // Handled in speakWithWebSpeech
     }
   }
 }
+
+/**
+ * Alias for playCharacterAudio
+ */
+export const playKanaAudio = playCharacterAudio

@@ -9,14 +9,22 @@ import {
   ChevronRight,
   ChevronLeft,
   Layers,
+  Flame,
 } from 'lucide-react'
 import { CharacterData } from '@/types/character'
 import { UserProgress, ProgressSummary, PracticeSessionStats } from '@/types/progress'
 import { OverallAccuracyResult } from '@/types/accuracy'
+import { ExamResultSummary } from '@/types/exam'
 import { StrokeCanvas } from '@/components/StrokeCanvas'
 import { PracticeSummaryModal } from '@/components/PracticeSummaryModal'
 import { AudioSpeakerButton } from '@/components/AudioSpeakerButton'
 import { useCharacterAudio } from '@/hooks/useCharacterAudio'
+import { useGamification } from '@/context/GamificationContext'
+import {
+  evaluateCharacterReviewStatus,
+  getCharactersNeedingReview,
+  getLatestExamFromStorage,
+} from '@/utils/srs'
 import rawHiraganaData from '@/data/hiragana_46.json'
 
 interface RawHiraganaItem {
@@ -76,20 +84,25 @@ function PracticeStudioContent() {
   const searchParams = useSearchParams()
   const initialCharParam = searchParams.get('char')
   const initialIdParam = searchParams.get('id')
+  const initialFilterParam = searchParams.get('filter')
 
+  const { awardXP } = useGamification()
   const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
   // Master character pool & progress
   const [allCharacters, setAllCharacters] = useState<CharacterData[]>(FALLBACK_ALL)
   const [progressMap, setProgressMap] = useState<Record<number, UserProgress>>({})
+  const [latestExam, setLatestExam] = useState<ExamResultSummary | null>(null)
   const [isLiveApi, setIsLiveApi] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(true)
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
 
   // Selected character & queue
   const [selectedChar, setSelectedChar] = useState<CharacterData>(FALLBACK_ALL[0])
-  const [selectedRowGroup, setSelectedRowGroup] = useState<string>('all')
+  const [selectedRowGroup, setSelectedRowGroup] = useState<string>(
+    initialFilterParam === 'needs_review' ? 'needs_review' : 'all'
+  )
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true)
 
   // Session stats
@@ -103,18 +116,42 @@ function PracticeStudioContent() {
   // Audio Hook
   const { play: playAudio, isItemPlaying, activeSource } = useCharacterAudio()
 
-  // Load progress from localStorage on mount
-  useEffect(() => {
+  // Safe audio playback handler wrapped in try-catch
+  const handlePlayAudio = useCallback(
+    async (char: CharacterData) => {
+      try {
+        await playAudio(char)
+      } catch (err) {
+        console.warn('PracticePage audio playback error:', err)
+      }
+    },
+    [playAudio]
+  )
+
+  // Load progress and latest exam from localStorage on mount
+  const loadLocalData = useCallback(() => {
     if (typeof window === 'undefined') return
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY)
       if (stored) {
         setProgressMap(JSON.parse(stored))
       }
+      setLatestExam(getLatestExamFromStorage())
     } catch {
       // ignore
     }
   }, [])
+
+  useEffect(() => {
+    loadLocalData()
+    const handleUpdate = () => loadLocalData()
+    window.addEventListener('nihongo_sora_progress_updated', handleUpdate)
+    window.addEventListener('storage', handleUpdate)
+    return () => {
+      window.removeEventListener('nihongo_sora_progress_updated', handleUpdate)
+      window.removeEventListener('storage', handleUpdate)
+    }
+  }, [loadLocalData])
 
   // Save progress map
   const saveLocalProgress = useCallback((newMap: Record<number, UserProgress>) => {
@@ -197,14 +234,34 @@ function PracticeStudioContent() {
     fetchCharacters()
   }, [fetchCharacters])
 
+  // Characters requiring review based on SRS criteria
+  const needsReviewList = useMemo(() => {
+    return getCharactersNeedingReview(allCharacters, progressMap, latestExam)
+  }, [allCharacters, progressMap, latestExam])
+
+  // If navigated with ?filter=needs_review, select first review character
+  useEffect(() => {
+    if (
+      initialFilterParam === 'needs_review' &&
+      !initialCharParam &&
+      !initialIdParam &&
+      needsReviewList.length > 0
+    ) {
+      setSelectedChar(needsReviewList[0])
+    }
+  }, [initialFilterParam, initialCharParam, initialIdParam, needsReviewList])
+
   // Filtered sidebar characters
   const sidebarCharacters = useMemo(() => {
+    if (selectedRowGroup === 'needs_review') {
+      return needsReviewList
+    }
     if (selectedRowGroup === 'all') return allCharacters
     if (selectedRowGroup === 'wa_n') {
       return allCharacters.filter((c) => c.row_group === 'wa' || c.row_group === 'n')
     }
     return allCharacters.filter((c) => c.row_group === selectedRowGroup)
-  }, [allCharacters, selectedRowGroup])
+  }, [allCharacters, selectedRowGroup, needsReviewList])
 
   // Summary statistics
   const summary: ProgressSummary = useMemo(() => {
@@ -229,21 +286,29 @@ function PracticeStudioContent() {
 
   // Advance to next character seamlessly
   const handleNextCharacter = useCallback(() => {
-    const currentIndex = allCharacters.findIndex((c) => c.id === selectedChar.id)
-    if (currentIndex === -1) return
+    const list = sidebarCharacters.length > 0 ? sidebarCharacters : allCharacters
+    const currentIndex = list.findIndex((c) => c.id === selectedChar.id)
+    if (currentIndex === -1) {
+      setSelectedChar(list[0])
+      return
+    }
 
-    const nextIndex = (currentIndex + 1) % allCharacters.length
-    setSelectedChar(allCharacters[nextIndex])
-  }, [allCharacters, selectedChar.id])
+    const nextIndex = (currentIndex + 1) % list.length
+    setSelectedChar(list[nextIndex])
+  }, [sidebarCharacters, allCharacters, selectedChar.id])
 
   // Advance to previous character
   const handlePrevCharacter = useCallback(() => {
-    const currentIndex = allCharacters.findIndex((c) => c.id === selectedChar.id)
-    if (currentIndex === -1) return
+    const list = sidebarCharacters.length > 0 ? sidebarCharacters : allCharacters
+    const currentIndex = list.findIndex((c) => c.id === selectedChar.id)
+    if (currentIndex === -1) {
+      setSelectedChar(list[0])
+      return
+    }
 
-    const prevIndex = (currentIndex - 1 + allCharacters.length) % allCharacters.length
-    setSelectedChar(allCharacters[prevIndex])
-  }, [allCharacters, selectedChar.id])
+    const prevIndex = (currentIndex - 1 + list.length) % list.length
+    setSelectedChar(list[prevIndex])
+  }, [sidebarCharacters, allCharacters, selectedChar.id])
 
   // Action: Tandai Sudah Hafal
   const handleMarkMemorized = async () => {
@@ -361,6 +426,14 @@ function PracticeStudioContent() {
     const nextMap = { ...progressMap, [charId]: updated }
     saveLocalProgress(nextMap)
 
+    // Gamification: Berhasil menyelesaikan tracing karakter (akurasi >= 70%): +10 XP
+    if (evalResult.score >= 70) {
+      awardXP(
+        10,
+        `Presisi Tracing ${selectedChar.character || selectedChar.symbol} (${evalResult.score}%)`
+      )
+    }
+
     if (isLiveApi) {
       try {
         await fetch(`${apiBaseUrl}/progress/update`, {
@@ -379,6 +452,9 @@ function PracticeStudioContent() {
 
   const isCurrentMemorized = progressMap[selectedChar.id]?.status === 'memorized'
   const currentAccuracy = progressMap[selectedChar.id]?.accuracy_score
+  const currentCharReviewStatus = useMemo(() => {
+    return evaluateCharacterReviewStatus(selectedChar, progressMap, latestExam)
+  }, [selectedChar, progressMap, latestExam])
 
   return (
     <div className="w-full min-h-[calc(100vh-4.5rem)] flex flex-col bg-slate-50 dark:bg-slate-950">
@@ -428,6 +504,15 @@ function PracticeStudioContent() {
                   🎯 {currentAccuracy}%
                 </span>
               )}
+              {currentCharReviewStatus.needsReview && (
+                <span
+                  className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 border border-amber-300 dark:border-amber-700/60 text-amber-800 dark:text-amber-300 flex items-center gap-1"
+                  title={currentCharReviewStatus.label}
+                >
+                  <Flame className="w-3 h-3 text-amber-600 fill-amber-500 animate-pulse" />
+                  <span>Perlu Diulang (SRS)</span>
+                </span>
+              )}
             </div>
 
             {/* Audio Button */}
@@ -435,7 +520,7 @@ function PracticeStudioContent() {
               character={selectedChar}
               isPlaying={isItemPlaying(selectedChar)}
               activeSource={activeSource}
-              onPlay={() => playAudio(selectedChar)}
+              onPlay={() => handlePlayAudio(selectedChar)}
               size="sm"
               title="Dengarkan pelafalan karakter ini"
             />
@@ -510,13 +595,45 @@ function PracticeStudioContent() {
                 </span>
               </div>
 
+              {/* Quick Filter Switch: All vs Needs Review */}
+              <div className="grid grid-cols-2 gap-1.5 mb-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedRowGroup('all')}
+                  className={`py-1.5 px-2 rounded-xl text-[11px] font-bold transition cursor-pointer text-center ${
+                    selectedRowGroup !== 'needs_review'
+                      ? 'bg-sky-600 text-white shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                  }`}
+                >
+                  Semua ({allCharacters.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRowGroup('needs_review')}
+                  className={`py-1.5 px-2 rounded-xl text-[11px] font-bold transition cursor-pointer flex items-center justify-center gap-1 text-center ${
+                    selectedRowGroup === 'needs_review'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 hover:bg-amber-100'
+                  }`}
+                  title="Karakter dengan akurasi < 70% atau salah di ujian"
+                >
+                  <Flame className="w-3 h-3 text-amber-500 fill-amber-500" />
+                  <span>Review ({needsReviewList.length})</span>
+                </button>
+              </div>
+
               {/* Row Filter dropdown */}
               <select
                 value={selectedRowGroup}
                 onChange={(e) => setSelectedRowGroup(e.target.value)}
                 className="w-full py-1.5 px-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-sky-500"
               >
-                {ROW_FILTERS.map((r) => (
+                <option value="needs_review">
+                  ⚠️ Karakter Perlu Diulang ({needsReviewList.length})
+                </option>
+                <option value="all">Baris: Semua Huruf (46)</option>
+                {ROW_FILTERS.filter((r) => r.id !== 'all').map((r) => (
                   <option key={r.id} value={r.id}>
                     Baris: {r.label}
                   </option>
@@ -526,52 +643,95 @@ function PracticeStudioContent() {
 
             {/* Character List Grid in Sidebar */}
             <div className="p-2 grid grid-cols-4 gap-1.5 overflow-y-auto max-h-[calc(100vh-14rem)]">
-              {sidebarCharacters.map((char) => {
-                const isSelected = char.id === selectedChar.id
-                const isMemorized = progressMap[char.id]?.status === 'memorized'
-                const score = progressMap[char.id]?.accuracy_score
-
-                return (
+              {sidebarCharacters.length === 0 ? (
+                <div className="col-span-4 p-4 text-center">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 mx-auto flex items-center justify-center mb-1">
+                    ✓
+                  </div>
+                  <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Tidak ada huruf lemah!
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Semua akurasi tracing ≥ 70% dan tidak ada kesalahan ujian.
+                  </p>
                   <button
-                    key={char.id}
-                    onClick={() => setSelectedChar(char)}
-                    className={`p-2 rounded-xl border flex flex-col items-center justify-center transition cursor-pointer select-none relative ${
-                      isSelected
-                        ? 'bg-sky-600 text-white border-sky-600 shadow-md ring-2 ring-sky-400/50 scale-105 z-10'
-                        : isMemorized
-                        ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800/60 text-slate-900 dark:text-slate-100'
-                        : 'bg-slate-50 dark:bg-slate-850 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-sky-300 dark:hover:border-slate-700'
-                    }`}
+                    type="button"
+                    onClick={() => setSelectedRowGroup('all')}
+                    className="mt-2 text-xs font-bold text-sky-600 hover:underline cursor-pointer"
                   >
-                    {isMemorized && !isSelected && (
-                      <span className="absolute top-1 right-1 text-emerald-500 text-[9px] font-bold">
-                        ✓
-                      </span>
-                    )}
+                    Buka Semua Huruf
+                  </button>
+                </div>
+              ) : (
+                sidebarCharacters.map((char) => {
+                  const isSelected = char.id === selectedChar.id
+                  const isMemorized = progressMap[char.id]?.status === 'memorized'
+                  const score = progressMap[char.id]?.accuracy_score
+                  const reviewStatus = evaluateCharacterReviewStatus(
+                    char,
+                    progressMap,
+                    latestExam
+                  )
 
-                    <span className="text-xl font-bold leading-tight">
-                      {char.character || char.symbol}
-                    </span>
-                    <span
-                      className={`text-[10px] font-mono leading-tight ${
-                        isSelected ? 'text-sky-100' : 'text-slate-400'
+                  return (
+                    <button
+                      key={char.id}
+                      onClick={() => setSelectedChar(char)}
+                      className={`p-2 rounded-xl border flex flex-col items-center justify-center transition cursor-pointer select-none relative ${
+                        isSelected
+                          ? 'bg-sky-600 text-white border-sky-600 shadow-md ring-2 ring-sky-400/50 scale-105 z-10'
+                          : reviewStatus.needsReview
+                          ? 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/80 text-slate-900 dark:text-slate-100 hover:border-amber-400'
+                          : isMemorized
+                          ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800/60 text-slate-900 dark:text-slate-100'
+                          : 'bg-slate-50 dark:bg-slate-850 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-sky-300 dark:hover:border-slate-700'
                       }`}
                     >
-                      {char.readings?.[0]?.romaji}
-                    </span>
+                      {/* Review warning dot */}
+                      {reviewStatus.needsReview && !isSelected && (
+                        <span
+                          className="absolute top-1 left-1 flex h-2 w-2"
+                          title={reviewStatus.label}
+                        >
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                        </span>
+                      )}
 
-                    {score !== undefined && score !== null && (
+                      {isMemorized && !isSelected && (
+                        <span className="absolute top-1 right-1 text-emerald-500 text-[9px] font-bold">
+                          ✓
+                        </span>
+                      )}
+
+                      <span className="text-xl font-bold leading-tight">
+                        {char.character || char.symbol}
+                      </span>
                       <span
-                        className={`text-[8px] font-mono mt-0.5 ${
-                          isSelected ? 'text-sky-100' : 'text-emerald-600 dark:text-emerald-400 font-bold'
+                        className={`text-[10px] font-mono leading-tight ${
+                          isSelected ? 'text-sky-100' : 'text-slate-400'
                         }`}
                       >
-                        {score}%
+                        {char.readings?.[0]?.romaji}
                       </span>
-                    )}
-                  </button>
-                )
-              })}
+
+                      {score !== undefined && score !== null && (
+                        <span
+                          className={`text-[8px] font-mono mt-0.5 ${
+                            isSelected
+                              ? 'text-sky-100'
+                              : score >= 70
+                              ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                              : 'text-amber-600 dark:text-amber-400 font-bold'
+                          }`}
+                        >
+                          {score}%
+                        </span>
+                      )}
+                    </button>
+                  )
+                })
+              )}
             </div>
           </aside>
         )}
@@ -579,6 +739,27 @@ function PracticeStudioContent() {
         {/* CENTRAL STAGE: FOCUSED STROKE CANVAS */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto flex flex-col items-center">
           <div className="w-full max-w-4xl">
+            {/* SRS Active Banner */}
+            {selectedRowGroup === 'needs_review' && (
+              <div className="mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-300 dark:border-amber-800/80 flex items-center justify-between gap-3 text-xs text-amber-900 dark:text-amber-200 animate-in fade-in">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-xl bg-amber-500 text-white shrink-0">
+                    <Flame className="w-4 h-4 fill-white" />
+                  </span>
+                  <div>
+                    <strong className="font-extrabold">Antrean Spaced Repetition (SRS):</strong>{' '}
+                    Menampilkan karakter dengan akurasi &lt; 70% atau salah di sesi ujian terakhir. Selesaikan goresan dengan akurasi ≥ 70% untuk meraih +10 XP!
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRowGroup('all')}
+                  className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 font-bold hover:bg-amber-50 text-[11px] whitespace-nowrap cursor-pointer shrink-0"
+                >
+                  Lihat Semua
+                </button>
+              </div>
+            )}
             {/* DISTRACTION-FREE CANVAS */}
             <div className="bg-white dark:bg-slate-900/80 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-sm">
               {loading ? (

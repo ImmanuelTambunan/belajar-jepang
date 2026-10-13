@@ -11,11 +11,18 @@ import {
   Play,
   RotateCcw,
   Filter,
+  Flame,
 } from 'lucide-react'
 import { CharacterData } from '@/types/character'
 import { UserProgress } from '@/types/progress'
+import { ExamResultSummary } from '@/types/exam'
 import { AudioSpeakerButton } from '@/components/AudioSpeakerButton'
 import { useCharacterAudio } from '@/hooks/useCharacterAudio'
+import {
+  evaluateCharacterReviewStatus,
+  getCharactersNeedingReview,
+  getLatestExamFromStorage,
+} from '@/utils/srs'
 import rawHiraganaData from '@/data/hiragana_46.json'
 
 interface RawHiraganaItem {
@@ -93,12 +100,13 @@ export default function LearnPage() {
   const [characters, setCharacters] = useState<CharacterData[]>(FALLBACK_HIRAGANA)
   const [activeTab, setActiveTab] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
-  const [masteryFilter, setMasteryFilter] = useState<'all' | 'memorized' | 'learning'>('all')
+  const [masteryFilter, setMasteryFilter] = useState<'all' | 'memorized' | 'learning' | 'needs_review'>('all')
   const [loading, setLoading] = useState<boolean>(false)
   const [isLiveApi, setIsLiveApi] = useState<boolean>(false)
 
-  // User progress map
+  // User progress map & latest exam history
   const [progressMap, setProgressMap] = useState<Record<number, UserProgress>>({})
+  const [latestExam, setLatestExam] = useState<ExamResultSummary | null>(null)
 
   // Modal Detail State
   const [modalChar, setModalChar] = useState<CharacterData | null>(null)
@@ -108,7 +116,19 @@ export default function LearnPage() {
   // Audio Hook
   const { play: playAudio, isItemPlaying, activeSource } = useCharacterAudio()
 
-  // Load progress
+  // Safe audio playback handler wrapped in try-catch
+  const handlePlayAudio = useCallback(
+    async (char: CharacterData) => {
+      try {
+        await playAudio(char)
+      } catch (err) {
+        console.warn('LearnPage audio playback error:', err)
+      }
+    },
+    [playAudio]
+  )
+
+  // Load progress and latest exam
   const loadProgress = useCallback(() => {
     if (typeof window === 'undefined') return
     try {
@@ -116,6 +136,7 @@ export default function LearnPage() {
       if (stored) {
         setProgressMap(JSON.parse(stored))
       }
+      setLatestExam(getLatestExamFromStorage())
     } catch {
       // ignore
     }
@@ -198,10 +219,20 @@ export default function LearnPage() {
       result = result.filter((c) => progressMap[c.id]?.status === 'memorized')
     } else if (masteryFilter === 'learning') {
       result = result.filter((c) => progressMap[c.id]?.status !== 'memorized')
+    } else if (masteryFilter === 'needs_review') {
+      result = result.filter((c) => {
+        const { needsReview } = evaluateCharacterReviewStatus(c, progressMap, latestExam)
+        return needsReview
+      })
     }
 
     return result
-  }, [characters, activeTab, searchQuery, masteryFilter, progressMap])
+  }, [characters, activeTab, searchQuery, masteryFilter, progressMap, latestExam])
+
+  // Count of characters needing review
+  const needsReviewCount = useMemo(() => {
+    return getCharactersNeedingReview(characters, progressMap, latestExam).length
+  }, [characters, progressMap, latestExam])
 
   // Hitsujun Animation controller in modal
   const animTimerRef = useRef<number | null>(null)
@@ -318,6 +349,7 @@ export default function LearnPage() {
             {(
               [
                 { id: 'all', label: 'Semua' },
+                { id: 'needs_review', label: `Perlu Diulang (${needsReviewCount})` },
                 { id: 'memorized', label: 'Sudah Hafal' },
                 { id: 'learning', label: 'Belum Hafal' },
               ] as const
@@ -325,13 +357,20 @@ export default function LearnPage() {
               <button
                 key={opt.id}
                 onClick={() => setMasteryFilter(opt.id)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
                   masteryFilter === opt.id
-                    ? 'bg-white dark:bg-sky-600 text-sky-700 dark:text-white shadow-2xs'
+                    ? opt.id === 'needs_review'
+                      ? 'bg-amber-600 text-white shadow-2xs'
+                      : 'bg-white dark:bg-sky-600 text-sky-700 dark:text-white shadow-2xs'
+                    : opt.id === 'needs_review'
+                    ? 'text-amber-700 dark:text-amber-400 hover:text-amber-800'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                {opt.label}
+                {opt.id === 'needs_review' && (
+                  <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                )}
+                <span>{opt.label}</span>
               </button>
             ))}
           </div>
@@ -398,6 +437,11 @@ export default function LearnPage() {
             const isMemorized = progressMap[item.id]?.status === 'memorized'
             const accuracyScore = progressMap[item.id]?.accuracy_score
             const isPlaying = isItemPlaying(item)
+            const reviewStatus = evaluateCharacterReviewStatus(
+              item,
+              progressMap,
+              latestExam
+            )
 
             return (
               <div
@@ -414,10 +458,25 @@ export default function LearnPage() {
                     setModalChar(item)
                   }
                 }}
-                className="group relative p-3 rounded-2xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 hover:border-sky-400 dark:hover:border-sky-500 hover:shadow-md transition-all cursor-pointer flex flex-col items-center justify-center select-none"
+                className={`group relative p-3 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center select-none ${
+                  reviewStatus.needsReview
+                    ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/80 hover:border-amber-400 hover:shadow-md'
+                    : 'bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 hover:border-sky-400 dark:hover:border-sky-500 hover:shadow-md'
+                }`}
               >
-                {/* Status Badges */}
-                {isMemorized && (
+                {/* Needs Review Pulsing Indicator */}
+                {reviewStatus.needsReview && (
+                  <span
+                    className="absolute top-1.5 left-1.5 z-10 flex h-2.5 w-2.5"
+                    title={reviewStatus.label}
+                  >
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                  </span>
+                )}
+
+                {/* Status Badges (Hafal) */}
+                {isMemorized && !reviewStatus.needsReview && (
                   <span
                     className="absolute top-1.5 left-1.5 text-emerald-500 text-[10px]"
                     title="Sudah Hafal"
@@ -431,7 +490,7 @@ export default function LearnPage() {
                   <AudioSpeakerButton
                     character={item}
                     isPlaying={isPlaying}
-                    onPlay={() => playAudio(item)}
+                    onPlay={() => handlePlayAudio(item)}
                     size="xs"
                     stopPropagation={true}
                     title={`Putar audio pelafalan ${item.character}`}
@@ -448,13 +507,29 @@ export default function LearnPage() {
                   /{item.readings?.[0]?.romaji || '-'}/
                 </span>
 
+                {/* Needs Review Pill */}
+                {reviewStatus.needsReview && (
+                  <span
+                    className="mt-1 px-1.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/80 text-[8px] font-extrabold text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 leading-none"
+                    title={reviewStatus.label}
+                  >
+                    Review
+                  </span>
+                )}
+
                 {/* Stroke count & accuracy */}
                 <div className="flex items-center gap-1 text-[9px] text-slate-400 dark:text-slate-500 mt-0.5">
                   <span>{item.strokes_count} Goresan</span>
                   {accuracyScore !== undefined && accuracyScore !== null && (
                     <>
                       <span>•</span>
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                      <span
+                        className={`font-bold ${
+                          accuracyScore >= 70
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-amber-600 dark:text-amber-400'
+                        }`}
+                      >
                         {accuracyScore}%
                       </span>
                     </>
@@ -520,6 +595,33 @@ export default function LearnPage() {
                 </button>
               </div>
             </div>
+
+            {/* Needs Review Alert Banner in Modal */}
+            {(() => {
+              const modalReviewStatus = modalChar
+                ? evaluateCharacterReviewStatus(modalChar, progressMap, latestExam)
+                : null
+              if (!modalReviewStatus?.needsReview) return null
+              return (
+                <div className="mt-4 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900 dark:text-amber-200">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-xl bg-amber-500 text-white shrink-0">
+                      <Flame className="w-4 h-4 fill-white" />
+                    </span>
+                    <div>
+                      <strong className="font-extrabold">Karakter Perlu Diulang (SRS):</strong>{' '}
+                      {modalReviewStatus.label}
+                    </div>
+                  </div>
+                  <Link
+                    href={`/practice?char=${modalChar.symbol || modalChar.character}`}
+                    className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs whitespace-nowrap self-start sm:self-auto shadow-xs"
+                  >
+                    Latih di Studio Tracing →
+                  </Link>
+                </div>
+              )
+            })()}
 
             {/* Modal Body */}
             <div className="mt-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
@@ -605,7 +707,7 @@ export default function LearnPage() {
                       character={modalChar}
                       isPlaying={isItemPlaying(modalChar)}
                       activeSource={activeSource}
-                      onPlay={() => playAudio(modalChar)}
+                      onPlay={() => handlePlayAudio(modalChar)}
                       size="md"
                       variant="badge"
                       label="Putar Audio Pelafalan"
