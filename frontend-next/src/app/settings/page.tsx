@@ -39,8 +39,9 @@ import {
   playCharacterAudio,
 } from '@/utils/audio'
 import rawHiraganaData from '@/data/hiragana_107.json'
+import rawKatakanaData from '@/data/katakana_107.json'
 
-interface RawHiraganaItem {
+interface RawKanaItem {
   symbol: string
   script_type: string
   category?: string
@@ -50,11 +51,20 @@ interface RawHiraganaItem {
   strokes: string[]
 }
 
-const ALL_HIRAGANA = (rawHiraganaData as RawHiraganaItem[]).map((item) => ({
+const ALL_HIRAGANA = (rawHiraganaData as RawKanaItem[]).map((item) => ({
   symbol: item.symbol,
   romaji: item.reading,
   category: item.category || 'gojuon',
   row_group: item.row_group,
+  script_type: 'hiragana' as const,
+}))
+
+const ALL_KATAKANA = (rawKatakanaData as RawKanaItem[]).map((item) => ({
+  symbol: item.symbol,
+  romaji: item.reading,
+  category: item.category || 'gojuon',
+  row_group: item.row_group,
+  script_type: 'katakana' as const,
 }))
 
 const SETTINGS_CATEGORY_TABS = [
@@ -64,73 +74,76 @@ const SETTINGS_CATEGORY_TABS = [
   { id: 'yoon', label: 'Yōon (36)' },
 ] as const
 
-const SETTINGS_ROW_FILTERS: Record<string, { id: string; label: string }[]> = {
-  all: [
-    { id: 'all', label: 'Semua Baris (107)' },
-    { id: 'vowel', label: 'A (Vokal)' },
-    { id: 'ka', label: 'Ka' },
-    { id: 'sa', label: 'Sa' },
-    { id: 'ta', label: 'Ta' },
-    { id: 'na', label: 'Na' },
-    { id: 'ha', label: 'Ha' },
-    { id: 'ma', label: 'Ma' },
-    { id: 'ya', label: 'Ya' },
-    { id: 'ra', label: 'Ra' },
-    { id: 'wa_n', label: 'Wa/N' },
-    { id: 'ga', label: 'Ga (が)' },
-    { id: 'za', label: 'Za (ざ)' },
-    { id: 'da', label: 'Da (だ)' },
-    { id: 'ba', label: 'Ba (ば)' },
-    { id: 'pa', label: 'Pa (ぱ)' },
-    { id: 'kya', label: 'Kya' },
-    { id: 'sha', label: 'Sha' },
-    { id: 'cha', label: 'Cha' },
-    { id: 'nya', label: 'Nya' },
-    { id: 'hya', label: 'Hya' },
-    { id: 'mya', label: 'Mya' },
-    { id: 'rya', label: 'Rya' },
-    { id: 'gya', label: 'Gya' },
-    { id: 'ja', label: 'Ja' },
-    { id: 'dya', label: 'Dya' },
-    { id: 'bya', label: 'Bya' },
-    { id: 'pya', label: 'Pya' },
-  ],
-  gojuon: [
-    { id: 'all', label: 'Semua Gojūon (46)' },
-    { id: 'vowel', label: 'A (Vokal)' },
-    { id: 'ka', label: 'Ka' },
-    { id: 'sa', label: 'Sa' },
-    { id: 'ta', label: 'Ta' },
-    { id: 'na', label: 'Na' },
-    { id: 'ha', label: 'Ha' },
-    { id: 'ma', label: 'Ma' },
-    { id: 'ya', label: 'Ya' },
-    { id: 'ra', label: 'Ra' },
-    { id: 'wa_n', label: 'Wa / N' },
-  ],
-  dakuon_handakuon: [
-    { id: 'all', label: 'Semua Turunan (25)' },
-    { id: 'ga', label: 'Ga (が)' },
-    { id: 'za', label: 'Za (ざ)' },
-    { id: 'da', label: 'Da (だ)' },
-    { id: 'ba', label: 'Ba (ば)' },
-    { id: 'pa', label: 'Pa (ぱ)' },
-  ],
-  yoon: [
-    { id: 'all', label: 'Semua Yōon (36)' },
-    { id: 'kya', label: 'Kya (きゃ)' },
-    { id: 'sha', label: 'Sha (しゃ)' },
-    { id: 'cha', label: 'Cha (ちゃ)' },
-    { id: 'nya', label: 'Nya (にゃ)' },
-    { id: 'hya', label: 'Hya (ひゃ)' },
-    { id: 'mya', label: 'Mya (みゃ)' },
-    { id: 'rya', label: 'Rya (りゃ)' },
-    { id: 'gya', label: 'Gya (ぎゃ)' },
-    { id: 'ja', label: 'Ja (じゃ)' },
-    { id: 'dya', label: 'Dya (ぢゃ)' },
-    { id: 'bya', label: 'Bya (びゃ)' },
-    { id: 'pya', label: 'Pya (ぴゃ)' },
-  ],
+function getSettingsRowFilters(scriptMode: 'hiragana' | 'katakana'): Record<string, { id: string; label: string }[]> {
+  const isK = scriptMode === 'katakana'
+  return {
+    all: [
+      { id: 'all', label: 'Semua Baris (107)' },
+      { id: 'vowel', label: isK ? 'A (Vokal - ア)' : 'A (Vokal - あ)' },
+      { id: 'ka', label: isK ? 'Ka (カ)' : 'Ka (か)' },
+      { id: 'sa', label: isK ? 'Sa (サ)' : 'Sa (sa)' },
+      { id: 'ta', label: isK ? 'Ta (タ)' : 'Ta (た)' },
+      { id: 'na', label: isK ? 'Na (ナ)' : 'Na (な)' },
+      { id: 'ha', label: isK ? 'Ha (ハ)' : 'Ha (は)' },
+      { id: 'ma', label: isK ? 'Ma (マ)' : 'Ma (ま)' },
+      { id: 'ya', label: isK ? 'Ya (ヤ)' : 'Ya (や)' },
+      { id: 'ra', label: isK ? 'Ra (ラ)' : 'Ra (ら)' },
+      { id: 'wa_n', label: isK ? 'Wa/N (ワ/ン)' : 'Wa/N (わ/ん)' },
+      { id: 'ga', label: isK ? 'Ga (ガ)' : 'Ga (が)' },
+      { id: 'za', label: isK ? 'Za (ザ)' : 'Za (ざ)' },
+      { id: 'da', label: isK ? 'Da (ダ)' : 'Da (だ)' },
+      { id: 'ba', label: isK ? 'Ba (バ)' : 'Ba (ば)' },
+      { id: 'pa', label: isK ? 'Pa (パ)' : 'Pa (ぱ)' },
+      { id: 'kya', label: isK ? 'Kya (キャ)' : 'Kya (きゃ)' },
+      { id: 'sha', label: isK ? 'Sha (シャ)' : 'Sha (しゃ)' },
+      { id: 'cha', label: isK ? 'Cha (チャ)' : 'Cha (ちゃ)' },
+      { id: 'nya', label: isK ? 'Nya (ニャ)' : 'Nya (にゃ)' },
+      { id: 'hya', label: isK ? 'Hya (ヒャ)' : 'Hya (ひゃ)' },
+      { id: 'mya', label: isK ? 'Mya (ミャ)' : 'Mya (みゃ)' },
+      { id: 'rya', label: isK ? 'Rya (リャ)' : 'Rya (りゃ)' },
+      { id: 'gya', label: isK ? 'Gya (ギャ)' : 'Gya (ぎゃ)' },
+      { id: 'ja', label: isK ? 'Ja (ジャ)' : 'Ja (じゃ)' },
+      { id: 'dya', label: isK ? 'Dya (ヂャ)' : 'Dya (ぢゃ)' },
+      { id: 'bya', label: isK ? 'Bya (ビャ)' : 'Bya (びゃ)' },
+      { id: 'pya', label: isK ? 'Pya (ピャ)' : 'Pya (ぴゃ)' },
+    ],
+    gojuon: [
+      { id: 'all', label: 'Semua Gojūon (46)' },
+      { id: 'vowel', label: isK ? 'A (Vokal - ア)' : 'A (Vokal - あ)' },
+      { id: 'ka', label: isK ? 'Ka (カ)' : 'Ka (か)' },
+      { id: 'sa', label: isK ? 'Sa (サ)' : 'Sa (sa)' },
+      { id: 'ta', label: isK ? 'Ta (タ)' : 'Ta (た)' },
+      { id: 'na', label: isK ? 'Na (ナ)' : 'Na (な)' },
+      { id: 'ha', label: isK ? 'Ha (ハ)' : 'Ha (は)' },
+      { id: 'ma', label: isK ? 'Ma (マ)' : 'Ma (ま)' },
+      { id: 'ya', label: isK ? 'Ya (ヤ)' : 'Ya (や)' },
+      { id: 'ra', label: isK ? 'Ra (ラ)' : 'Ra (ら)' },
+      { id: 'wa_n', label: isK ? 'Wa / N (ワ/ン)' : 'Wa / N (わ/ん)' },
+    ],
+    dakuon_handakuon: [
+      { id: 'all', label: 'Semua Turunan (25)' },
+      { id: 'ga', label: isK ? 'Ga (ガ)' : 'Ga (が)' },
+      { id: 'za', label: isK ? 'Za (ザ)' : 'Za (ざ)' },
+      { id: 'da', label: isK ? 'Da (ダ)' : 'Da (だ)' },
+      { id: 'ba', label: isK ? 'Ba (バ)' : 'Ba (ば)' },
+      { id: 'pa', label: isK ? 'Pa (パ)' : 'Pa (ぱ)' },
+    ],
+    yoon: [
+      { id: 'all', label: 'Semua Yōon (36)' },
+      { id: 'kya', label: isK ? 'Kya (キャ)' : 'Kya (きゃ)' },
+      { id: 'sha', label: isK ? 'Sha (シャ)' : 'Sha (しゃ)' },
+      { id: 'cha', label: isK ? 'Cha (チャ)' : 'Cha (ちゃ)' },
+      { id: 'nya', label: isK ? 'Nya (ニャ)' : 'Nya (にゃ)' },
+      { id: 'hya', label: isK ? 'Hya (ヒャ)' : 'Hya (ひゃ)' },
+      { id: 'mya', label: isK ? 'Mya (ミャ)' : 'Mya (みゃ)' },
+      { id: 'rya', label: isK ? 'Rya (リャ)' : 'Rya (りゃ)' },
+      { id: 'gya', label: isK ? 'Gya (ギャ)' : 'Gya (ぎゃ)' },
+      { id: 'ja', label: isK ? 'Ja (ジャ)' : 'Ja (じゃ)' },
+      { id: 'dya', label: isK ? 'Dya (ヂャ)' : 'Dya (ぢゃ)' },
+      { id: 'bya', label: isK ? 'Bya (ビャ)' : 'Bya (びゃ)' },
+      { id: 'pya', label: isK ? 'Pya (ピャ)' : 'Pya (ぴゃ)' },
+    ],
+  }
 }
 
 export default function SettingsPage() {
@@ -143,6 +156,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'language' | 'audio' | 'voice' | 'practice' | 'system'>('language')
 
   // Audio Manager State
+  const [audioManagerScript, setAudioManagerScript] = useState<'hiragana' | 'katakana'>('hiragana')
   const [selectedCategory, setSelectedCategory] = useState<
     'all' | 'gojuon' | 'dakuon_handakuon' | 'yoon'
   >('all')
@@ -223,8 +237,19 @@ export default function SettingsPage() {
     }
   }, [refreshCustomAudio])
 
-  // Filtered Hiragana list for Audio Manager
-  const filteredHiragana = ALL_HIRAGANA.filter((item) => {
+  const activeKanaList = audioManagerScript === 'katakana' ? ALL_KATAKANA : ALL_HIRAGANA
+  const rowFilters = getSettingsRowFilters(audioManagerScript)
+
+  const handleSwitchAudioScript = (newScript: 'hiragana' | 'katakana') => {
+    setAudioManagerScript(newScript)
+    const targetList = newScript === 'katakana' ? ALL_KATAKANA : ALL_HIRAGANA
+    const match = targetList.find((k) => k.romaji === selectedRomaji) || targetList[0]
+    setSelectedSymbol(match.symbol)
+    setSelectedRomaji(match.romaji)
+  }
+
+  // Filtered Kana list for Audio Manager
+  const filteredKana = activeKanaList.filter((item) => {
     if (selectedCategory === 'gojuon' && (item.category || 'gojuon') !== 'gojuon') return false
     if (
       selectedCategory === 'dakuon_handakuon' &&
@@ -242,9 +267,9 @@ export default function SettingsPage() {
   })
 
   const currentCharObj =
-    ALL_HIRAGANA.find((h) => h.symbol === selectedSymbol) ||
-    ALL_HIRAGANA.find((h) => h.romaji === selectedRomaji) ||
-    ALL_HIRAGANA[0]
+    activeKanaList.find((h) => h.symbol === selectedSymbol) ||
+    activeKanaList.find((h) => h.romaji === selectedRomaji) ||
+    activeKanaList[0]
   const currentCustomRecord = customAudioMap[currentCharObj.romaji]
 
   // File Upload Handlers
@@ -338,10 +363,17 @@ export default function SettingsPage() {
     setIsAudioPlaying(item.symbol)
     try {
       await playCharacterAudio(
-        { symbol: item.symbol, romaji: item.romaji },
+        {
+          symbol: item.symbol,
+          character: item.symbol,
+          romaji: item.romaji,
+          script_type: audioManagerScript,
+          readings: [{ romaji: item.romaji }],
+        },
         {
           rate: speechRate,
           pitch: speechPitch,
+          selectedVoiceURI,
           onEnd: () => setIsAudioPlaying(null),
           onError: () => setIsAudioPlaying(null),
         }
@@ -761,7 +793,7 @@ export default function SettingsPage() {
                     onChange={(e) => setSelectedRowGroup(e.target.value)}
                     className="py-1 px-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
                   >
-                    {(SETTINGS_ROW_FILTERS[selectedCategory] || SETTINGS_ROW_FILTERS.all).map(
+                    {(rowFilters[selectedCategory] || rowFilters.all).map(
                       (r) => (
                         <option key={r.id} value={r.id}>
                           {r.label}
@@ -769,6 +801,36 @@ export default function SettingsPage() {
                       )
                     )}
                   </select>
+                </div>
+
+                {/* Hiragana | Katakana Segmented Switcher for Audio Manager */}
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="inline-flex p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => handleSwitchAudioScript('hiragana')}
+                      className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                        audioManagerScript === 'hiragana'
+                          ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/80 dark:border-slate-600'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      <span className="font-serif text-sm">あ</span>
+                      <span>Hiragana (107)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSwitchAudioScript('katakana')}
+                      className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                        audioManagerScript === 'katakana'
+                          ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200/80 dark:border-slate-600'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      <span className="font-serif text-sm">ア</span>
+                      <span>Katakana (107)</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Category Filter Tabs */}
@@ -797,7 +859,7 @@ export default function SettingsPage() {
 
                 {/* Character Grid */}
                 <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-96 overflow-y-auto pr-1">
-                  {filteredHiragana.map((item) => {
+                  {filteredKana.map((item) => {
                     const isSelected = item.symbol === currentCharObj.symbol
                     const hasCustom = !!customAudioMap[item.romaji]
                     const isYoon = item.category === 'yoon' && item.symbol.length === 2

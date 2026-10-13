@@ -23,6 +23,8 @@ import { useCharacterAudio } from '@/hooks/useCharacterAudio'
 import { AudioSpeakerButton } from '@/components/AudioSpeakerButton'
 import { useGamification } from '@/context/GamificationContext'
 import { useLanguage } from '@/context/LanguageContext'
+import { useScript } from '@/context/ScriptContext'
+import { KanaSwitcher } from '@/components/KanaSwitcher'
 import {
   getCharactersNeedingReview,
   getLatestExamFromStorage,
@@ -105,6 +107,8 @@ const LOCAL_STORAGE_EXAM_KEY = 'nihongo_sora_exam_history'
 export default function HomePage() {
   const { currentXP, dailyStreak, levelInfo } = useGamification()
   const { t } = useLanguage()
+  const { script } = useScript()
+  const [homeScriptFilter, setHomeScriptFilter] = useState<'all' | 'hiragana' | 'katakana'>('all')
   const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
@@ -193,43 +197,81 @@ export default function HomePage() {
     }
   }, [loadLocalData, pingBackend])
 
-  // Progress summary calculation
-  const stats = useMemo(() => {
-    const total = FALLBACK_ALL.length || 107
-    let memorized = 0
-    let learning = 0
-    let totalScore = 0
-    let scoredCount = 0
+  // Progress summary calculation per script and combined
+  const { allStats, hStats, kStats, activeStats } = useMemo(() => {
+    const calcForPool = (chars: CharacterData[]) => {
+      const total = chars.length
+      let memorized = 0
+      let learning = 0
+      let totalScore = 0
+      let scoredCount = 0
 
-    Object.values(progressMap).forEach((p) => {
-      if (p.status === 'memorized') {
-        memorized++
-      } else if (p.status === 'learning') {
-        learning++
-      }
-      if (p.accuracy_score !== undefined && p.accuracy_score !== null) {
-        totalScore += p.accuracy_score
-        scoredCount++
-      }
-    })
+      chars.forEach((c) => {
+        const p = progressMap[c.id]
+        if (p) {
+          if (p.status === 'memorized') memorized++
+          else if (p.status === 'learning') learning++
+          if (p.accuracy_score !== undefined && p.accuracy_score !== null) {
+            totalScore += p.accuracy_score
+            scoredCount++
+          }
+        }
+      })
 
-    const percent = Math.round((memorized / total) * 100)
-    const avgScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : 0
+      const percent = total > 0 ? Math.round((memorized / total) * 100) : 0
+      const avgScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : 0
+
+      return {
+        total,
+        memorized,
+        learning: learning > 0 ? learning : total - memorized,
+        percent,
+        avgScore,
+        unmemorized: total - memorized,
+      }
+    }
+
+    const hiraganaChars = FALLBACK_ALL.filter((c) => c.script_type === 'hiragana')
+    const katakanaChars = FALLBACK_ALL.filter((c) => c.script_type === 'katakana')
+
+    const computedH = calcForPool(hiraganaChars)
+    const computedK = calcForPool(katakanaChars)
+    const computedAll = calcForPool(FALLBACK_ALL)
+
+    const active =
+      homeScriptFilter === 'hiragana'
+        ? computedH
+        : homeScriptFilter === 'katakana'
+        ? computedK
+        : computedAll
 
     return {
-      total,
-      memorized,
-      learning: learning > 0 ? learning : total - memorized,
-      percent,
-      avgScore,
-      unmemorized: total - memorized,
+      allStats: computedAll,
+      hStats: computedH,
+      kStats: computedK,
+      activeStats: active,
     }
-  }, [progressMap])
+  }, [progressMap, homeScriptFilter])
 
   // Characters requiring review based on SRS criteria
-  const needsReviewList = useMemo(() => {
-    return getCharactersNeedingReview(FALLBACK_ALL, progressMap, latestExam)
-  }, [progressMap, latestExam])
+  const { needsReviewList, hReviewList, kReviewList, activeReviewList } = useMemo(() => {
+    const allReviews = getCharactersNeedingReview(FALLBACK_ALL, progressMap, latestExam)
+    const hReviews = allReviews.filter((c) => c.script_type === 'hiragana')
+    const kReviews = allReviews.filter((c) => c.script_type === 'katakana')
+    const activeReviews =
+      homeScriptFilter === 'hiragana'
+        ? hReviews
+        : homeScriptFilter === 'katakana'
+        ? kReviews
+        : allReviews
+
+    return {
+      needsReviewList: allReviews,
+      hReviewList: hReviews,
+      kReviewList: kReviews,
+      activeReviewList: activeReviews,
+    }
+  }, [progressMap, latestExam, homeScriptFilter])
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -263,30 +305,30 @@ export default function HomePage() {
           {/* QUICK CTAs */}
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-8">
             <Link
-              href="/practice"
+              href={`/practice?script=${script}`}
               className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-sm shadow-md shadow-sky-600/25 flex items-center gap-2 transition active:scale-98"
             >
               <PenTool className="w-4 h-4" />
-              <span>{t('home.cta_practice')}</span>
+              <span>{t('home.cta_practice')} ({script === 'katakana' ? 'Katakana' : 'Hiragana'})</span>
               <ArrowRight className="w-4 h-4 ml-0.5" />
             </Link>
 
             {/* Tombol Latihan Kilat Huruf Lemah */}
             <Link
               href={
-                needsReviewList.length > 0
-                  ? `/practice?filter=needs_review&char=${needsReviewList[0].symbol || needsReviewList[0].character}`
+                activeReviewList.length > 0
+                  ? `/practice?filter=needs_review&char=${encodeURIComponent(activeReviewList[0].symbol || activeReviewList[0].character)}`
                   : '/practice?filter=needs_review'
               }
               className={`px-6 py-3.5 rounded-2xl font-bold text-sm shadow-md flex items-center gap-2 transition active:scale-98 ${
-                needsReviewList.length > 0
+                activeReviewList.length > 0
                   ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white shadow-amber-500/25 ring-2 ring-amber-400/40'
                   : 'bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 hover:bg-amber-100'
               }`}
-              title={t('home.srs_alert_desc', { count: needsReviewList.length })}
+              title={t('home.srs_alert_desc', { count: activeReviewList.length })}
             >
-              <Flame className={`w-4 h-4 ${needsReviewList.length > 0 ? 'fill-white text-white animate-pulse' : 'text-amber-500'}`} />
-              <span>{t('home.srs_alert_btn')} ({needsReviewList.length})</span>
+              <Flame className={`w-4 h-4 ${activeReviewList.length > 0 ? 'fill-white text-white animate-pulse' : 'text-amber-500'}`} />
+              <span>{t('home.srs_alert_btn')} ({activeReviewList.length})</span>
             </Link>
 
             <Link
@@ -304,6 +346,10 @@ export default function HomePage() {
               <BookOpen className="w-4 h-4" />
               <span>{t('home.cta_learn')}</span>
             </Link>
+
+            <div className="sm:ml-auto">
+              <KanaSwitcher size="sm" />
+            </div>
           </div>
         </div>
       </section>
@@ -360,7 +406,7 @@ export default function HomePage() {
       {/* 3. RINGKASAN PROGRES BELAJAR HARI INI */}
       {/* ========================================================================= */}
       <section className="mb-12">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-3">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Target className="w-5 h-5 text-sky-500" />
@@ -371,13 +417,52 @@ export default function HomePage() {
             </p>
           </div>
 
-          <Link
-            href="/analytics"
-            className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 self-start sm:self-auto"
-          >
-            <span>Lihat Statistik Lengkap</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Script Filter Segmented Control */}
+            <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-850 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setHomeScriptFilter('all')}
+                className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                  homeScriptFilter === 'all'
+                    ? 'bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-2xs font-black'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                Semua (214)
+              </button>
+              <button
+                type="button"
+                onClick={() => setHomeScriptFilter('hiragana')}
+                className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                  homeScriptFilter === 'hiragana'
+                    ? 'bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-2xs font-black'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                あ Hiragana ({hStats.memorized}/107)
+              </button>
+              <button
+                type="button"
+                onClick={() => setHomeScriptFilter('katakana')}
+                className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                  homeScriptFilter === 'katakana'
+                    ? 'bg-white dark:bg-slate-700 text-sky-700 dark:text-sky-300 shadow-2xs font-black'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                ア Katakana ({kStats.memorized}/107)
+              </button>
+            </div>
+
+            <Link
+              href="/analytics"
+              className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 ml-2"
+            >
+              <span>Statistik Lengkap</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -394,22 +479,29 @@ export default function HomePage() {
             <div>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-black text-slate-900 dark:text-white">
-                  {stats.memorized}
+                  {activeStats.memorized}
                 </span>
                 <span className="text-sm font-semibold text-slate-400">
-                  / {stats.total} Aksara
+                  / {activeStats.total} {homeScriptFilter === 'hiragana' ? 'Hiragana' : homeScriptFilter === 'katakana' ? 'Katakana' : 'Aksara'}
                 </span>
               </div>
               {/* Progress Bar */}
               <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-3 overflow-hidden">
                 <div
                   className="bg-emerald-500 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${stats.percent}%` }}
+                  style={{ width: `${activeStats.percent}%` }}
                 />
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
-                {stats.percent}% kurikulum Hiragana & Katakana terkuasai
+                {activeStats.percent}% kurikulum {homeScriptFilter === 'all' ? 'Hiragana & Katakana' : homeScriptFilter === 'katakana' ? 'Katakana' : 'Hiragana'} terkuasai
               </p>
+              {homeScriptFilter === 'all' && (
+                <div className="flex items-center gap-2 mt-1.5 text-[10px] text-slate-400">
+                  <span>Hiragana: <strong className="text-slate-700 dark:text-slate-300">{hStats.memorized}/107</strong></span>
+                  <span>•</span>
+                  <span>Katakana: <strong className="text-slate-700 dark:text-slate-300">{kStats.memorized}/107</strong></span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -426,22 +518,29 @@ export default function HomePage() {
             <div>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-black text-slate-900 dark:text-white">
-                  {needsReviewList.length}
+                  {activeReviewList.length}
                 </span>
                 <span className="text-sm font-semibold text-slate-400">
                   Huruf Lemah
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
-                {needsReviewList.length > 0
+                {activeReviewList.length > 0
                   ? 'Akurasi < 70% atau salah di sesi ujian'
                   : 'Semua huruf aman terkontrol lancar'}
               </p>
+              {homeScriptFilter === 'all' && activeReviewList.length > 0 && (
+                <div className="flex items-center gap-2 mt-1 text-[10px] text-amber-700 dark:text-amber-400">
+                  <span>Hiragana: {hReviewList.length}</span>
+                  <span>•</span>
+                  <span>Katakana: {kReviewList.length}</span>
+                </div>
+              )}
               <Link
                 href={
-                  needsReviewList.length > 0
-                    ? `/practice?filter=needs_review&char=${needsReviewList[0].symbol || needsReviewList[0].character}`
-                    : '/practice?filter=needs_review'
+                  activeReviewList.length > 0
+                    ? `/practice?filter=needs_review${homeScriptFilter !== 'all' ? `&script=${homeScriptFilter}` : ''}&char=${encodeURIComponent(activeReviewList[0].symbol || activeReviewList[0].character)}`
+                    : `/practice?filter=needs_review${homeScriptFilter !== 'all' ? `&script=${homeScriptFilter}` : ''}`
                 }
                 className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline"
               >
@@ -464,10 +563,10 @@ export default function HomePage() {
             <div>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-black text-slate-900 dark:text-white">
-                  {stats.avgScore > 0 ? `${stats.avgScore}%` : '-'}
+                  {activeStats.avgScore > 0 ? `${activeStats.avgScore}%` : '-'}
                 </span>
                 <span className="text-xs font-semibold text-sky-600 dark:text-sky-400">
-                  {stats.avgScore >= 80 ? 'Grade A' : stats.avgScore >= 60 ? 'Grade B' : 'Latihan'}
+                  {activeStats.avgScore >= 80 ? 'Grade A' : activeStats.avgScore >= 60 ? 'Grade B' : 'Latihan'}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-3 font-medium">
@@ -521,7 +620,7 @@ export default function HomePage() {
               <span>{t('home.spotlight_badge')}</span>
             </div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-white">
-              Hiragana {spotlightChar.symbol} (/{spotlightChar.readings?.[0]?.romaji}/)
+              {spotlightChar.script_type === 'katakana' ? 'Katakana' : 'Hiragana'} {spotlightChar.symbol} (/{spotlightChar.readings?.[0]?.romaji}/)
             </h3>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-0.5">
               {t('home.spotlight_row', { row: spotlightChar.row_group?.toUpperCase() || '' })} • {t('home.spotlight_strokes', { count: spotlightChar.strokes_count })} • JLPT N5
@@ -540,7 +639,7 @@ export default function HomePage() {
           />
 
           <Link
-            href={`/practice?char=${spotlightChar.symbol}`}
+            href={`/practice?script=${spotlightChar.script_type || 'hiragana'}&char=${encodeURIComponent(spotlightChar.symbol || spotlightChar.character || '')}`}
             className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm shadow-md transition flex items-center gap-2"
           >
             <PenTool className="w-4 h-4" />

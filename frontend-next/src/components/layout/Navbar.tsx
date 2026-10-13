@@ -39,6 +39,8 @@ export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isBackendLive, setIsBackendLive] = useState<boolean | null>(null)
   const [memorizedCount, setMemorizedCount] = useState<number>(0)
+  const [hiraganaCount, setHiraganaCount] = useState<number>(0)
+  const [katakanaCount, setKatakanaCount] = useState<number>(0)
   const totalCharactersCount = 107
   const [isCheckingBackend, setIsCheckingBackend] = useState<boolean>(false)
 
@@ -84,14 +86,15 @@ export const Navbar: React.FC = () => {
   const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
-  // Read memorized count from localStorage or progress API based on active script
+  // Read memorized counts for both Hiragana and Katakana
   const refreshMasteryBadge = useCallback(() => {
     if (typeof window === 'undefined') return
     try {
       const stored = localStorage.getItem('nihongo_sora_character_progress')
       if (stored) {
         const parsed = JSON.parse(stored)
-        let count = 0
+        let hCount = 0
+        let kCount = 0
         Object.entries(parsed).forEach(([key, item]: [string, unknown]) => {
           if (
             typeof item === 'object' &&
@@ -99,19 +102,25 @@ export const Navbar: React.FC = () => {
             (item as { status?: string }).status === 'memorized'
           ) {
             const charId = Number((item as { character_id?: number }).character_id ?? key)
-            if (script === 'hiragana' && charId >= 1 && charId <= 107) {
-              count++
-            } else if (script === 'katakana' && charId >= 108 && charId <= 214) {
-              count++
+            if (charId >= 1 && charId <= 107) {
+              hCount++
+            } else if (charId >= 108 && charId <= 214) {
+              kCount++
             }
           }
         })
-        setMemorizedCount((prev) => (prev === count ? prev : count))
+        setHiraganaCount(hCount)
+        setKatakanaCount(kCount)
+        setMemorizedCount(script === 'katakana' ? kCount : hCount)
       } else {
-        setMemorizedCount((prev) => (prev === 0 ? prev : 0))
+        setHiraganaCount(0)
+        setKatakanaCount(0)
+        setMemorizedCount(0)
       }
     } catch {
-      setMemorizedCount((prev) => (prev === 0 ? prev : 0))
+      setHiraganaCount(0)
+      setKatakanaCount(0)
+      setMemorizedCount(0)
     }
   }, [script])
 
@@ -315,12 +324,15 @@ export const Navbar: React.FC = () => {
               href="/learn"
               suppressHydrationWarning
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition shadow-2xs"
-              title={t('nav.memorized_title')}
+              title={`Hiragana: ${hiraganaCount}/107 | Katakana: ${katakanaCount}/107 | Total: ${hiraganaCount + katakanaCount}/214`}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-spin-slow" />
               <span suppressHydrationWarning>
-                <strong className="font-extrabold">{memorizedCount}</strong>/{totalCharactersCount}{' '}
+                <strong className="font-extrabold">{script === 'katakana' ? katakanaCount : hiraganaCount}</strong>/107{' '}
                 {script === 'katakana' ? 'Katakana' : t('nav.memorized')}
+                <span className="hidden xl:inline text-[10px] opacity-75 font-normal ml-1">
+                  ({hiraganaCount + katakanaCount}/214)
+                </span>
               </span>
             </Link>
 
@@ -381,7 +393,7 @@ export const Navbar: React.FC = () => {
                 <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
                   <span className="font-mono">{levelInfo.currentLevelXP} / {levelInfo.nextLevelXP} XP ({levelInfo.totalXP} Total)</span>
                   <span className="font-bold text-amber-600 dark:text-amber-400">
-                    {memorizedCount}/{totalCharactersCount} {script === 'katakana' ? 'Katakana' : t('nav.memorized')}
+                    {script === 'katakana' ? katakanaCount : hiraganaCount}/107 {script === 'katakana' ? 'Katakana' : t('nav.memorized')} ({hiraganaCount + katakanaCount}/214)
                   </span>
                 </div>
               </div>

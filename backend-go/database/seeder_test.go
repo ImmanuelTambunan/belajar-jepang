@@ -8,10 +8,12 @@ import (
 	"belajar-jepang-api/database"
 )
 
-func TestHiraganaDatasetIntegrity(t *testing.T) {
+func verifyKanaDataset(t *testing.T, filename string, expectedScript string) {
 	paths := []string{
-		"../data/hiragana_46.json",
-		"../../backend/data/hiragana_46.json",
+		"../data/" + filename,
+		"backend-go/data/" + filename,
+		"data/" + filename,
+		"../../backend-go/data/" + filename,
 	}
 
 	var data []byte
@@ -23,60 +25,59 @@ func TestHiraganaDatasetIntegrity(t *testing.T) {
 		}
 	}
 	if err != nil {
-		t.Fatalf("Failed to read hiragana_46.json: %v", err)
+		t.Fatalf("Failed to read %s: %v", filename, err)
 	}
 
-	var items []database.HiraganaItem
+	var items []database.KanaItem
 	if err := json.Unmarshal(data, &items); err != nil {
-		t.Fatalf("Failed to unmarshal hiragana_46.json: %v", err)
+		t.Fatalf("Failed to unmarshal %s: %v", filename, err)
 	}
 
-	if len(items) != 46 {
-		t.Fatalf("Expected 46 characters, got %d", len(items))
+	if len(items) != 107 {
+		t.Fatalf("Expected 107 characters in %s, got %d", filename, len(items))
 	}
 
-	validGroups := map[string]bool{
-		"vowel": true, "ka": true, "sa": true, "ta": true,
-		"na": true, "ha": true, "ma": true, "ya": true,
-		"ra": true, "wa": true, "n": true,
-	}
-
-	groupCounts := make(map[string]int)
+	categoryCounts := make(map[string]int)
 
 	for i, item := range items {
 		if item.Symbol == "" {
-			t.Errorf("Item %d has empty symbol", i)
+			t.Errorf("[%s] Item %d has empty symbol", filename, i)
 		}
-		if item.ScriptType != "hiragana" {
-			t.Errorf("Item %d (%s) expected script_type 'hiragana', got %q", i, item.Symbol, item.ScriptType)
-		}
-		if !validGroups[item.RowGroup] {
-			t.Errorf("Item %d (%s) invalid row_group %q", i, item.Symbol, item.RowGroup)
-		}
-		groupCounts[item.RowGroup]++
-
-		if item.StrokeCount != len(item.Strokes) {
-			t.Errorf("Item %d (%s) stroke_count (%d) != len(strokes) (%d)", i, item.Symbol, item.StrokeCount, len(item.Strokes))
+		if item.ScriptType != expectedScript {
+			t.Errorf("[%s] Item %d (%s) expected script_type %q, got %q", filename, i, item.Symbol, expectedScript, item.ScriptType)
 		}
 		if item.Reading == "" {
-			t.Errorf("Item %d (%s) has empty reading", i, item.Symbol)
+			t.Errorf("[%s] Item %d (%s) has empty reading", filename, i, item.Symbol)
+		}
+		if item.StrokeCount != len(item.Strokes) || item.StrokeCount <= 0 {
+			t.Errorf("[%s] Item %d (%s) stroke_count (%d) != len(strokes) (%d)", filename, i, item.Symbol, item.StrokeCount, len(item.Strokes))
 		}
 		for sIdx, stroke := range item.Strokes {
 			if len(stroke) == 0 {
-				t.Errorf("Item %d (%s) stroke %d is empty", i, item.Symbol, sIdx+1)
+				t.Errorf("[%s] Item %d (%s) stroke %d is empty", filename, i, item.Symbol, sIdx+1)
 			}
 		}
+		categoryCounts[item.Category]++
 	}
 
-	expectedCounts := map[string]int{
-		"vowel": 5, "ka": 5, "sa": 5, "ta": 5,
-		"na": 5, "ha": 5, "ma": 5, "ya": 3,
-		"ra": 5, "wa": 2, "n": 1,
+	expectedCategories := map[string]int{
+		"gojuon":     46,
+		"dakuon":     20,
+		"handakuon":  5,
+		"yoon":       36,
 	}
 
-	for group, expected := range expectedCounts {
-		if actual := groupCounts[group]; actual != expected {
-			t.Errorf("Group %q expected %d items, got %d", group, expected, actual)
+	for cat, expCount := range expectedCategories {
+		if categoryCounts[cat] != expCount {
+			t.Errorf("[%s] Expected %d %s characters, got %d", filename, expCount, cat, categoryCounts[cat])
 		}
 	}
+}
+
+func TestHiraganaDatasetIntegrity(t *testing.T) {
+	verifyKanaDataset(t, "hiragana_107.json", "hiragana")
+}
+
+func TestKatakanaDatasetIntegrity(t *testing.T) {
+	verifyKanaDataset(t, "katakana_107.json", "katakana")
 }

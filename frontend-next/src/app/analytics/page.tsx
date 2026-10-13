@@ -13,7 +13,19 @@ import rawHiraganaData from '@/data/hiragana_107.json'
 import rawKatakanaData from '@/data/katakana_107.json'
 import { ResetConfirmModal } from '@/components/ResetConfirmModal'
 import { useScript } from '@/context/ScriptContext'
+import { useLanguage } from '@/context/LanguageContext'
 import { KanaSwitcher } from '@/components/KanaSwitcher'
+import {
+  BarChart3,
+  CheckCircle2,
+  Trophy,
+  Flame,
+  Award,
+  RefreshCw,
+  Trash2,
+  ArrowRight,
+  TrendingUp,
+} from 'lucide-react'
 
 interface RawKanaItem {
   symbol: string
@@ -28,32 +40,83 @@ interface RawKanaItem {
 const LOCAL_STORAGE_PROGRESS_KEY = 'nihongo_sora_character_progress'
 const LOCAL_STORAGE_EXAM_KEY = 'nihongo_sora_exam_history'
 
-// Row definition list for Gojuon, Dakuon, Handakuon, and Yoon
-function getRowDefinitions(script: 'hiragana' | 'katakana') {
-  const isKatakana = script === 'katakana'
+type AnalyticsScriptMode = 'hiragana' | 'katakana' | 'overall'
+
+interface RowDefinition {
+  row_group: string
+  label: string
+  sample_kana: string
+}
+
+function getRowDefinitions(mode: AnalyticsScriptMode): RowDefinition[] {
+  if (mode === 'katakana') {
+    return [
+      { row_group: 'vowel', label: 'Baris A (Vokal)', sample_kana: 'ア, イ, ウ, エ, オ' },
+      { row_group: 'ka', label: 'Baris Ka', sample_kana: 'カ, キ, ク, ケ, コ' },
+      { row_group: 'sa', label: 'Baris Sa', sample_kana: 'サ, シ, ス, セ, ソ' },
+      { row_group: 'ta', label: 'Baris Ta', sample_kana: 'タ, チ, ツ, テ, ト' },
+      { row_group: 'na', label: 'Baris Na', sample_kana: 'ナ, ニ, ヌ, ネ, ノ' },
+      { row_group: 'ha', label: 'Baris Ha', sample_kana: 'ハ, ヒ, フ, ヘ, ホ' },
+      { row_group: 'ma', label: 'Baris Ma', sample_kana: 'マ, ミ, ム, メ, モ' },
+      { row_group: 'ya', label: 'Baris Ya', sample_kana: 'ヤ, ユ, ヨ' },
+      { row_group: 'ra', label: 'Baris Ra', sample_kana: 'ラ, リ, ル, レ, ロ' },
+      { row_group: 'wa', label: 'Baris Wa / N', sample_kana: 'ワ, ヲ, ン' },
+      { row_group: 'ga', label: 'Baris Ga (Dakuon)', sample_kana: 'ガ, ギ, グ, ゲ, ゴ' },
+      { row_group: 'za', label: 'Baris Za (Dakuon)', sample_kana: 'ザ, ジ, ズ, ゼ, ゾ' },
+      { row_group: 'da', label: 'Baris Da (Dakuon)', sample_kana: 'ダ, ヂ, ヅ, デ, ド' },
+      { row_group: 'ba', label: 'Baris Ba (Dakuon)', sample_kana: 'バ, ビ, ブ, ベ, ボ' },
+      { row_group: 'pa', label: 'Baris Pa (Handakuon)', sample_kana: 'パ, ピ, プ, ペ, ポ' },
+      { row_group: 'yoon', label: 'Yōon (Gabungan)', sample_kana: 'キャ, シュ, チョ, ...' },
+    ]
+  } else if (mode === 'overall') {
+    return [
+      { row_group: 'vowel', label: 'Baris A (Vokal)', sample_kana: 'あ/ア, い/イ, う/ウ, ...' },
+      { row_group: 'ka', label: 'Baris Ka', sample_kana: 'か/カ, き/キ, く/ク, ...' },
+      { row_group: 'sa', label: 'Baris Sa', sample_kana: 'さ/サ, し/シ, す/ス, ...' },
+      { row_group: 'ta', label: 'Baris Ta', sample_kana: 'た/タ, ち/チ, つ/ツ, ...' },
+      { row_group: 'na', label: 'Baris Na', sample_kana: 'な/ナ, に/ニ, ぬ/ヌ, ...' },
+      { row_group: 'ha', label: 'Baris Ha', sample_kana: 'は/ハ, ひ/ヒ, ふ/フ, ...' },
+      { row_group: 'ma', label: 'Baris Ma', sample_kana: 'ま/マ, み/ミ, む/ム, ...' },
+      { row_group: 'ya', label: 'Baris Ya', sample_kana: 'や/ヤ, ゆ/ユ, よ/ヨ' },
+      { row_group: 'ra', label: 'Baris Ra', sample_kana: 'ら/ラ, り/リ, る/ル, ...' },
+      { row_group: 'wa', label: 'Baris Wa / N', sample_kana: 'わ/ワ, を/ヲ, ん/ン' },
+      { row_group: 'ga', label: 'Baris Ga (Dakuon)', sample_kana: 'が/ガ, ぎ/ギ, ぐ/グ, ...' },
+      { row_group: 'za', label: 'Baris Za (Dakuon)', sample_kana: 'ざ/ザ, ジ/ジ, ず/ズ, ...' },
+      { row_group: 'da', label: 'Baris Da (Dakuon)', sample_kana: 'だ/ダ, ぢ/ヂ, づ/ヅ, ...' },
+      { row_group: 'ba', label: 'Baris Ba (Dakuon)', sample_kana: 'ば/バ, び/ビ, ぶ/ブ, ...' },
+      { row_group: 'pa', label: 'Baris Pa (Handakuon)', sample_kana: 'ぱ/パ, ぴ/ピ, ぷ/プ, ...' },
+      { row_group: 'yoon', label: 'Yōon (Gabungan)', sample_kana: 'きゃ/キャ, しゃ/シャ, ...' },
+    ]
+  }
   return [
-    { row_group: 'vowel', label: 'Baris A (Vokal)', sample_kana: isKatakana ? 'ア, イ, ウ, エ, オ' : 'あ, い, う, え, お' },
-    { row_group: 'ka', label: 'Baris Ka', sample_kana: isKatakana ? 'カ, キ, ク, ケ, コ' : 'か, き, く, け, こ' },
-    { row_group: 'sa', label: 'Baris Sa', sample_kana: isKatakana ? 'サ, シ, ス, セ, ソ' : 'さ, し, す, せ, そ' },
-    { row_group: 'ta', label: 'Baris Ta', sample_kana: isKatakana ? 'タ, チ, ツ, テ, ト' : 'た, ち, つ, て, と' },
-    { row_group: 'na', label: 'Baris Na', sample_kana: isKatakana ? 'ナ, ニ, ヌ, ネ, ノ' : 'な, に, ぬ, ネ, の' },
-    { row_group: 'ha', label: 'Baris Ha', sample_kana: isKatakana ? 'ハ, ヒ, フ, ヘ, ホ' : 'は, ひ, ふ, へ, ほ' },
-    { row_group: 'ma', label: 'Baris Ma', sample_kana: isKatakana ? 'マ, ミ, ム, メ, モ' : 'ま, み, む, め, も' },
-    { row_group: 'ya', label: 'Baris Ya', sample_kana: isKatakana ? 'ヤ, ユ, ヨ' : 'や, ゆ, よ' },
-    { row_group: 'ra', label: 'Baris Ra', sample_kana: isKatakana ? 'ラ, リ, ル, レ, ロ' : 'ら, り, る, れ, ろ' },
-    { row_group: 'wa', label: 'Baris Wa / N', sample_kana: isKatakana ? 'ワ, ヲ, ン' : 'わ, を, ん' },
-    { row_group: 'ga', label: 'Baris Ga (Dakuon)', sample_kana: isKatakana ? 'ガ, ギ, グ, ゲ, ゴ' : 'が, ぎ, ぐ, げ, ご' },
-    { row_group: 'za', label: 'Baris Za (Dakuon)', sample_kana: isKatakana ? 'ザ, ジ, ズ, ゼ, ゾ' : 'ざ, じ, ず, ぜ, ぞ' },
-    { row_group: 'da', label: 'Baris Da (Dakuon)', sample_kana: isKatakana ? 'ダ, ヂ, ヅ, デ, ド' : 'だ, ぢ, づ, で, ど' },
-    { row_group: 'ba', label: 'Baris Ba (Dakuon)', sample_kana: isKatakana ? 'バ, ビ, ブ, ベ, ボ' : 'ば, び, ぶ, べ, ぼ' },
-    { row_group: 'pa', label: 'Baris Pa (Handakuon)', sample_kana: isKatakana ? 'パ, ピ, プ, ペ, ポ' : 'ぱ, ぴ, ぷ, ぺ, ぽ' },
-    { row_group: 'yoon', label: 'Yōon (Gabungan)', sample_kana: isKatakana ? 'キャ, シャ, チャ, ニャ, ...' : 'きゃ, しゃ, ちゃ, にゃ, ...' },
+    { row_group: 'vowel', label: 'Baris A (Vokal)', sample_kana: 'あ, い, う, え, お' },
+    { row_group: 'ka', label: 'Baris Ka', sample_kana: 'か, き, く, け, こ' },
+    { row_group: 'sa', label: 'Baris Sa', sample_kana: 'さ, し, す, せ, そ' },
+    { row_group: 'ta', label: 'Baris Ta', sample_kana: 'た, ち, つ, て, と' },
+    { row_group: 'na', label: 'Baris Na', sample_kana: 'な, に, ぬ, ね, の' },
+    { row_group: 'ha', label: 'Baris Ha', sample_kana: 'は, ひ, ふ, へ, ほ' },
+    { row_group: 'ma', label: 'Baris Ma', sample_kana: 'ま, み, む, め, も' },
+    { row_group: 'ya', label: 'Baris Ya', sample_kana: 'や, ゆ, よ' },
+    { row_group: 'ra', label: 'Baris Ra', sample_kana: 'ら, り, る, れ, ろ' },
+    { row_group: 'wa', label: 'Baris Wa / N', sample_kana: 'わ, を, ん' },
+    { row_group: 'ga', label: 'Baris Ga (Dakuon)', sample_kana: 'が, ぎ, ぐ, げ, ご' },
+    { row_group: 'za', label: 'Baris Za (Dakuon)', sample_kana: 'ざ, じ, ず, ぜ, ぞ' },
+    { row_group: 'da', label: 'Baris Da (Dakuon)', sample_kana: 'だ, ぢ, づ, で, ど' },
+    { row_group: 'ba', label: 'Baris Ba (Dakuon)', sample_kana: 'ば, び, ぶ, べ, ぼ' },
+    { row_group: 'pa', label: 'Baris Pa (Handakuon)', sample_kana: 'ぱ, ぴ, ぷ, ぺ, ぽ' },
+    { row_group: 'yoon', label: 'Yōon (Gabungan)', sample_kana: 'きゃ, しゃ, ちょ, ...' },
   ]
 }
 
 export default function AnalyticsDashboardPage() {
-  const { script } = useScript()
+  const { script: globalScript } = useScript()
+  const { t, language } = useLanguage()
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+
+  // Script Mode state for analytics: 'hiragana' | 'katakana' | 'overall'
+  const [scriptMode, setScriptMode] = useState<AnalyticsScriptMode>(
+    globalScript === 'katakana' ? 'katakana' : 'hiragana'
+  )
 
   // Dashboard Data State
   const [overview, setOverview] = useState<AnalyticsOverview>({
@@ -67,6 +130,10 @@ export default function AnalyticsDashboardPage() {
     total_exams_taken: 0,
     exam_average_score: 0,
   })
+
+  // Quick stats counts for the top badges
+  const [hMemorizedCount, setHMemorizedCount] = useState<number>(0)
+  const [kMemorizedCount, setKMemorizedCount] = useState<number>(0)
 
   const [rowMetrics, setRowMetrics] = useState<RowAccuracyMetric[]>([])
   const [examHistory, setExamHistory] = useState<ExamHistoryAnalyticsItem[]>([])
@@ -86,11 +153,11 @@ export default function AnalyticsDashboardPage() {
     return `${secs} dtk`
   }
 
-  // Format Helper: ISO date to friendly Indonesian format
+  // Format Helper: ISO date to friendly format
   const formatDateTime = (isoString: string): string => {
     try {
       const date = new Date(isoString)
-      return date.toLocaleDateString('id-ID', {
+      return date.toLocaleDateString(language === 'en' ? 'en-US' : 'id-ID', {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
@@ -122,37 +189,38 @@ export default function AnalyticsDashboardPage() {
   const getAccuracyStatusBadge = (status: string, acc: number) => {
     if (acc === 0 || status === 'unpracticed') {
       return {
-        label: 'Belum Dilatih',
-        classes: 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700',
+        label: language === 'en' ? 'Unpracticed' : 'Belum Dilatih',
+        classes:
+          'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700',
         barColor: 'bg-slate-300 dark:bg-slate-700',
       }
     }
     if (acc >= 85) {
       return {
-        label: 'Sangat Mahir',
-        classes: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+        label: language === 'en' ? 'Mastered' : 'Sangat Mahir',
+        classes:
+          'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
         barColor: 'bg-gradient-to-r from-emerald-500 to-teal-400',
       }
     }
     if (acc >= 70) {
       return {
-        label: 'Bagus',
-        classes: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30',
+        label: language === 'en' ? 'Good' : 'Bagus',
+        classes:
+          'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30',
         barColor: 'bg-gradient-to-r from-sky-500 to-indigo-400',
       }
     }
     return {
-      label: 'Perlu Latihan',
-      classes: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
+      label: language === 'en' ? 'Needs Practice' : 'Perlu Latihan',
+      classes:
+        'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
       barColor: 'bg-gradient-to-r from-amber-500 to-rose-400',
     }
   }
 
-  // Local Offline Analytics Calculator (Fallback when Golang API is unreachable)
+  // Local Offline Analytics Calculator (Fallback when Golang API is unreachable or standalone)
   const computeOfflineAnalytics = useCallback(() => {
-    const isKatakana = script === 'katakana'
-    const rawList = (isKatakana ? rawKatakanaData : rawHiraganaData) as RawKanaItem[]
-    const idOffset = isKatakana ? 107 : 0
     let progressMap: Record<number, UserProgress> = {}
     let storedExams: ExamResultSummary[] = []
 
@@ -172,16 +240,47 @@ export default function AnalyticsDashboardPage() {
       }
     }
 
+    // Always compute badge counters (107 Hiragana vs 107 Katakana)
+    const hRaw = rawHiraganaData as RawKanaItem[]
+    const kRaw = rawKatakanaData as RawKanaItem[]
+    let hCount = 0
+    let kCount = 0
+
+    hRaw.forEach((_, idx) => {
+      const charId = idx + 1
+      if (progressMap[charId]?.status === 'memorized') hCount++
+    })
+    kRaw.forEach((_, idx) => {
+      const charId = 107 + idx + 1
+      if (progressMap[charId]?.status === 'memorized') kCount++
+    })
+    setHMemorizedCount(hCount)
+    setKMemorizedCount(kCount)
+
+    // Build candidate list based on active scriptMode
+    let activeKanaItems: Array<{ item: RawKanaItem; id: number }> = []
+
+    if (scriptMode === 'hiragana') {
+      activeKanaItems = hRaw.map((item, idx) => ({ item, id: idx + 1 }))
+    } else if (scriptMode === 'katakana') {
+      activeKanaItems = kRaw.map((item, idx) => ({ item, id: 107 + idx + 1 }))
+    } else {
+      // Overall: both Hiragana and Katakana (214 characters)
+      activeKanaItems = [
+        ...hRaw.map((item, idx) => ({ item, id: idx + 1 })),
+        ...kRaw.map((item, idx) => ({ item, id: 107 + idx + 1 })),
+      ]
+    }
+
     // 1. Overview computation
-    const totalChars = rawList.length || 107
+    const totalChars = activeKanaItems.length
     let memorized = 0
     let activeLearning = 0
     let totalReviewCount = 0
     const accuracyScores: number[] = []
 
-    rawList.forEach((_, idx) => {
-      const charId = idOffset + idx + 1
-      const p = progressMap[charId]
+    activeKanaItems.forEach(({ id }) => {
+      const p = progressMap[id]
       if (p) {
         if (p.status === 'memorized') memorized++
         if (p.status === 'learning') activeLearning++
@@ -197,9 +296,13 @@ export default function AnalyticsDashboardPage() {
         ? Math.round((accuracyScores.reduce((a, b) => a + b, 0) / accuracyScores.length) * 10) / 10
         : 0
 
+    // Filter exams by script mode
+    const filteredExams = storedExams.filter((e) => {
+      if (scriptMode === 'overall') return true
+      return !e.scriptMode || e.scriptMode === scriptMode || e.scriptMode === 'mixed'
+    })
+
     let totalExamScoreSum = 0
-    // Filter exams by script if recorded
-    const filteredExams = storedExams.filter((e) => !e.scriptMode || e.scriptMode === script || e.scriptMode === 'mixed')
     filteredExams.forEach((e) => {
       totalExamScoreSum += e.score || 0
     })
@@ -211,9 +314,9 @@ export default function AnalyticsDashboardPage() {
     const computedOverview: AnalyticsOverview = {
       total_characters: totalChars,
       memorized_count: memorized,
-      learning_count: totalChars - memorized,
+      learning_count: Math.max(0, totalChars - memorized),
       active_learning_count: activeLearning,
-      completion_rate: Math.round((memorized / totalChars) * 1000) / 10,
+      completion_rate: totalChars > 0 ? Math.round((memorized / totalChars) * 1000) / 10 : 0,
       overall_accuracy_avg: overallAvgAcc,
       total_practice_count: totalReviewCount,
       total_exams_taken: filteredExams.length,
@@ -221,29 +324,26 @@ export default function AnalyticsDashboardPage() {
     }
 
     // 2. Row accuracy computation
-    const rowDefs = getRowDefinitions(script)
+    const rowDefs = getRowDefinitions(scriptMode)
     const computedRows: RowAccuracyMetric[] = rowDefs.map((rowDef) => {
-      // Find characters matching row_group
-      const matching = rawList
-        .map((item, idx) => ({ ...item, id: idOffset + idx + 1 }))
-        .filter((item) => {
-          const rg = item.row_group?.toLowerCase().trim()
-          if (rowDef.row_group === 'wa') {
-            return rg === 'wa' || rg === 'n' || rg === 'wa_n'
-          }
-          if (rowDef.row_group === 'yoon') {
-            return item.category === 'yoon'
-          }
-          return rg === rowDef.row_group
-        })
+      const matching = activeKanaItems.filter(({ item }) => {
+        const rg = item.row_group?.toLowerCase().trim()
+        if (rowDef.row_group === 'wa') {
+          return rg === 'wa' || rg === 'n' || rg === 'wa_n'
+        }
+        if (rowDef.row_group === 'yoon') {
+          return item.category === 'yoon'
+        }
+        return rg === rowDef.row_group
+      })
 
       const totalInRow = matching.length > 0 ? matching.length : 5
       let memInRow = 0
       let revInRow = 0
       const rowAccuracies: number[] = []
 
-      matching.forEach((char) => {
-        const p = progressMap[char.id]
+      matching.forEach(({ id }) => {
+        const p = progressMap[id]
         if (p) {
           if (p.status === 'memorized') memInRow++
           revInRow += p.review_count || 0
@@ -292,17 +392,17 @@ export default function AnalyticsDashboardPage() {
     setOverview(computedOverview)
     setRowMetrics(computedRows)
     setExamHistory(formattedExams)
-  }, [script])
+  }, [scriptMode])
 
   // Load Data with dual-mode support (Live Backend -> Local Offline Fallback)
   const loadDashboardData = useCallback(async () => {
     setLoading(true)
+    const backendScriptQuery = scriptMode === 'overall' ? 'all' : scriptMode
     try {
-      // Parallel fetch to backend
       const [resOverview, resRowAcc, resExamHistory] = await Promise.all([
-        fetch(`${apiBaseUrl}/analytics/overview?script=${script}`),
-        fetch(`${apiBaseUrl}/analytics/accuracy-by-row?script=${script}`),
-        fetch(`${apiBaseUrl}/analytics/exam-history?script=${script}`),
+        fetch(`${apiBaseUrl}/analytics/overview?script=${backendScriptQuery}`),
+        fetch(`${apiBaseUrl}/analytics/accuracy-by-row?script=${backendScriptQuery}`),
+        fetch(`${apiBaseUrl}/analytics/exam-history?script=${backendScriptQuery}`),
       ])
 
       if (resOverview.ok && resRowAcc.ok && resExamHistory.ok) {
@@ -314,6 +414,28 @@ export default function AnalyticsDashboardPage() {
         if (jsonRowAcc.data) setRowMetrics(jsonRowAcc.data)
         if (jsonExamHistory.data) setExamHistory(jsonExamHistory.data)
         setIsLiveBackend(true)
+
+        // Read badge counts from storage
+        if (typeof window !== 'undefined') {
+          try {
+            const progStr = localStorage.getItem(LOCAL_STORAGE_PROGRESS_KEY)
+            if (progStr) {
+              const pm = JSON.parse(progStr)
+              let hCount = 0
+              let kCount = 0
+              for (let i = 1; i <= 107; i++) {
+                if (pm[i]?.status === 'memorized') hCount++
+              }
+              for (let i = 108; i <= 214; i++) {
+                if (pm[i]?.status === 'memorized') kCount++
+              }
+              setHMemorizedCount(hCount)
+              setKMemorizedCount(kCount)
+            }
+          } catch {
+            // ignore
+          }
+        }
       } else {
         throw new Error('Backend response not OK')
       }
@@ -324,7 +446,7 @@ export default function AnalyticsDashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [apiBaseUrl, computeOfflineAnalytics, script])
+  }, [apiBaseUrl, computeOfflineAnalytics, scriptMode])
 
   useEffect(() => {
     loadDashboardData()
@@ -342,22 +464,17 @@ export default function AnalyticsDashboardPage() {
       window.removeEventListener('nihongo_sora_gamification_updated', handleUpdate)
       window.removeEventListener('storage', handleUpdate)
     }
-  }, [loadDashboardData, script])
-
-  // Tracing accuracy grade letter helper
-  const accuracyGrade = useMemo(() => {
-    const acc = overview.overall_accuracy_avg
-    if (acc === 0) return '-'
-    if (acc >= 90) return 'S'
-    if (acc >= 75) return 'A'
-    if (acc >= 60) return 'B'
-    if (acc >= 45) return 'C'
-    return 'D'
-  }, [overview.overall_accuracy_avg])
+  }, [loadDashboardData])
 
   // Clear Exam History Handler (Local storage)
   const handleClearExamHistory = () => {
-    if (confirm('Apakah Anda yakin ingin mereset seluruh riwayat sesi ujian lokal?')) {
+    if (
+      confirm(
+        language === 'en'
+          ? 'Are you sure you want to clear your local exam session history?'
+          : 'Apakah Anda yakin ingin mereset seluruh riwayat sesi ujian lokal?'
+      )
+    ) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem(LOCAL_STORAGE_EXAM_KEY)
       }
@@ -377,7 +494,7 @@ export default function AnalyticsDashboardPage() {
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-wider bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-              Fase 5 • Analytics Dashboard
+              Analytics Dashboard
             </span>
             <span className="text-xs text-slate-400 dark:text-slate-500">•</span>
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
@@ -385,10 +502,14 @@ export default function AnalyticsDashboardPage() {
             </span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-            Dasbor Statistik & Riwayat Belajar
+            {language === 'en'
+              ? 'Learning Statistics & History Dashboard'
+              : 'Dasbor Statistik & Riwayat Belajar'}
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
-            Pantau kemajuan penguasaan 107 {script === 'katakana' ? 'Katakana' : 'Hiragana'} (Gojūon, Dakuon, Handakuon, &amp; Yōon), akurasi goresan kuas per baris, serta grafik perkembangan nilai ujian Anda.
+            {language === 'en'
+              ? `Track mastery progress across 107 Hiragana and 107 Katakana, brush stroke accuracy by row, and exam performance trends.`
+              : `Pantau kemajuan penguasaan 107 Hiragana dan 107 Katakana (Gojūon, Dakuon, Handakuon, & Yōon), akurasi goresan kuas per baris, serta grafik perkembangan nilai ujian Anda.`}
           </p>
         </div>
 
@@ -416,23 +537,79 @@ export default function AnalyticsDashboardPage() {
           </div>
 
           <button
+            type="button"
             onClick={loadDashboardData}
             disabled={loading}
             className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
           >
-            <span className={loading ? 'animate-spin' : ''}>🔄</span>
-            <span>Segarkan</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <span>{language === 'en' ? 'Refresh' : 'Segarkan'}</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setIsResetModalOpen(true)}
             className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
             title="Reset seluruh progres belajar & database"
           >
-            <span>🗑️</span>
-            <span>Reset Progres</span>
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>{language === 'en' ? 'Reset Progress' : 'Reset Progres'}</span>
           </button>
         </div>
+      </div>
+
+      {/* SCRIPT FILTER SEGMENTED CONTROL: HIRAGANA | KATAKANA | OVERALL */}
+      <div className="mb-8 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 flex flex-wrap sm:flex-nowrap gap-1.5 shadow-xs">
+        {/* Tab 1: Hiragana */}
+        <button
+          type="button"
+          onClick={() => setScriptMode('hiragana')}
+          className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            scriptMode === 'hiragana'
+              ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-md border border-slate-200/80 dark:border-slate-700 ring-2 ring-sky-500/20'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
+          }`}
+        >
+          <span className="text-base font-serif font-black text-sky-500">あ</span>
+          <span>Hiragana</span>
+          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 font-bold">
+            {hMemorizedCount}/107
+          </span>
+        </button>
+
+        {/* Tab 2: Katakana */}
+        <button
+          type="button"
+          onClick={() => setScriptMode('katakana')}
+          className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            scriptMode === 'katakana'
+              ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-md border border-slate-200/80 dark:border-slate-700 ring-2 ring-indigo-500/20'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
+          }`}
+        >
+          <span className="text-base font-serif font-black text-indigo-500">ア</span>
+          <span>Katakana</span>
+          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold">
+            {kMemorizedCount}/107
+          </span>
+        </button>
+
+        {/* Tab 3: Ringkasan Gabungan (Overall) */}
+        <button
+          type="button"
+          onClick={() => setScriptMode('overall')}
+          className={`flex-1 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            scriptMode === 'overall'
+              ? 'bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-md border border-slate-200/80 dark:border-slate-700 ring-2 ring-purple-500/20'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
+          }`}
+        >
+          <span className="text-base font-serif font-black text-purple-500">空</span>
+          <span>{language === 'en' ? 'Combined (Overall)' : 'Ringkasan Gabungan'}</span>
+          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 font-bold">
+            {hMemorizedCount + kMemorizedCount}/214
+          </span>
+        </button>
       </div>
 
       {/* SUCCESS TOAST ALERT */}
@@ -443,6 +620,7 @@ export default function AnalyticsDashboardPage() {
             <span>{successToast}</span>
           </div>
           <button
+            type="button"
             onClick={() => setSuccessToast(null)}
             className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-200 cursor-pointer"
           >
@@ -451,9 +629,10 @@ export default function AnalyticsDashboardPage() {
         </div>
       )}
 
-      {/* TABS NAVIGATION */}
+      {/* TABS NAVIGATION (VIEWS: ALL | ACCURACY | EXAMS) */}
       <div className="flex items-center gap-2 mb-8 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto">
         <button
+          type="button"
           onClick={() => setActiveTab('all')}
           className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
             activeTab === 'all'
@@ -461,10 +640,11 @@ export default function AnalyticsDashboardPage() {
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
-          <span>📊</span>
-          <span>Semua Ringkasan</span>
+          <BarChart3 className="w-4 h-4" />
+          <span>{language === 'en' ? 'All Metrics' : 'Semua Ringkasan'}</span>
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('accuracy')}
           className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
             activeTab === 'accuracy'
@@ -472,10 +652,19 @@ export default function AnalyticsDashboardPage() {
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
-          <span>🎯</span>
-          <span>Akurasi Goresan Baris</span>
+          <Flame className="w-4 h-4" />
+          <span>
+            {language === 'en' ? 'Brush Accuracy by Row' : 'Akurasi Goresan Baris'} (
+            {scriptMode === 'katakana'
+              ? 'Katakana'
+              : scriptMode === 'overall'
+              ? 'Gabungan'
+              : 'Hiragana'}
+            )
+          </span>
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('exams')}
           className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer flex items-center gap-2 ${
             activeTab === 'exams'
@@ -483,8 +672,8 @@ export default function AnalyticsDashboardPage() {
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
-          <span>📝</span>
-          <span>Riwayat & Tren Ujian</span>
+          <Award className="w-4 h-4" />
+          <span>{language === 'en' ? 'Exam History & Trend' : 'Riwayat & Tren Ujian'}</span>
         </button>
       </div>
 
@@ -499,7 +688,7 @@ export default function AnalyticsDashboardPage() {
                   Status Penguasaan
                 </span>
                 <span className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center text-sm font-bold">
-                  🔤
+                  {scriptMode === 'katakana' ? 'ア' : scriptMode === 'overall' ? '空' : 'あ'}
                 </span>
               </div>
               <div className="flex items-baseline gap-2 mb-2">
@@ -512,15 +701,23 @@ export default function AnalyticsDashboardPage() {
               </div>
               <div className="flex items-center gap-2 text-xs font-medium mt-3">
                 <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  {overview.memorized_count} Hafal
+                  {overview.memorized_count} {t('common.mastered')}
                 </span>
                 <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                  {overview.learning_count} Belajar
+                  {overview.learning_count} {t('common.learning')}
                 </span>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span>Koleksi Hiragana</span>
-                <span className="font-semibold text-slate-700 dark:text-slate-300">{overview.total_characters} Karakter Lengkap</span>
+                <span>
+                  {scriptMode === 'katakana'
+                    ? 'Koleksi Katakana'
+                    : scriptMode === 'overall'
+                    ? 'Total Kurikulum Aksara'
+                    : 'Koleksi Hiragana'}
+                </span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                  {overview.total_characters} Karakter
+                </span>
               </div>
             </div>
 
@@ -531,7 +728,7 @@ export default function AnalyticsDashboardPage() {
                   Tingkat Kelulusan
                 </span>
                 <span className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm font-bold">
-                  🏆
+                  <Trophy className="w-4 h-4" />
                 </span>
               </div>
               <div className="flex items-baseline gap-2 mb-2">
@@ -556,111 +753,115 @@ export default function AnalyticsDashboardPage() {
               <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                 <span>Target Hafalan</span>
                 <span className="font-semibold text-slate-700 dark:text-slate-300">
-                  {overview.total_characters - overview.memorized_count} tersisa
+                  {overview.memorized_count}/{overview.total_characters}
                 </span>
               </div>
             </div>
 
-            {/* CARD 3: Rata-Rata Presisi Tracing */}
-            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-indigo-500/50 transition-all">
+            {/* CARD 3: Rata-rata Akurasi Tracing Kuas */}
+            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-purple-500/50 transition-all">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Akurasi Tracing
+                  Rata-rata Akurasi Tracing
                 </span>
-                <span className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-sm font-bold">
-                  ✍️
+                <span className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-sm font-bold">
+                  🎯
                 </span>
               </div>
               <div className="flex items-baseline gap-2 mb-2">
                 <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
                   {overview.overall_accuracy_avg > 0 ? `${overview.overall_accuracy_avg}%` : '0%'}
                 </span>
-                {overview.overall_accuracy_avg > 0 && (
-                  <span
-                    className={`text-xs font-black px-2 py-0.5 rounded-md border ${getGradeBadge(
-                      accuracyGrade
-                    )}`}
-                  >
-                    Grade {accuracyGrade}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                Berdasarkan {overview.total_practice_count} kali latihan goresan kuas kanji/kana.
-              </p>
-              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span>Kualitas Goresan</span>
-                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-600 dark:text-purple-400">
                   {overview.overall_accuracy_avg >= 85
-                    ? 'Sangat Presisi'
+                    ? 'Grade A'
                     : overview.overall_accuracy_avg >= 70
-                    ? 'Bagus & Rapi'
+                    ? 'Grade B'
                     : overview.overall_accuracy_avg > 0
-                    ? 'Perlu Penyesuaian'
-                    : 'Belum Ada Latihan'}
+                    ? 'Grade C'
+                    : 'Belum Uji'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs font-medium mt-3">
+                <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                  {overview.total_practice_count}x Penggoresan
+                </span>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span>Metrik Studio</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                  Jarak Hausdorff KanjiVG
                 </span>
               </div>
             </div>
 
-            {/* CARD 4: Performa Ujian (Exam Average) */}
-            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-purple-500/50 transition-all">
+            {/* CARD 4: Rata-rata Skor Ujian */}
+            <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group hover:border-amber-500/50 transition-all">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  Performa Ujian
+                  Rata-rata Skor Ujian
                 </span>
-                <span className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-sm font-bold">
-                  📊
+                <span className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-sm font-bold">
+                  <Award className="w-4 h-4" />
                 </span>
               </div>
               <div className="flex items-baseline gap-2 mb-2">
                 <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
-                  {overview.exam_average_score > 0 ? overview.exam_average_score : '0'}
+                  {overview.exam_average_score > 0 ? `${overview.exam_average_score}` : '-'}
                 </span>
-                <span className="text-sm font-medium text-slate-400 dark:text-slate-500">/ 100</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs font-medium mt-2">
-                <span className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 font-bold">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400">
                   {overview.total_exams_taken} Sesi Selesai
                 </span>
               </div>
-              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span>Rata-Rata Nilai</span>
-                <span className="font-semibold text-slate-700 dark:text-slate-300">
-                  {overview.exam_average_score >= 80
-                    ? 'Sangat Memuaskan'
-                    : overview.exam_average_score >= 60
-                    ? 'Kompeten'
-                    : overview.exam_average_score > 0
-                    ? 'Perlu Evaluasi'
-                    : 'Belum Mengambil Ujian'}
+              <div className="flex items-center gap-2 text-xs font-medium mt-3">
+                <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  Tersimpan di Sistem
                 </span>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span>Modul Ujian</span>
+                <Link
+                  href="/exam"
+                  className="font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+                >
+                  <span>Mulai Ujian</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
               </div>
             </div>
           </div>
         </section>
       )}
 
-      {/* SECTION 2: ROW-BY-ROW ACCURACY BREAKDOWN */}
+      {/* SECTION 2: BRUSH ACCURACY BY ROW METRIC */}
       {(activeTab === 'all' || activeTab === 'accuracy') && (
         <section className="mb-10">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-sm">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>🎯</span>
-                  <span>Akurasi Goresan Tracing Per Baris Karakter (Gojūon Rows)</span>
+                  <span>🎨</span>
+                  <span>
+                    Akurasi Goresan Kuas per Baris (
+                    {scriptMode === 'katakana'
+                      ? 'Katakana'
+                      : scriptMode === 'overall'
+                      ? 'Gabungan Hiragana & Katakana'
+                      : 'Hiragana'}
+                    )
+                  </span>
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Evaluasi presisi goresan kuas Anda di setiap deret vokal dan konsonan untuk menemukan baris huruf yang membutuhkan latihan intensif.
+                  Evaluasi presisi goresan berdasarkan kelompok baris (Gojūon, Dakuon, Handakuon, & Yōon).
                 </p>
               </div>
 
               <Link
-                href="/practice"
+                href={`/practice?script=${scriptMode === 'katakana' ? 'katakana' : 'hiragana'}`}
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 hover:bg-sky-100 dark:hover:bg-sky-900/60 transition-all flex items-center gap-1.5 shrink-0"
               >
                 <span>🧠</span>
-                <span>Latihan Baris Karakter</span>
+                <span>Latihan Studio Tracing</span>
               </Link>
             </div>
 
@@ -730,7 +931,9 @@ export default function AnalyticsDashboardPage() {
                       </div>
 
                       <Link
-                        href={`/practice`}
+                        href={`/practice?script=${
+                          scriptMode === 'katakana' ? 'katakana' : 'hiragana'
+                        }`}
                         className="text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
                       >
                         <span>Latih baris</span>
@@ -752,11 +955,11 @@ export default function AnalyticsDashboardPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>📈</span>
+                  <TrendingUp className="w-5 h-5 text-purple-500" />
                   <span>Grafik Tren Nilai & Riwayat Sesi Ujian</span>
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Rekapitulasi nilai dan waktu pengerjaan ujian kuis Hiragana dari waktu ke waktu.
+                  Rekapitulasi nilai dan waktu pengerjaan ujian kuis Hiragana & Katakana dari waktu ke waktu.
                 </p>
               </div>
 
@@ -765,12 +968,13 @@ export default function AnalyticsDashboardPage() {
                   href="/exam"
                   className="px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition-all flex items-center gap-1.5"
                 >
-                  <span>✍️</span>
+                  <Award className="w-4 h-4" />
                   <span>Ambil Ujian Baru</span>
                 </Link>
 
                 {examHistory.length > 0 && !isLiveBackend && (
                   <button
+                    type="button"
                     onClick={handleClearExamHistory}
                     className="px-3 py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 transition-colors cursor-pointer"
                     title="Reset riwayat lokal"
@@ -785,20 +989,20 @@ export default function AnalyticsDashboardPage() {
             {examHistory.length === 0 ? (
               <div className="text-center py-12 px-4 rounded-2xl bg-slate-50 dark:bg-slate-800/30 border border-dashed border-slate-200 dark:border-slate-800">
                 <div className="w-14 h-14 mx-auto rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-2xl font-bold mb-3">
-                  📝
+                  <Award className="w-7 h-7" />
                 </div>
                 <h4 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-1">
                   Belum Ada Riwayat Sesi Ujian
                 </h4>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-5">
-                  Anda belum menyelesaikan sesi ujian Hiragana. Uji kemampuan hafalan dan presisi goresan huruf Anda sekarang untuk melihat analitik nilai!
+                  Anda belum menyelesaikan sesi ujian. Uji kemampuan hafalan dan presisi goresan huruf Anda sekarang untuk melihat analitik nilai!
                 </p>
                 <Link
                   href="/exam"
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-600/20 transition-all"
                 >
-                  <span>🚀</span>
-                  <span>Mulai Ujian Pertama Sekarang</span>
+                  <span>Mulai Ujian Sekarang</span>
+                  <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
             ) : (
@@ -806,137 +1010,60 @@ export default function AnalyticsDashboardPage() {
                 {/* INTERACTIVE SCORE TREND SVG CHART */}
                 <div className="mb-8 p-5 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800/80">
                   <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                        Grafik Perkembangan Skor Ujian ({chronologicalExams.length} Sesi Terakhir)
-                      </h4>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Arahkan kursor pada titik grafik untuk melihat rincian sesi.
-                      </p>
-                    </div>
-
-                    {selectedPointIndex !== null && chronologicalExams[selectedPointIndex] && (
-                      <div className="text-right text-xs bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
-                        <span className="font-bold text-purple-600 dark:text-purple-400">
-                          Skor {chronologicalExams[selectedPointIndex].score}/100
-                        </span>{' '}
-                        • Grade {chronologicalExams[selectedPointIndex].grade} (
-                        {chronologicalExams[selectedPointIndex].correct_answers}/
-                        {chronologicalExams[selectedPointIndex].total_questions} Benar)
-                      </div>
-                    )}
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Tren Nilai {chronologicalExams.length} Sesi Terakhir
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      Skor 0 - 100
+                    </span>
                   </div>
 
-                  {/* SVG Chart */}
-                  <div className="relative w-full h-44 sm:h-52">
-                    <svg
-                      className="w-full h-full overflow-visible"
-                      viewBox="0 0 600 160"
-                      preserveAspectRatio="none"
-                    >
-                      <defs>
-                        <linearGradient id="scoreAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.4" />
-                          <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.0" />
-                        </linearGradient>
-                      </defs>
+                  <div className="w-full overflow-x-auto">
+                    <svg viewBox="0 0 500 120" className="w-full h-32 overflow-visible">
+                      {/* Grid Lines */}
+                      <line x1="0" y1="20" x2="500" y2="20" stroke="currentColor" strokeOpacity="0.08" strokeDasharray="3 3" />
+                      <line x1="0" y1="60" x2="500" y2="60" stroke="currentColor" strokeOpacity="0.08" strokeDasharray="3 3" />
+                      <line x1="0" y1="100" x2="500" y2="100" stroke="currentColor" strokeOpacity="0.08" strokeDasharray="3 3" />
 
-                      {/* Horizontal Grid lines (0, 25, 50, 75, 100) */}
-                      {[0, 25, 50, 75, 100].map((level) => {
-                        const y = 140 - (level / 100) * 120
-                        return (
-                          <g key={level}>
-                            <line
-                              x1="30"
-                              y1={y}
-                              x2="590"
-                              y2={y}
-                              stroke="currentColor"
-                              className="text-slate-200 dark:text-slate-700/60"
-                              strokeDasharray={level === 75 || level === 100 ? '4 4' : '2 2'}
-                              strokeWidth="1"
-                            />
-                            <text
-                              x="5"
-                              y={y + 3}
-                              className="text-[9px] fill-slate-400 dark:fill-slate-500 font-mono"
-                            >
-                              {level}
-                            </text>
-                          </g>
-                        )
-                      })}
-
-                      {/* Connecting Line and Area */}
+                      {/* SVG Polyline trend */}
                       {chronologicalExams.length > 1 && (
-                        <>
-                          {/* Area Polygon */}
-                          <polygon
-                            points={`30,140 ${chronologicalExams
-                              .map((item, idx) => {
-                                const x =
-                                  30 +
-                                  (idx / (chronologicalExams.length - 1)) * 560
-                                const y = 140 - (item.score / 100) * 120
-                                return `${x},${y}`
-                              })
-                              .join(' ')} 590,140`}
-                            fill="url(#scoreAreaGradient)"
-                          />
-
-                          {/* Line Path */}
-                          <polyline
-                            fill="none"
-                            stroke="#8b5cf6"
-                            strokeWidth="3"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            points={chronologicalExams
-                              .map((item, idx) => {
-                                const x =
-                                  30 +
-                                  (idx / (chronologicalExams.length - 1)) * 560
-                                const y = 140 - (item.score / 100) * 120
-                                return `${x},${y}`
-                              })
-                              .join(' ')}
-                          />
-                        </>
+                        <polyline
+                          fill="none"
+                          stroke="#a855f7"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          points={chronologicalExams
+                            .map((item, idx) => {
+                              const x = 30 + (idx * (440 / Math.max(chronologicalExams.length - 1, 1)))
+                              const y = 100 - (item.score * 0.8)
+                              return `${x},${y}`
+                            })
+                            .join(' ')}
+                        />
                       )}
 
                       {/* Interactive Data Points */}
                       {chronologicalExams.map((item, idx) => {
-                        const x =
-                          chronologicalExams.length === 1
-                            ? 310
-                            : 30 +
-                              (idx / (chronologicalExams.length - 1)) * 560
-                        const y = 140 - (item.score / 100) * 120
+                        const x = 30 + (idx * (440 / Math.max(chronologicalExams.length - 1, 1)))
+                        const y = 100 - (item.score * 0.8)
                         const isSelected = selectedPointIndex === idx
 
                         return (
-                          <g
-                            key={idx}
-                            className="cursor-pointer group"
-                            onMouseEnter={() => setSelectedPointIndex(idx)}
-                            onClick={() => setSelectedPointIndex(idx)}
-                          >
+                          <g key={item.id || idx}>
                             <circle
                               cx={x}
                               cy={y}
-                              r={isSelected ? '7' : '5'}
-                              className={`transition-all duration-200 ${
-                                isSelected
-                                  ? 'fill-purple-600 stroke-white stroke-2 drop-shadow-md'
-                                  : 'fill-purple-500 group-hover:fill-purple-600 stroke-white dark:stroke-slate-900 stroke-2'
-                              }`}
+                              r={isSelected ? '6' : '4'}
+                              className="fill-purple-600 stroke-white dark:stroke-slate-900 cursor-pointer transition-all"
+                              strokeWidth="2"
+                              onClick={() => setSelectedPointIndex(idx)}
                             />
-                            {/* Score Text Label */}
                             <text
                               x={x}
-                              y={y - 10}
+                              y={y - 8}
                               textAnchor="middle"
-                              className={`text-[9px] font-bold ${
+                              className={`text-[9px] ${
                                 isSelected
                                   ? 'fill-purple-600 dark:fill-purple-400 font-extrabold'
                                   : 'fill-slate-500 dark:fill-slate-400'
@@ -1036,15 +1163,15 @@ export default function AnalyticsDashboardPage() {
       {/* QUICK SHORTCUT CARDS FOOTER */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Link
-          href="/"
+          href="/learn"
           className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-sky-400/50 shadow-xs transition-all flex items-center gap-4 group"
         >
           <div className="w-12 h-12 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center text-xl font-bold group-hover:scale-105 transition-transform">
-            🔤
+            あ
           </div>
           <div>
             <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
-              Koleksi 46 Huruf
+              Koleksi Huruf
             </h4>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Pelajari urutan goresan stroke order dan audio pelafalan asli.
@@ -1061,7 +1188,7 @@ export default function AnalyticsDashboardPage() {
           </div>
           <div>
             <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-              Latihan Hafalan
+              Studio Tracing
             </h4>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Uji memori dengan antrean repetisi berjarak (spaced review).

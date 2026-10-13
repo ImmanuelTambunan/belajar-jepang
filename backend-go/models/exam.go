@@ -5,6 +5,7 @@ import "time"
 // ExamResult stores the history of completed quiz and exam sessions.
 type ExamResult struct {
 	ID                uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	ScriptType        string    `gorm:"size:20;default:'hiragana';column:script_type" json:"script_type"` // hiragana, katakana, mixed
 	TotalQuestions    int       `gorm:"not null;column:total_questions" json:"total_questions"`
 	CorrectAnswers    int       `gorm:"not null;column:correct_answers" json:"correct_answers"`
 	Score             int       `gorm:"not null;column:score" json:"score"` // 0 - 100

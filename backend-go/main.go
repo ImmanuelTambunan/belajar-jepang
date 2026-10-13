@@ -18,12 +18,9 @@ func main() {
 	// 1. Initialize Database connection
 	db := config.ConnectDatabase()
 
-	// 2. Run AutoMigrate & Seeder
-	if err := database.AutoMigrate(db); err != nil {
-		log.Printf("⚠️ Peringatan saat migrasi database: %v", err)
-	}
-	if err := database.SeedHiraganaDataset(db); err != nil {
-		log.Printf("⚠️ Peringatan saat seeding Hiragana dataset: %v", err)
+	// 2. Run AutoMigrate & Seeder (Hiragana 107 + Katakana 107 = 214 Karakter)
+	if err := database.AutoMigrateAndSeed(db); err != nil {
+		log.Printf("⚠️ Peringatan saat migrasi & seeding dataset: %v", err)
 	}
 
 	// 3. Initialize Fiber App

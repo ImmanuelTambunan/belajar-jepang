@@ -14,36 +14,60 @@ import {
   AlertCircle,
   FileAudio,
 } from 'lucide-react'
-import { CharacterData } from '@/types/character'
 import {
   saveCustomAudio,
-  getCustomAudio,
   deleteCustomAudio,
   getAllCustomAudio,
   clearAllCustomAudio,
   CustomAudioRecord,
 } from '@/utils/audioStorage'
 import { useCharacterAudio } from '@/hooks/useCharacterAudio'
-import rawHiraganaData from '@/data/hiragana_46.json'
+import rawHiraganaData from '@/data/hiragana_107.json'
+import rawKatakanaData from '@/data/katakana_107.json'
 
-interface RawHiraganaItem {
+interface RawKanaItem {
   symbol: string
   script_type: string
+  category?: string
   row_group: string
   stroke_count: number
   reading: string
   strokes: string[]
 }
 
-const ALL_HIRAGANA: Array<{ symbol: string; romaji: string; row_group: string }> =
-  (rawHiraganaData as RawHiraganaItem[]).map((item) => ({
-    symbol: item.symbol,
-    romaji: item.reading,
-    row_group: item.row_group,
-  }))
+interface ModalKanaItem {
+  symbol: string
+  romaji: string
+  row_group: string
+  category: string
+  script_type: 'hiragana' | 'katakana'
+}
 
-const ROW_GROUPS = [
-  { id: 'all', label: 'Semua (46)' },
+const ALL_HIRAGANA: ModalKanaItem[] = (rawHiraganaData as RawKanaItem[]).map((item) => ({
+  symbol: item.symbol,
+  romaji: item.reading,
+  row_group: item.row_group,
+  category: item.category || 'gojuon',
+  script_type: 'hiragana',
+}))
+
+const ALL_KATAKANA: ModalKanaItem[] = (rawKatakanaData as RawKanaItem[]).map((item) => ({
+  symbol: item.symbol,
+  romaji: item.reading,
+  row_group: item.row_group,
+  category: item.category || 'gojuon',
+  script_type: 'katakana',
+}))
+
+const CATEGORY_TABS = [
+  { id: 'all', label: 'Semua (107)' },
+  { id: 'gojuon', label: 'Gojūon (46)' },
+  { id: 'dakuon_handakuon', label: 'Turunan (25)' },
+  { id: 'yoon', label: 'Yōon (36)' },
+]
+
+const GOJUON_ROW_GROUPS = [
+  { id: 'all', label: 'Semua Baris' },
   { id: 'vowel', label: 'Vokal (A)' },
   { id: 'ka', label: 'Ka' },
   { id: 'sa', label: 'Sa' },
@@ -54,6 +78,30 @@ const ROW_GROUPS = [
   { id: 'ya', label: 'Ya' },
   { id: 'ra', label: 'Ra' },
   { id: 'wa_n', label: 'Wa/N' },
+]
+
+const DAKUON_ROW_GROUPS = [
+  { id: 'all', label: 'Semua' },
+  { id: 'ga', label: 'Ga' },
+  { id: 'za', label: 'Za' },
+  { id: 'da', label: 'Da' },
+  { id: 'ba', label: 'Ba' },
+  { id: 'pa', label: 'Pa' },
+]
+
+const YOON_ROW_GROUPS = [
+  { id: 'all', label: 'Semua' },
+  { id: 'kya', label: 'Kya' },
+  { id: 'sha', label: 'Sha' },
+  { id: 'cha', label: 'Cha' },
+  { id: 'nya', label: 'Nya' },
+  { id: 'hya', label: 'Hya' },
+  { id: 'mya', label: 'Mya' },
+  { id: 'rya', label: 'Rya' },
+  { id: 'gya', label: 'Gya' },
+  { id: 'ja', label: 'Ja' },
+  { id: 'bya', label: 'Bya' },
+  { id: 'pya', label: 'Pya' },
 ]
 
 interface AudioManagerModalProps {
@@ -67,10 +115,12 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
   onClose,
   initialSelectedRomaji,
 }) => {
+  const [modalScript, setModalScript] = useState<'hiragana' | 'katakana'>('hiragana')
+  const [activeCategory, setActiveCategory] = useState<string>('all')
+  const [activeRowTab, setActiveRowTab] = useState<string>('all')
   const [selectedRomaji, setSelectedRomaji] = useState<string>(
     initialSelectedRomaji || 'a'
   )
-  const [activeTab, setActiveTab] = useState<string>('all')
   const [customAudioMap, setCustomAudioMap] = useState<
     Record<string, CustomAudioRecord>
   >({})
@@ -87,7 +137,7 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   // Use character audio hook for playing existing sounds
-  const { play: playLiveAudio, isPlaying: isLivePlaying, activeSource } =
+  const { play: playLiveAudio, isPlaying: isLivePlaying } =
     useCharacterAudio()
 
   // Load custom audio database
@@ -122,12 +172,16 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
     }
   }, [isOpen, initialSelectedRomaji, refreshCustomAudioList, stagedAudioUrl])
 
+  const activeKanaList = useMemo(() => {
+    return modalScript === 'katakana' ? ALL_KATAKANA : ALL_HIRAGANA
+  }, [modalScript])
+
   // Get currently selected character item
   const selectedChar = useMemo(() => {
     return (
-      ALL_HIRAGANA.find((c) => c.romaji === selectedRomaji) || ALL_HIRAGANA[0]
+      activeKanaList.find((c) => c.romaji === selectedRomaji) || activeKanaList[0]
     )
-  }, [selectedRomaji])
+  }, [activeKanaList, selectedRomaji])
 
   const existingCustomRecord = customAudioMap[selectedChar.romaji] || null
 
@@ -142,20 +196,38 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
     setStatusMessage(null)
   }, [selectedRomaji])
 
-  // Filter characters by row tab
+  // Get row tabs based on active category
+  const availableRowGroups = useMemo(() => {
+    if (activeCategory === 'gojuon') return GOJUON_ROW_GROUPS
+    if (activeCategory === 'dakuon_handakuon') return DAKUON_ROW_GROUPS
+    if (activeCategory === 'yoon') return YOON_ROW_GROUPS
+    return []
+  }, [activeCategory])
+
+  // Filter characters by category & row tab
   const filteredList = useMemo(() => {
-    if (activeTab === 'all') return ALL_HIRAGANA
-    if (activeTab === 'wa_n') {
-      return ALL_HIRAGANA.filter(
-        (c) => c.row_group === 'wa' || c.row_group === 'n'
-      )
+    let list: ModalKanaItem[] = activeKanaList
+    if (activeCategory === 'gojuon') {
+      list = list.filter((c) => c.category === 'gojuon')
+    } else if (activeCategory === 'dakuon_handakuon') {
+      list = list.filter((c) => c.category === 'dakuon' || c.category === 'handakuon')
+    } else if (activeCategory === 'yoon') {
+      list = list.filter((c) => c.category === 'yoon')
     }
-    return ALL_HIRAGANA.filter((c) => c.row_group === activeTab)
-  }, [activeTab])
+
+    if (activeRowTab !== 'all') {
+      if (activeRowTab === 'wa_n') {
+        list = list.filter((c) => c.row_group === 'wa' || c.row_group === 'n')
+      } else {
+        list = list.filter((c) => c.row_group === activeRowTab)
+      }
+    }
+
+    return list
+  }, [activeKanaList, activeCategory, activeRowTab])
 
   // Handle file staging (either from file input or drag-and-drop)
   const handleStageFile = (file: File) => {
-    // Validate file type
     const validTypes = ['audio/mpeg', 'audio/mp3', 'audio/ogg', 'audio/wav', 'audio/x-m4a', 'audio/aac']
     const hasValidExt = /\.(mp3|ogg|wav|m4a|aac)$/i.test(file.name)
 
@@ -167,7 +239,6 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
       return
     }
 
-    // Validate size (max 5MB per character)
     if (file.size > 5 * 1024 * 1024) {
       setStatusMessage({
         type: 'error',
@@ -265,7 +336,7 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
 
       setStatusMessage({
         type: 'success',
-        text: `Suara kustom untuk karakter "${selectedChar.symbol} (/${selectedChar.romaji}/)" berhasil disimpan!`,
+        text: `Suara kustom untuk karakter "${selectedChar.symbol} (/${selectedChar.romaji}/)" berhasil disimpan! Berlaku untuk Hiragana & Katakana.`,
       })
     } catch {
       setStatusMessage({
@@ -335,13 +406,13 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <span>Audio Studio & Kustomisasi Suara</span>
+                <span>Audio Studio &amp; Kustomisasi Suara</span>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-800 font-bold">
                   IndexedDB
                 </span>
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Unggah file rekaman .mp3 Anda sendiri untuk setiap huruf Hiragana.
+                Unggah file rekaman .mp3 Anda sendiri untuk setiap huruf Hiragana &amp; Katakana.
               </p>
             </div>
           </div>
@@ -372,18 +443,51 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
         <div className="flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-200 dark:divide-slate-800">
           {/* COLUMN 1: CHARACTER PICKER GRID */}
           <div className="lg:col-span-5 p-4 sm:p-5 flex flex-col max-h-[75vh] overflow-y-auto">
-            {/* Row Group Tabs */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-2 scrollbar-thin mb-3">
-              {ROW_GROUPS.map((tab) => {
-                const isActive = activeTab === tab.id
+            {/* SCRIPT SWITCHER: HIRAGANA VS KATAKANA */}
+            <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl mb-3">
+              <button
+                type="button"
+                onClick={() => setModalScript('hiragana')}
+                className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  modalScript === 'hiragana'
+                    ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-400 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <span>あ</span>
+                <span>Hiragana (107)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalScript('katakana')}
+                className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  modalScript === 'katakana'
+                    ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-400 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <span>ア</span>
+                <span>Katakana (107)</span>
+              </button>
+            </div>
+
+            {/* Category Tabs */}
+            <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-thin mb-2">
+              {CATEGORY_TABS.map((tab) => {
+                const isActive = activeCategory === tab.id
                 return (
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                    onClick={() => {
+                      setActiveCategory(tab.id)
+                      setActiveRowTab('all')
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition whitespace-nowrap cursor-pointer ${
                       isActive
-                        ? 'bg-sky-600 text-white shadow-xs'
+                        ? modalScript === 'katakana'
+                          ? 'bg-purple-600 text-white shadow-xs'
+                          : 'bg-sky-600 text-white shadow-xs'
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-750'
                     }`}
                   >
@@ -392,6 +496,29 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
                 )
               })}
             </div>
+
+            {/* Sub-row Filter Tabs if applicable */}
+            {availableRowGroups.length > 0 && (
+              <div className="flex items-center gap-1 overflow-x-auto pb-2 scrollbar-thin mb-3">
+                {availableRowGroups.map((row) => {
+                  const isActive = activeRowTab === row.id
+                  return (
+                    <button
+                      key={row.id}
+                      type="button"
+                      onClick={() => setActiveRowTab(row.id)}
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-semibold transition whitespace-nowrap cursor-pointer ${
+                        isActive
+                          ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900'
+                          : 'bg-slate-100/80 dark:bg-slate-800/80 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                      }`}
+                    >
+                      {row.label}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
             {/* Character Selector Grid */}
             <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 flex-1 overflow-y-auto pr-1">
@@ -406,7 +533,9 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
                     onClick={() => setSelectedRomaji(item.romaji)}
                     className={`p-2 rounded-2xl border transition text-center relative cursor-pointer select-none flex flex-col items-center justify-center ${
                       isSelected
-                        ? 'bg-gradient-to-b from-purple-50 to-indigo-50 dark:from-purple-950/40 dark:to-indigo-950/40 border-purple-500 ring-2 ring-purple-400/50 shadow-sm'
+                        ? modalScript === 'katakana'
+                          ? 'bg-gradient-to-b from-purple-50 to-indigo-50 dark:from-purple-950/40 dark:to-indigo-950/40 border-purple-500 ring-2 ring-purple-400/50 shadow-sm'
+                          : 'bg-gradient-to-b from-sky-50 to-indigo-50 dark:from-sky-950/40 dark:to-indigo-950/40 border-sky-500 ring-2 ring-sky-400/50 shadow-sm'
                         : 'bg-slate-50 dark:bg-slate-850/60 border-slate-200 dark:border-slate-800 hover:border-purple-300 dark:hover:border-slate-700'
                     }`}
                   >
@@ -431,9 +560,9 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
             <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-                <span>Kustom ({customCount}/46)</span>
+                <span>Kustom: {customCount} total</span>
               </span>
-              <span>Prioritas 1: Kustom ➔ Static ➔ TTS</span>
+              <span>107 Hiragana + 107 Katakana</span>
             </div>
           </div>
 
@@ -447,9 +576,12 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
                     {selectedChar.symbol}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xl font-bold font-mono text-purple-700 dark:text-purple-300">
                         /{selectedChar.romaji}/
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-slate-750 text-slate-700 dark:text-slate-300">
+                        {modalScript === 'katakana' ? 'Katakana' : 'Hiragana'}
                       </span>
                       {existingCustomRecord ? (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500 text-white flex items-center gap-1">
@@ -458,12 +590,12 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
                         </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-slate-750 text-slate-700 dark:text-slate-300">
-                          Suara Bawaan (Static/TTS)
+                          Bawaan (Static/TTS)
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                      Target file: <code className="font-mono text-purple-600 dark:text-purple-400">{selectedChar.romaji}.mp3</code>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                      Target file: <code className="font-mono text-purple-600 dark:text-purple-400">{selectedChar.romaji}.mp3</code> (berbagi audio untuk Hiragana &amp; Katakana)
                     </p>
                   </div>
                 </div>
@@ -483,7 +615,7 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
                       console.warn('AudioManagerModal live test audio error:', err)
                     }
                   }}
-                  className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-slate-750 shadow-xs cursor-pointer flex items-center gap-1.5 transition active:scale-95"
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-slate-750 shadow-xs cursor-pointer flex items-center gap-1.5 transition active:scale-95 shrink-0"
                 >
                   <Volume2 size={15} />
                   <span>{isLivePlaying ? 'Memutar...' : 'Tes Suara'}</span>
@@ -538,7 +670,7 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
                   <Upload size={22} />
                 </div>
                 <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                  Tarik & Lepas File Rekaman .mp3 ke Sini
+                  Tarik &amp; Lepas File Rekaman .mp3 ke Sini
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   atau <span className="text-purple-600 dark:text-purple-400 font-bold underline">klik untuk memilih file</span> dari perangkat (Maks. 5MB)

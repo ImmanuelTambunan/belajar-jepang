@@ -98,17 +98,43 @@ function generateOptions(
   target: CharacterData,
   pool: CharacterData[]
 ): ExamOption[] {
+  const targetRomaji = target.readings?.[0]?.romaji || '-'
+  const targetSymbol = target.character || target.symbol || ''
   const targetOption: ExamOption = {
     id: target.id,
-    symbol: target.character || target.symbol || '',
-    romaji: target.readings?.[0]?.romaji || '-',
+    symbol: targetSymbol,
+    romaji: targetRomaji,
   }
 
-  // Filter distractors pool
-  const distractorsPool = pool.filter((c) => c.id !== target.id)
-  const shuffledPool = shuffleArray(distractorsPool)
+  // Filter distractors pool to ensure unique romaji and unique symbol (preventing duplicate buttons)
+  const seenRomaji = new Set<string>([targetRomaji.toLowerCase()])
+  const seenSymbols = new Set<string>([targetSymbol])
+  const validDistractors: CharacterData[] = []
 
-  const selectedDistractors: ExamOption[] = shuffledPool.slice(0, 3).map((c) => ({
+  const shuffledPool = shuffleArray(pool.filter((c) => c.id !== target.id))
+
+  for (const item of shuffledPool) {
+    const itemRomaji = (item.readings?.[0]?.romaji || '-').toLowerCase()
+    const itemSymbol = item.character || item.symbol || ''
+    if (!seenRomaji.has(itemRomaji) && !seenSymbols.has(itemSymbol)) {
+      seenRomaji.add(itemRomaji)
+      seenSymbols.add(itemSymbol)
+      validDistractors.push(item)
+      if (validDistractors.length === 3) break
+    }
+  }
+
+  // Fallback if not enough distinct items found in restricted pool
+  if (validDistractors.length < 3) {
+    for (const item of shuffledPool) {
+      if (item.id !== target.id && !validDistractors.some((d) => d.id === item.id)) {
+        validDistractors.push(item)
+        if (validDistractors.length === 3) break
+      }
+    }
+  }
+
+  const selectedDistractors: ExamOption[] = validDistractors.map((c) => ({
     id: c.id,
     symbol: c.character || c.symbol || '',
     romaji: c.readings?.[0]?.romaji || '-',

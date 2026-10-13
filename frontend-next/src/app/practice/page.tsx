@@ -790,6 +790,11 @@ function PracticeStudioContent() {
                 </span>
               </div>
 
+              {/* Script Selector in Drawer */}
+              <div className="mb-2">
+                <KanaSwitcher size="sm" className="w-full justify-center" />
+              </div>
+
               {/* Category Filter Tabs */}
               <div className="grid grid-cols-2 gap-1 mb-2">
                 {PRACTICE_CATEGORY_TABS.map((cat) => {

@@ -45,12 +45,54 @@ func GetHiraganaCharacters(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"status": "success",
 		"type":   "hiragana",
+		"script": "hiragana",
 		"count":  len(characters),
 		"data":   characters,
 	})
 }
 
-// GetAllCharacters retrieves characters with optional type, row, category, and jlpt_level filters.
+// GetKatakanaCharacters returns all katakana characters with readings and ordered strokes.
+// Supports optional query parameter `?row=...` to filter by row_group.
+func GetKatakanaCharacters(c *fiber.Ctx) error {
+	var characters []models.Character
+
+	query := config.DB.
+		Preload("Readings").
+		Preload("Strokes", func(db *gorm.DB) *gorm.DB {
+			return db.Order("`character_strokes`.`stroke_number` ASC")
+		}).
+		Where("`script_type` = ? OR `type` = ?", "katakana", "katakana")
+
+	if row := c.Query("row"); row != "" {
+		query = query.Where("`row_group` = ?", row)
+	}
+
+	if category := c.Query("category"); category != "" && category != "all" {
+		if category == "dakuon_handakuon" || category == "dakuon_and_handakuon" {
+			query = query.Where("`category` IN (?, ?)", "dakuon", "handakuon")
+		} else {
+			query = query.Where("`category` = ?", category)
+		}
+	}
+
+	if err := query.Order("`characters`.`id` ASC").Find(&characters).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Gagal mengambil data karakter Katakana: " + err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"type":   "katakana",
+		"script": "katakana",
+		"count":  len(characters),
+		"data":   characters,
+	})
+}
+
+// GetAllCharacters retrieves characters with optional script, type, row, category, and jlpt_level filters.
+// Defaults ?script=hiragana if not provided. Supports ?script=katakana or ?script=all.
 func GetAllCharacters(c *fiber.Ctx) error {
 	var characters []models.Character
 	query := config.DB.
@@ -59,8 +101,16 @@ func GetAllCharacters(c *fiber.Ctx) error {
 			return db.Order("`character_strokes`.`stroke_number` ASC")
 		})
 
-	if charType := c.Query("type"); charType != "" {
-		query = query.Where("`script_type` = ? OR `type` = ?", charType, charType)
+	script := c.Query("script")
+	if script == "" {
+		script = c.Query("type")
+	}
+	if script == "" {
+		script = "hiragana"
+	}
+
+	if script != "all" {
+		query = query.Where("`script_type` = ? OR `type` = ?", script, script)
 	}
 
 	if row := c.Query("row"); row != "" {
@@ -88,6 +138,7 @@ func GetAllCharacters(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"status": "success",
+		"script": script,
 		"count":  len(characters),
 		"data":   characters,
 	})

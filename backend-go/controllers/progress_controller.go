@@ -20,26 +20,45 @@ type ProgressSummaryResponse struct {
 }
 
 // GetProgressSummary returns the count of characters learning vs memorized.
+// Accepts optional ?script=hiragana|katakana|all (default: 'hiragana').
 // GET /api/progress/summary
 func GetProgressSummary(c *fiber.Ctx) error {
-	var totalCharacters int64
-	config.DB.Model(&models.Character{}).
-		Where("`script_type` = ? OR `type` = ?", "hiragana", "hiragana").
-		Count(&totalCharacters)
-
-	if totalCharacters == 0 {
-		totalCharacters = 46 // default standard Gojūon
+	script := c.Query("script")
+	if script == "" {
+		script = c.Query("type")
+	}
+	if script == "" {
+		script = "hiragana"
 	}
 
-	var memorizedCount int64
-	config.DB.Model(&models.UserCharacterProgress{}).
-		Where("status = ?", "memorized").
-		Count(&memorizedCount)
+	charQuery := config.DB.Model(&models.Character{})
+	if script != "all" {
+		charQuery = charQuery.Where("`script_type` = ? OR `type` = ?", script, script)
+	}
 
+	var totalCharacters int64
+	charQuery.Count(&totalCharacters)
+	if totalCharacters == 0 {
+		totalCharacters = 107
+	}
+
+	memorizedQuery := config.DB.Model(&models.UserCharacterProgress{}).
+		Joins("JOIN `characters` ON `characters`.`id` = `user_character_progress`.`character_id`").
+		Where("`user_character_progress`.`status` = ?", "memorized")
+	if script != "all" {
+		memorizedQuery = memorizedQuery.Where("`characters`.`script_type` = ? OR `characters`.`type` = ?", script, script)
+	}
+	var memorizedCount int64
+	memorizedQuery.Count(&memorizedCount)
+
+	learningQuery := config.DB.Model(&models.UserCharacterProgress{}).
+		Joins("JOIN `characters` ON `characters`.`id` = `user_character_progress`.`character_id`").
+		Where("`user_character_progress`.`status` = ?", "learning")
+	if script != "all" {
+		learningQuery = learningQuery.Where("`characters`.`script_type` = ? OR `characters`.`type` = ?", script, script)
+	}
 	var activeLearningCount int64
-	config.DB.Model(&models.UserCharacterProgress{}).
-		Where("status = ?", "learning").
-		Count(&activeLearningCount)
+	learningQuery.Count(&activeLearningCount)
 
 	learningCount := totalCharacters - memorizedCount
 	if learningCount < 0 {
@@ -61,6 +80,7 @@ func GetProgressSummary(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"status": "success",
+		"script": script,
 		"data":   summary,
 	})
 }
@@ -150,8 +170,17 @@ func UpdateProgress(c *fiber.Ctx) error {
 
 // GetPracticeQueue retrieves a prioritized queue of characters for practice.
 // Prioritizes "learning" status or unpracticed characters, ordered by review_count ASC.
+// Accepts optional ?script=hiragana|katakana|all (default: 'hiragana').
 // GET /api/progress/practice-queue
 func GetPracticeQueue(c *fiber.Ctx) error {
+	script := c.Query("script")
+	if script == "" {
+		script = c.Query("type")
+	}
+	if script == "" {
+		script = "hiragana"
+	}
+
 	query := config.DB.
 		Table("characters").
 		Select("characters.*").
@@ -159,8 +188,11 @@ func GetPracticeQueue(c *fiber.Ctx) error {
 		Preload("Readings").
 		Preload("Strokes", func(db *gorm.DB) *gorm.DB {
 			return db.Order("`character_strokes`.`stroke_number` ASC")
-		}).
-		Where("`characters`.`script_type` = ? OR `characters`.`type` = ?", "hiragana", "hiragana")
+		})
+
+	if script != "all" {
+		query = query.Where("`characters`.`script_type` = ? OR `characters`.`type` = ?", script, script)
+	}
 
 	if row := c.Query("row"); row != "" {
 		query = query.Where("`characters`.`row_group` = ?", row)

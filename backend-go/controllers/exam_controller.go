@@ -12,6 +12,7 @@ import (
 
 // SubmitExamRequest holds the quiz payload sent from the client.
 type SubmitExamRequest struct {
+	ScriptType        string `json:"script_type"` // "hiragana", "katakana", "mixed"
 	TotalQuestions    int    `json:"total_questions"`
 	CorrectAnswers    int    `json:"correct_answers"`
 	Score             int    `json:"score"`
@@ -50,7 +51,13 @@ func SubmitExam(c *fiber.Ctx) error {
 	}
 	wrongIDsJoined := strings.Join(wrongIDsStr, ",")
 
+	scriptType := req.ScriptType
+	if scriptType == "" {
+		scriptType = "hiragana"
+	}
+
 	examRecord := models.ExamResult{
+		ScriptType:        scriptType,
 		TotalQuestions:    req.TotalQuestions,
 		CorrectAnswers:    req.CorrectAnswers,
 		Score:             score,
@@ -96,7 +103,13 @@ func SubmitExam(c *fiber.Ctx) error {
 func GetExamHistory(c *fiber.Ctx) error {
 	var records []models.ExamResult
 	limit := c.QueryInt("limit", 10)
-	if err := config.DB.Order("created_at DESC").Limit(limit).Find(&records).Error; err != nil {
+	query := config.DB.Order("created_at DESC")
+
+	if script := c.Query("script"); script != "" && script != "all" {
+		query = query.Where("script_type = ?", script)
+	}
+
+	if err := query.Limit(limit).Find(&records).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Gagal mengambil histori ujian: " + err.Error(),

@@ -12,6 +12,7 @@ export interface CharacterAudioInput {
   symbol?: string
   character?: string
   romaji?: string
+  script_type?: 'hiragana' | 'katakana' | string
   readings?: Array<{ romaji?: string }>
 }
 
@@ -21,6 +22,8 @@ export interface PlaybackOptions {
   rate?: number // Default: 0.85 for articulate learning pace
   pitch?: number // Default: 1.0
   nativeBasePath?: string // Default: '/audio/hiragana'
+  selectedVoiceURI?: string
+  voiceURI?: string
   onStart?: (source: AudioPlaybackSource) => void
   onEnd?: () => void
   onError?: (error: Error) => void
@@ -331,8 +334,9 @@ export function playWebSpeech(
       utterance.rate = options.rate ?? prefs.rate ?? 0.85
       utterance.pitch = options.pitch ?? prefs.pitch ?? 1.0
 
-      const customVoice = prefs.selectedVoiceURI
-        ? cachedJapaneseVoices.find((v) => v.voiceURI === prefs.selectedVoiceURI)
+      const chosenVoiceURI = options.selectedVoiceURI || options.voiceURI || prefs.selectedVoiceURI
+      const customVoice = chosenVoiceURI
+        ? cachedJapaneseVoices.find((v) => v.voiceURI === chosenVoiceURI)
         : null
       const voice = customVoice || getBestJapaneseVoice()
       if (voice) {

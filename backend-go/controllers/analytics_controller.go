@@ -67,26 +67,46 @@ func calculateExamGrade(score int) (string, string) {
 }
 
 // GetAnalyticsOverview aggregates overall progress, memorization, and exam performance.
+// GetAnalyticsOverview aggregates overall progress, memorization, and exam performance.
 // GET /api/analytics/overview
 func GetAnalyticsOverview(c *fiber.Ctx) error {
-	var totalCharacters int64
-	config.DB.Model(&models.Character{}).
-		Where("script_type = ? OR type = ?", "hiragana", "hiragana").
-		Count(&totalCharacters)
-
-	if totalCharacters == 0 {
-		totalCharacters = 46
+	script := c.Query("script")
+	if script == "" {
+		script = c.Query("type")
+	}
+	if script == "" {
+		script = "hiragana"
 	}
 
-	var memorizedCount int64
-	config.DB.Model(&models.UserCharacterProgress{}).
-		Where("status = ?", "memorized").
-		Count(&memorizedCount)
+	charQuery := config.DB.Model(&models.Character{})
+	if script != "all" {
+		charQuery = charQuery.Where("script_type = ? OR type = ?", script, script)
+	}
 
+	var totalCharacters int64
+	charQuery.Count(&totalCharacters)
+
+	if totalCharacters == 0 {
+		totalCharacters = 107
+	}
+
+	memorizedQuery := config.DB.Model(&models.UserCharacterProgress{}).
+		Joins("JOIN `characters` ON `characters`.`id` = `user_character_progress`.`character_id`").
+		Where("`user_character_progress`.`status` = ?", "memorized")
+	if script != "all" {
+		memorizedQuery = memorizedQuery.Where("`characters`.`script_type` = ? OR `characters`.`type` = ?", script, script)
+	}
+	var memorizedCount int64
+	memorizedQuery.Count(&memorizedCount)
+
+	learningQuery := config.DB.Model(&models.UserCharacterProgress{}).
+		Joins("JOIN `characters` ON `characters`.`id` = `user_character_progress`.`character_id`").
+		Where("`user_character_progress`.`status` = ?", "learning")
+	if script != "all" {
+		learningQuery = learningQuery.Where("`characters`.`script_type` = ? OR `characters`.`type` = ?", script, script)
+	}
 	var activeLearningCount int64
-	config.DB.Model(&models.UserCharacterProgress{}).
-		Where("status = ?", "learning").
-		Count(&activeLearningCount)
+	learningQuery.Count(&activeLearningCount)
 
 	learningCount := totalCharacters - memorizedCount
 	if learningCount < 0 {
@@ -104,10 +124,14 @@ func GetAnalyticsOverview(c *fiber.Ctx) error {
 		TotalReview int64
 	}
 	var accResult AccuracyResult
-	config.DB.Model(&models.UserCharacterProgress{}).
-		Select("COALESCE(AVG(accuracy_score), 0) as avg_accuracy, COALESCE(SUM(review_count), 0) as total_review").
-		Where("accuracy_score IS NOT NULL AND accuracy_score > 0").
-		Scan(&accResult)
+	accQuery := config.DB.Model(&models.UserCharacterProgress{}).
+		Joins("JOIN `characters` ON `characters`.`id` = `user_character_progress`.`character_id`").
+		Select("COALESCE(AVG(`user_character_progress`.`accuracy_score`), 0) as avg_accuracy, COALESCE(SUM(`user_character_progress`.`review_count`), 0) as total_review").
+		Where("`user_character_progress`.`accuracy_score` IS NOT NULL AND `user_character_progress`.`accuracy_score` > 0")
+	if script != "all" {
+		accQuery = accQuery.Where("`characters`.`script_type` = ? OR `characters`.`type` = ?", script, script)
+	}
+	accQuery.Scan(&accResult)
 
 	// Exam performance aggregates
 	type ExamAggregate struct {
@@ -115,9 +139,12 @@ func GetAnalyticsOverview(c *fiber.Ctx) error {
 		AvgScore   float64
 	}
 	var examAgg ExamAggregate
-	config.DB.Model(&models.ExamResult{}).
-		Select("COUNT(*) as total_exams, COALESCE(AVG(score), 0) as avg_score").
-		Scan(&examAgg)
+	examQuery := config.DB.Model(&models.ExamResult{}).
+		Select("COUNT(*) as total_exams, COALESCE(AVG(score), 0) as avg_score")
+	if script != "all" {
+		examQuery = examQuery.Where("script_type = ?", script)
+	}
+	examQuery.Scan(&examAgg)
 
 	overview := AnalyticsOverviewResponse{
 		TotalCharacters:     totalCharacters,
@@ -133,6 +160,7 @@ func GetAnalyticsOverview(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"status": "success",
+		"script": script,
 		"data":   overview,
 	})
 }
@@ -140,35 +168,99 @@ func GetAnalyticsOverview(c *fiber.Ctx) error {
 // GetAccuracyByRow computes average tracing accuracy and memorization grouped by Gojuon row.
 // GET /api/analytics/accuracy-by-row
 func GetAccuracyByRow(c *fiber.Ctx) error {
-	// Standard Hiragana row group definitions
-	rowDefinitions := []struct {
+	script := c.Query("script")
+	if script == "" {
+		script = c.Query("type")
+	}
+	if script == "" {
+		script = "hiragana"
+	}
+
+	// Row group definitions for Hiragana or Katakana
+	var rowDefinitions []struct {
 		RowGroup   string
 		Label      string
 		SampleKana string
-	}{
-		{"vowel", "Baris A (Vokal)", "あ, い, う, え, お"},
-		{"ka", "Baris Ka", "か, き, く, け, こ"},
-		{"sa", "Baris Sa", "さ, し, す, せ, そ"},
-		{"ta", "Baris Ta", "た, ち, つ, て, と"},
-		{"na", "Baris Na", "な, に, ぬ, ね, の"},
-		{"ha", "Baris Ha", "は, ひ, ふ, へ, ほ"},
-		{"ma", "Baris Ma", "ま, み, む, め, も"},
-		{"ya", "Baris Ya", "や, ゆ, よ"},
-		{"ra", "Baris Ra", "ら, り, る, れ, ろ"},
-		{"wa", "Baris Wa / N", "わ, を, ん"},
-		{"ga", "Dakuon Ga", "が, ぎ, ぐ, げ, ご"},
-		{"za", "Dakuon Za", "ざ, じ, ず, ぜ, ぞ"},
-		{"da", "Dakuon Da", "だ, ぢ, づ, で, ど"},
-		{"ba", "Dakuon Ba", "ば, び, ぶ, べ, ぼ"},
-		{"pa", "Handakuon Pa", "ぱ, ぴ, ぷ, ぺ, ぽ"},
-		{"yoon", "Gabungan Yōon", "きゃ, しゃ, ちゃ, ..."},
 	}
 
-	// Fetch all characters with their associated progress
+	if script == "katakana" {
+		rowDefinitions = []struct {
+			RowGroup   string
+			Label      string
+			SampleKana string
+		}{
+			{"vowel", "Baris A (Vokal)", "ア, イ, ウ, エ, オ"},
+			{"ka", "Baris Ka", "カ, キ, ク, ケ, コ"},
+			{"sa", "Baris Sa", "サ, シ, ス, セ, ソ"},
+			{"ta", "Baris Ta", "タ, チ, ツ, テ, ト"},
+			{"na", "Baris Na", "ナ, ニ, ヌ, ネ, ノ"},
+			{"ha", "Baris Ha", "ハ, ヒ, フ, ヘ, ホ"},
+			{"ma", "Baris Ma", "マ, ミ, ム, メ, モ"},
+			{"ya", "Baris Ya", "ヤ, ユ, ヨ"},
+			{"ra", "Baris Ra", "ラ, リ, ル, レ, ロ"},
+			{"wa", "Baris Wa / N", "ワ, ヲ, ン"},
+			{"ga", "Dakuon Ga", "ガ, ギ, グ, ゲ, ゴ"},
+			{"za", "Dakuon Za", "ザ, ジ, ズ, ゼ, ゾ"},
+			{"da", "Dakuon Da", "ダ, ヂ, ヅ, デ, ド"},
+			{"ba", "Dakuon Ba", "バ, ビ, ブ, ベ, ボ"},
+			{"pa", "Handakuon Pa", "パ, ピ, プ, ペ, ポ"},
+			{"yoon", "Gabungan Yōon", "キャ, シュ, チョ, ..."},
+		}
+	} else if script == "all" {
+		rowDefinitions = []struct {
+			RowGroup   string
+			Label      string
+			SampleKana string
+		}{
+			{"vowel", "Baris A (Vokal)", "あ/ア, い/イ, う/ウ, ..."},
+			{"ka", "Baris Ka", "か/カ, き/キ, く/ク, ..."},
+			{"sa", "Baris Sa", "さ/サ, し/シ, す/ス, ..."},
+			{"ta", "Baris Ta", "た/タ, ち/チ, つ/ツ, ..."},
+			{"na", "Baris Na", "な/ナ, に/ニ, ぬ/ヌ, ..."},
+			{"ha", "Baris Ha", "は/ハ, ひ/ヒ, ふ/フ, ..."},
+			{"ma", "Baris Ma", "ま/マ, み/ミ, む/ム, ..."},
+			{"ya", "Baris Ya", "や/ヤ, ゆ/ユ, よ/ヨ"},
+			{"ra", "Baris Ra", "ら/ラ, り/リ, る/ル, ..."},
+			{"wa", "Baris Wa / N", "わ/ワ, を/ヲ, ん/ン"},
+			{"ga", "Dakuon Ga", "が/ガ, ぎ/ギ, ぐ/グ, ..."},
+			{"za", "Dakuon Za", "ざ/ザ, じ/ジ, ず/ズ, ..."},
+			{"da", "Dakuon Da", "だ/ダ, ぢ/ヂ, づ/ヅ, ..."},
+			{"ba", "Dakuon Ba", "ば/バ, び/ビ, ぶ/ブ, ..."},
+			{"pa", "Handakuon Pa", "ぱ/パ, ぴ/ピ, ぷ/プ, ..."},
+			{"yoon", "Gabungan Yōon", "きゃ/キャ, しゃ/シャ, ..."},
+		}
+	} else {
+		rowDefinitions = []struct {
+			RowGroup   string
+			Label      string
+			SampleKana string
+		}{
+			{"vowel", "Baris A (Vokal)", "あ, い, う, え, お"},
+			{"ka", "Baris Ka", "か, き, く, け, こ"},
+			{"sa", "Baris Sa", "さ, し, す, せ, そ"},
+			{"ta", "Baris Ta", "た, ち, つ, て, と"},
+			{"na", "Baris Na", "な, に, ぬ, ね, の"},
+			{"ha", "Baris Ha", "は, ひ, ふ, へ, ほ"},
+			{"ma", "Baris Ma", "ま, み, む, め, も"},
+			{"ya", "Baris Ya", "や, ゆ, よ"},
+			{"ra", "Baris Ra", "ら, り, る, れ, ろ"},
+			{"wa", "Baris Wa / N", "わ, を, ん"},
+			{"ga", "Dakuon Ga", "が, ぎ, ぐ, げ, ご"},
+			{"za", "Dakuon Za", "ざ, じ, ず, ぜ, ぞ"},
+			{"da", "Dakuon Da", "だ, ぢ, づ, で, ど"},
+			{"ba", "Dakuon Ba", "ば, び, ぶ, べ, ぼ"},
+			{"pa", "Handakuon Pa", "ぱ, ぴ, ぷ, ぺ, ぽ"},
+			{"yoon", "Gabungan Yōon", "きゃ, しゃ, ちゃ, ..."},
+		}
+	}
+
+	// Fetch characters for the specified script
 	var characters []models.Character
-	config.DB.Model(&models.Character{}).
-		Where("script_type = ? OR type = ?", "hiragana", "hiragana").
-		Find(&characters)
+	charFetch := config.DB.Model(&models.Character{})
+	if script != "all" {
+		charFetch = charFetch.Where("script_type = ? OR type = ?", script, script)
+	}
+	charFetch.Find(&characters)
 
 	// Fetch all user progress records
 	var allProgress []models.UserCharacterProgress

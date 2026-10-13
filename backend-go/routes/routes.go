@@ -14,6 +14,7 @@ func SetupRoutes(app *fiber.App) {
 
 	// Characters endpoints
 	api.Get("/characters/hiragana", controllers.GetHiraganaCharacters)
+	api.Get("/characters/katakana", controllers.GetKatakanaCharacters)
 	api.Get("/characters", controllers.GetAllCharacters)
 	api.Get("/characters/:id", controllers.GetCharacterDetail)
 

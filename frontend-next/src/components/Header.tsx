@@ -31,7 +31,7 @@ export const Header: React.FC = () => {
   }, [updateCount])
 
   const navLinks = [
-    { href: '/', label: 'Koleksi Huruf', icon: '🔤', desc: '46 Hiragana & Stroke Tracing' },
+    { href: '/', label: 'Koleksi Huruf', icon: '🔤', desc: 'Hiragana & Katakana Stroke Tracing' },
     { href: '/practice', label: 'Latihan Hafalan', icon: '🧠', desc: 'Memorize Mode & Antrean Review' },
     { href: '/exam', label: 'Ujian Hafalan', icon: '📝', desc: 'Quiz Mode & Blind Tracing' },
     { href: '/analytics', label: 'Dasbor Analitik', icon: '📊', desc: 'Statistik & Riwayat Belajar' },
@@ -62,7 +62,7 @@ export const Header: React.FC = () => {
       </h1>
 
       <p className="max-w-2xl mx-auto mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400 font-normal leading-relaxed">
-        Platform Pembelajaran Hiragana Interaktif dengan Arsitektur Decoupled:
+        Platform Pembelajaran Hiragana &amp; Katakana Interaktif dengan Arsitektur Decoupled:
         <span className="text-slate-900 dark:text-slate-200 font-medium"> Next.js 16 (App Router + Tailwind)</span> di Frontend dan
         <span className="text-slate-900 dark:text-slate-200 font-medium"> Golang Fiber + GORM</span> di Backend.
       </p>

@@ -165,7 +165,7 @@ const LOCAL_STORAGE_KEY = 'nihongo_sora_character_progress'
 
 export default function LearnPage() {
   const { t, language } = useLanguage()
-  const { script } = useScript()
+  const { script, setScript } = useScript()
   const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
@@ -433,6 +433,36 @@ export default function LearnPage() {
             <RotateCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
+      </div>
+
+      {/* PRIMARY SCRIPT SWITCHER TAB BAR (HIRAGANA | KATAKANA) */}
+      <div className="mb-6 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex max-w-md shadow-xs">
+        <button
+          type="button"
+          onClick={() => setScript('hiragana')}
+          className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            script === 'hiragana'
+              ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-sm border border-slate-200/80 dark:border-slate-700'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <span className="text-base font-serif font-black">あ</span>
+          <span>Hiragana</span>
+          <span className="text-[10px] font-mono opacity-75 px-1.5 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700">107</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setScript('katakana')}
+          className={`flex-1 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            script === 'katakana'
+              ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-200/80 dark:border-slate-700'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+        >
+          <span className="text-base font-serif font-black">ア</span>
+          <span>Katakana</span>
+          <span className="text-[10px] font-mono opacity-75 px-1.5 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700">107</span>
+        </button>
       </div>
 
       {/* CATEGORY TABS (Fase 9: Gojuon, Dakuon & Handakuon, Yoon, Semua) */}
