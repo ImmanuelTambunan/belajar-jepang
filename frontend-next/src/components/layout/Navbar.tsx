@@ -97,12 +97,12 @@ export const Navbar: React.FC = () => {
             count++
           }
         })
-        setMemorizedCount(count)
+        setMemorizedCount((prev) => (prev === count ? prev : count))
       } else {
-        setMemorizedCount(0)
+        setMemorizedCount((prev) => (prev === 0 ? prev : 0))
       }
     } catch {
-      setMemorizedCount(0)
+      setMemorizedCount((prev) => (prev === 0 ? prev : 0))
     }
   }, [])
 
@@ -124,26 +124,33 @@ export const Navbar: React.FC = () => {
     }
   }, [apiBaseUrl])
 
+  // Listen to custom progress update events (mount only)
   useEffect(() => {
     refreshMasteryBadge()
-    checkBackendStatus()
 
-    // Listen to custom progress update events
-    const handleProgressUpdate = () => refreshMasteryBadge()
+    const handleProgressUpdate = () => {
+      refreshMasteryBadge()
+    }
+
     window.addEventListener('nihongo_sora_progress_updated', handleProgressUpdate)
-    window.addEventListener('nihongo_sora_gamification_updated', handleProgressUpdate)
     window.addEventListener('storage', handleProgressUpdate)
-
-    // Periodic backend status check every 30s
-    const interval = setInterval(checkBackendStatus, 30000)
 
     return () => {
       window.removeEventListener('nihongo_sora_progress_updated', handleProgressUpdate)
-      window.removeEventListener('nihongo_sora_gamification_updated', handleProgressUpdate)
       window.removeEventListener('storage', handleProgressUpdate)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Periodic backend status check
+  useEffect(() => {
+    checkBackendStatus()
+    const interval = setInterval(checkBackendStatus, 30000)
+
+    return () => {
       clearInterval(interval)
     }
-  }, [refreshMasteryBadge, checkBackendStatus])
+  }, [checkBackendStatus])
 
   // Close mobile menu on route change
   useEffect(() => {
