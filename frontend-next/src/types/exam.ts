@@ -21,9 +21,12 @@ export interface ExamQuestion {
   timeSpentSeconds: number
 }
 
+export type ExamScope = 'all' | 'gojuon' | 'dakuon_handakuon' | 'yoon'
+
 export interface ExamConfig {
-  questionCount: number // 10, 20, 46
-  rowGroup: string // 'all', 'vowel_ka', 'sa_ta', 'na_ha_ma', 'ya_ra_wa_n'
+  questionCount: number // 10, 20, 46, 107
+  scope?: ExamScope // 'all', 'gojuon', 'dakuon_handakuon', 'yoon'
+  rowGroup: string // 'all', 'vowel_ka', 'sa_ta', 'na_ha_ma', 'ya_ra_wa_n', etc.
   enabledTypes: ExamQuestionType[]
   timerSecondsPerQuestion: number // 0 (unlimited), 15, 30
 }

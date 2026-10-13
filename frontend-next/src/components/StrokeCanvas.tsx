@@ -425,7 +425,7 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
               {/* Static faint guide paths */}
               {sortedStrokes.map((stroke, index) => (
                 <path
-                  key={`guide-${stroke.id}`}
+                  key={`guide-${stroke.id ?? index}`}
                   d={stroke.svg_path}
                   fill="none"
                   stroke={strokeColors[index % strokeColors.length]}
@@ -439,7 +439,7 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
               {/* Animated active paths */}
               {sortedStrokes.map((stroke, index) => (
                 <path
-                  key={`anim-${stroke.id}`}
+                  key={`anim-${stroke.id ?? index}`}
                   ref={(el) => {
                     animatedPathRefs.current[index] = el
                   }}
@@ -466,7 +466,7 @@ export const StrokeCanvas: React.FC<StrokeCanvasProps> = ({
                   const isCurrent = activeStrokeIndex === index
                   return (
                     <g
-                      key={`badge-${stroke.id}`}
+                      key={`badge-${stroke.id ?? index}`}
                       className="transition-transform duration-200"
                       transform={
                         isCurrent

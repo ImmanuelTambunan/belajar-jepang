@@ -24,6 +24,7 @@ export interface CharacterData {
   symbol?: string
   type: string
   script_type?: string
+  category?: 'gojuon' | 'dakuon' | 'handakuon' | 'yoon' | string
   row_group?: string
   strokes_count: number
   stroke_count?: number

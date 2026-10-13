@@ -26,6 +26,15 @@ func GetHiraganaCharacters(c *fiber.Ctx) error {
 		query = query.Where("`row_group` = ?", row)
 	}
 
+	// Optional query parameter ?category=... (gojuon, dakuon, handakuon, yoon, dakuon_handakuon)
+	if category := c.Query("category"); category != "" && category != "all" {
+		if category == "dakuon_handakuon" || category == "dakuon_and_handakuon" {
+			query = query.Where("`category` IN (?, ?)", "dakuon", "handakuon")
+		} else {
+			query = query.Where("`category` = ?", category)
+		}
+	}
+
 	if err := query.Order("`characters`.`id` ASC").Find(&characters).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
@@ -41,7 +50,7 @@ func GetHiraganaCharacters(c *fiber.Ctx) error {
 	})
 }
 
-// GetAllCharacters retrieves characters with optional type, row, and jlpt_level filters.
+// GetAllCharacters retrieves characters with optional type, row, category, and jlpt_level filters.
 func GetAllCharacters(c *fiber.Ctx) error {
 	var characters []models.Character
 	query := config.DB.
@@ -56,6 +65,14 @@ func GetAllCharacters(c *fiber.Ctx) error {
 
 	if row := c.Query("row"); row != "" {
 		query = query.Where("`row_group` = ?", row)
+	}
+
+	if category := c.Query("category"); category != "" && category != "all" {
+		if category == "dakuon_handakuon" || category == "dakuon_and_handakuon" {
+			query = query.Where("`category` IN (?, ?)", "dakuon", "handakuon")
+		} else {
+			query = query.Where("`category` = ?", category)
+		}
 	}
 
 	if jlpt := c.Query("jlpt_level"); jlpt != "" {

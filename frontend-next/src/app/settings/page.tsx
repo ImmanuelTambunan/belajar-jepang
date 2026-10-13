@@ -37,11 +37,12 @@ import {
   getAllJapaneseVoices,
   playCharacterAudio,
 } from '@/utils/audio'
-import rawHiraganaData from '@/data/hiragana_46.json'
+import rawHiraganaData from '@/data/hiragana_107.json'
 
 interface RawHiraganaItem {
   symbol: string
   script_type: string
+  category?: string
   row_group: string
   stroke_count: number
   reading: string
@@ -51,22 +52,85 @@ interface RawHiraganaItem {
 const ALL_HIRAGANA = (rawHiraganaData as RawHiraganaItem[]).map((item) => ({
   symbol: item.symbol,
   romaji: item.reading,
+  category: item.category || 'gojuon',
   row_group: item.row_group,
 }))
 
-const ROW_FILTERS = [
-  { id: 'all', label: 'Semua (46)' },
-  { id: 'vowel', label: 'A (Vokal)' },
-  { id: 'ka', label: 'Ka' },
-  { id: 'sa', label: 'Sa' },
-  { id: 'ta', label: 'Ta' },
-  { id: 'na', label: 'Na' },
-  { id: 'ha', label: 'Ha' },
-  { id: 'ma', label: 'Ma' },
-  { id: 'ya', label: 'Ya' },
-  { id: 'ra', label: 'Ra' },
-  { id: 'wa_n', label: 'Wa/N' },
-]
+const SETTINGS_CATEGORY_TABS = [
+  { id: 'all', label: 'Semua (107)' },
+  { id: 'gojuon', label: 'Gojūon (46)' },
+  { id: 'dakuon_handakuon', label: 'Turunan (25)' },
+  { id: 'yoon', label: 'Yōon (36)' },
+] as const
+
+const SETTINGS_ROW_FILTERS: Record<string, { id: string; label: string }[]> = {
+  all: [
+    { id: 'all', label: 'Semua Baris (107)' },
+    { id: 'vowel', label: 'A (Vokal)' },
+    { id: 'ka', label: 'Ka' },
+    { id: 'sa', label: 'Sa' },
+    { id: 'ta', label: 'Ta' },
+    { id: 'na', label: 'Na' },
+    { id: 'ha', label: 'Ha' },
+    { id: 'ma', label: 'Ma' },
+    { id: 'ya', label: 'Ya' },
+    { id: 'ra', label: 'Ra' },
+    { id: 'wa_n', label: 'Wa/N' },
+    { id: 'ga', label: 'Ga (が)' },
+    { id: 'za', label: 'Za (ざ)' },
+    { id: 'da', label: 'Da (だ)' },
+    { id: 'ba', label: 'Ba (ば)' },
+    { id: 'pa', label: 'Pa (ぱ)' },
+    { id: 'kya', label: 'Kya' },
+    { id: 'sha', label: 'Sha' },
+    { id: 'cha', label: 'Cha' },
+    { id: 'nya', label: 'Nya' },
+    { id: 'hya', label: 'Hya' },
+    { id: 'mya', label: 'Mya' },
+    { id: 'rya', label: 'Rya' },
+    { id: 'gya', label: 'Gya' },
+    { id: 'ja', label: 'Ja' },
+    { id: 'dya', label: 'Dya' },
+    { id: 'bya', label: 'Bya' },
+    { id: 'pya', label: 'Pya' },
+  ],
+  gojuon: [
+    { id: 'all', label: 'Semua Gojūon (46)' },
+    { id: 'vowel', label: 'A (Vokal)' },
+    { id: 'ka', label: 'Ka' },
+    { id: 'sa', label: 'Sa' },
+    { id: 'ta', label: 'Ta' },
+    { id: 'na', label: 'Na' },
+    { id: 'ha', label: 'Ha' },
+    { id: 'ma', label: 'Ma' },
+    { id: 'ya', label: 'Ya' },
+    { id: 'ra', label: 'Ra' },
+    { id: 'wa_n', label: 'Wa/N' },
+  ],
+  dakuon_handakuon: [
+    { id: 'all', label: 'Semua Turunan (25)' },
+    { id: 'ga', label: 'Ga (が)' },
+    { id: 'za', label: 'Za (ざ)' },
+    { id: 'da', label: 'Da (だ)' },
+    { id: 'ba', label: 'Ba (ば)' },
+    { id: 'pa', label: 'Pa (ぱ)' },
+  ],
+  yoon: [
+    { id: 'all', label: 'Semua Yōon (36)' },
+    { id: 'kya', label: 'Kya (きゃ)' },
+    { id: 'sha', label: 'Sha (しゃ)' },
+    { id: 'cha', label: 'Cha (ちゃ)' },
+    { id: 'nya', label: 'Nya (にゃ)' },
+    { id: 'hya', label: 'Hya (ひゃ)' },
+    { id: 'mya', label: 'Mya (みゃ)' },
+    { id: 'rya', label: 'Rya (りゃ)' },
+    { id: 'gya', label: 'Gya (ぎゃ)' },
+    { id: 'ja', label: 'Ja (じゃ)' },
+    { id: 'dya', label: 'Dya (ぢゃ)' },
+    { id: 'bya', label: 'Bya (びゃ)' },
+    { id: 'pya', label: 'Pya (ぴゃ)' },
+  ],
+}
 
 export default function SettingsPage() {
   const { language, setLanguage, t } = useLanguage()
@@ -77,6 +141,9 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'language' | 'audio' | 'voice' | 'practice' | 'system'>('language')
 
   // Audio Manager State
+  const [selectedCategory, setSelectedCategory] = useState<
+    'all' | 'gojuon' | 'dakuon_handakuon' | 'yoon'
+  >('all')
   const [selectedRomaji, setSelectedRomaji] = useState<string>('a')
   const [selectedRowGroup, setSelectedRowGroup] = useState<string>('all')
   const [customAudioMap, setCustomAudioMap] = useState<Record<string, CustomAudioRecord>>({})
@@ -155,6 +222,15 @@ export default function SettingsPage() {
 
   // Filtered Hiragana list for Audio Manager
   const filteredHiragana = ALL_HIRAGANA.filter((item) => {
+    if (selectedCategory === 'gojuon' && (item.category || 'gojuon') !== 'gojuon') return false
+    if (
+      selectedCategory === 'dakuon_handakuon' &&
+      item.category !== 'dakuon' &&
+      item.category !== 'handakuon'
+    )
+      return false
+    if (selectedCategory === 'yoon' && item.category !== 'yoon') return false
+
     if (selectedRowGroup === 'all') return true
     if (selectedRowGroup === 'wa_n') {
       return item.row_group === 'wa' || item.row_group === 'n'
@@ -612,7 +688,7 @@ export default function SettingsPage() {
             {/* Right: Character Audio Directory */}
             <div className="lg:col-span-7 bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs flex flex-col justify-between">
               <div>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                     <span>🔤</span> Pilih Karakter untuk Dikelola
                   </h4>
@@ -623,12 +699,38 @@ export default function SettingsPage() {
                     onChange={(e) => setSelectedRowGroup(e.target.value)}
                     className="py-1 px-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200"
                   >
-                    {ROW_FILTERS.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.label}
-                      </option>
-                    ))}
+                    {(SETTINGS_ROW_FILTERS[selectedCategory] || SETTINGS_ROW_FILTERS.all).map(
+                      (r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.label}
+                        </option>
+                      )
+                    )}
                   </select>
+                </div>
+
+                {/* Category Filter Tabs */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-3">
+                  {SETTINGS_CATEGORY_TABS.map((cat) => {
+                    const isSelected = selectedCategory === cat.id
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCategory(cat.id)
+                          setSelectedRowGroup('all')
+                        }}
+                        className={`py-1.5 px-2 rounded-xl text-[11px] font-bold transition cursor-pointer text-center truncate ${
+                          isSelected
+                            ? 'bg-amber-500 text-white shadow-2xs'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    )
+                  })}
                 </div>
 
                 {/* Character Grid */}
@@ -636,6 +738,7 @@ export default function SettingsPage() {
                   {filteredHiragana.map((item) => {
                     const isSelected = item.romaji === selectedRomaji
                     const hasCustom = !!customAudioMap[item.romaji]
+                    const isYoon = item.category === 'yoon' && item.symbol.length === 2
 
                     return (
                       <div
@@ -657,7 +760,20 @@ export default function SettingsPage() {
                             title="Ada rekaman audio kustom"
                           />
                         )}
-                        <span className="text-2xl font-black">{item.symbol}</span>
+                        {isYoon ? (
+                          <div className="flex flex-col items-center">
+                            <span
+                              className={`text-[8px] font-bold -mb-0.5 ${
+                                isSelected ? 'text-amber-100' : 'text-slate-400'
+                              }`}
+                            >
+                              {item.symbol[0]}+{item.symbol[1]}
+                            </span>
+                            <span className="text-xl font-black">{item.symbol}</span>
+                          </div>
+                        ) : (
+                          <span className="text-2xl font-black">{item.symbol}</span>
+                        )}
                         <span
                           className={`text-[10px] font-mono uppercase font-bold mt-0.5 ${
                             isSelected ? 'text-amber-100' : 'text-slate-400'

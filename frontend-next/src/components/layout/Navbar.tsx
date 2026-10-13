@@ -36,6 +36,7 @@ export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isBackendLive, setIsBackendLive] = useState<boolean | null>(null)
   const [memorizedCount, setMemorizedCount] = useState<number>(0)
+  const totalCharactersCount = 107
   const [isCheckingBackend, setIsCheckingBackend] = useState<boolean>(false)
 
   const navItems: NavItem[] = [
@@ -301,7 +302,7 @@ export const Navbar: React.FC = () => {
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-spin-slow" />
               <span>
-                <strong className="font-extrabold">{memorizedCount}</strong>/46{' '}
+                <strong className="font-extrabold">{memorizedCount}</strong>/{totalCharactersCount}{' '}
                 {t('nav.memorized')}
               </span>
             </Link>
@@ -362,7 +363,7 @@ export const Navbar: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
                   <span className="font-mono">{levelInfo.currentLevelXP} / {levelInfo.nextLevelXP} XP ({levelInfo.totalXP} Total)</span>
-                  <span className="font-bold text-amber-600 dark:text-amber-400">{memorizedCount}/46 {t('nav.memorized')}</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400">{memorizedCount}/{totalCharactersCount} {t('nav.memorized')}</span>
                 </div>
               </div>
             </div>

@@ -26,11 +26,12 @@ import {
   getCharactersNeedingReview,
   getLatestExamFromStorage,
 } from '@/utils/srs'
-import rawHiraganaData from '@/data/hiragana_46.json'
+import rawHiraganaData from '@/data/hiragana_107.json'
 
 interface RawHiraganaItem {
   symbol: string
   script_type: string
+  category?: string
   row_group: string
   stroke_count: number
   reading: string
@@ -43,6 +44,7 @@ const FALLBACK_ALL: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]).map
   symbol: item.symbol,
   type: item.script_type,
   script_type: item.script_type,
+  category: item.category || 'gojuon',
   row_group: item.row_group,
   strokes_count: item.stroke_count,
   stroke_count: item.stroke_count,
@@ -65,19 +67,81 @@ const FALLBACK_ALL: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]).map
   })),
 }))
 
-const ROW_FILTERS = [
-  { id: 'all', label: 'Semua (46)' },
-  { id: 'vowel', label: 'A (Vokal)' },
-  { id: 'ka', label: 'Ka' },
-  { id: 'sa', label: 'Sa' },
-  { id: 'ta', label: 'Ta' },
-  { id: 'na', label: 'Na' },
-  { id: 'ha', label: 'Ha' },
-  { id: 'ma', label: 'Ma' },
-  { id: 'ya', label: 'Ya' },
-  { id: 'ra', label: 'Ra' },
-  { id: 'wa_n', label: 'Wa / N' },
-]
+const PRACTICE_CATEGORY_TABS = [
+  { id: 'all', label: 'Semua', count: 107 },
+  { id: 'gojuon', label: 'Gojūon', count: 46 },
+  { id: 'dakuon_handakuon', label: 'Turunan', count: 25 },
+  { id: 'yoon', label: 'Yōon', count: 36 },
+] as const
+
+const ROW_FILTERS_BY_CATEGORY: Record<string, { id: string; label: string }[]> = {
+  all: [
+    { id: 'all', label: 'Semua (107)' },
+    { id: 'vowel', label: 'A, I, U, E, O' },
+    { id: 'ka', label: 'Ka - Ko' },
+    { id: 'sa', label: 'Sa - So' },
+    { id: 'ta', label: 'Ta - To' },
+    { id: 'na', label: 'Na - No' },
+    { id: 'ha', label: 'Ha - Ho' },
+    { id: 'ma', label: 'Ma - Mo' },
+    { id: 'ya', label: 'Ya, Yu, Yo' },
+    { id: 'ra', label: 'Ra - Ro' },
+    { id: 'wa_n', label: 'Wa, Wo, N' },
+    { id: 'ga', label: 'Ga - Go (が)' },
+    { id: 'za', label: 'Za - Zo (ざ)' },
+    { id: 'da', label: 'Da - Do (だ)' },
+    { id: 'ba', label: 'Ba - Bo (ば)' },
+    { id: 'pa', label: 'Pa - Po (ぱ)' },
+    { id: 'kya', label: 'Kya, Kyu, Kyo' },
+    { id: 'sha', label: 'Sha, Shu, Sho' },
+    { id: 'cha', label: 'Cha, Chu, Cho' },
+    { id: 'nya', label: 'Nya, Nyu, Nyo' },
+    { id: 'hya', label: 'Hya, Hyu, Hyo' },
+    { id: 'mya', label: 'Mya, Myu, Myo' },
+    { id: 'rya', label: 'Rya, Ryu, Ryo' },
+    { id: 'gya', label: 'Gya, Gyu, Gyo' },
+    { id: 'ja', label: 'Ja, Ju, Jo' },
+    { id: 'dya', label: 'Dya, Dyu, Dyo' },
+    { id: 'bya', label: 'Bya, Byu, Byo' },
+    { id: 'pya', label: 'Pya, Pyu, Pyo' },
+  ],
+  gojuon: [
+    { id: 'all', label: 'Semua Gojūon (46)' },
+    { id: 'vowel', label: 'A (Vokal)' },
+    { id: 'ka', label: 'Ka' },
+    { id: 'sa', label: 'Sa' },
+    { id: 'ta', label: 'Ta' },
+    { id: 'na', label: 'Na' },
+    { id: 'ha', label: 'Ha' },
+    { id: 'ma', label: 'Ma' },
+    { id: 'ya', label: 'Ya' },
+    { id: 'ra', label: 'Ra' },
+    { id: 'wa_n', label: 'Wa / N' },
+  ],
+  dakuon_handakuon: [
+    { id: 'all', label: 'Semua Turunan (25)' },
+    { id: 'ga', label: 'Ga (が)' },
+    { id: 'za', label: 'Za (ざ)' },
+    { id: 'da', label: 'Da (だ)' },
+    { id: 'ba', label: 'Ba (ば)' },
+    { id: 'pa', label: 'Pa (ぱ)' },
+  ],
+  yoon: [
+    { id: 'all', label: 'Semua Yōon (36)' },
+    { id: 'kya', label: 'Kya (きゃ)' },
+    { id: 'sha', label: 'Sha (しゃ)' },
+    { id: 'cha', label: 'Cha (ちゃ)' },
+    { id: 'nya', label: 'Nya (にゃ)' },
+    { id: 'hya', label: 'Hya (ひゃ)' },
+    { id: 'mya', label: 'Mya (みゃ)' },
+    { id: 'rya', label: 'Rya (りゃ)' },
+    { id: 'gya', label: 'Gya (ぎゃ)' },
+    { id: 'ja', label: 'Ja (じゃ)' },
+    { id: 'dya', label: 'Dya (ぢゃ)' },
+    { id: 'bya', label: 'Bya (びゃ)' },
+    { id: 'pya', label: 'Pya (ぴゃ)' },
+  ],
+}
 
 const LOCAL_STORAGE_KEY = 'nihongo_sora_character_progress'
 
@@ -101,6 +165,9 @@ function PracticeStudioContent() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
 
   // Selected character & queue
+  const [selectedCategory, setSelectedCategory] = useState<
+    'all' | 'gojuon' | 'dakuon_handakuon' | 'yoon'
+  >('all')
   const [selectedChar, setSelectedChar] = useState<CharacterData>(FALLBACK_ALL[0])
   const [selectedRowGroup, setSelectedRowGroup] = useState<string>(
     initialFilterParam === 'needs_review' ? 'needs_review' : 'all'
@@ -253,21 +320,40 @@ function PracticeStudioContent() {
     }
   }, [initialFilterParam, initialCharParam, initialIdParam, needsReviewList])
 
+  // Characters in current active category
+  const sidebarCategoryCharacters = useMemo(() => {
+    let list = allCharacters
+    if (selectedCategory === 'gojuon') {
+      list = list.filter((c) => (c.category || 'gojuon') === 'gojuon')
+    } else if (selectedCategory === 'dakuon_handakuon') {
+      list = list.filter((c) => c.category === 'dakuon' || c.category === 'handakuon')
+    } else if (selectedCategory === 'yoon') {
+      list = list.filter((c) => c.category === 'yoon')
+    }
+    return list
+  }, [allCharacters, selectedCategory])
+
   // Filtered sidebar characters
   const sidebarCharacters = useMemo(() => {
     if (selectedRowGroup === 'needs_review') {
-      return needsReviewList
+      return needsReviewList.filter((c) => {
+        if (selectedCategory === 'gojuon') return (c.category || 'gojuon') === 'gojuon'
+        if (selectedCategory === 'dakuon_handakuon')
+          return c.category === 'dakuon' || c.category === 'handakuon'
+        if (selectedCategory === 'yoon') return c.category === 'yoon'
+        return true
+      })
     }
-    if (selectedRowGroup === 'all') return allCharacters
+    if (selectedRowGroup === 'all') return sidebarCategoryCharacters
     if (selectedRowGroup === 'wa_n') {
-      return allCharacters.filter((c) => c.row_group === 'wa' || c.row_group === 'n')
+      return sidebarCategoryCharacters.filter((c) => c.row_group === 'wa' || c.row_group === 'n')
     }
-    return allCharacters.filter((c) => c.row_group === selectedRowGroup)
-  }, [allCharacters, selectedRowGroup, needsReviewList])
+    return sidebarCategoryCharacters.filter((c) => c.row_group === selectedRowGroup)
+  }, [sidebarCategoryCharacters, selectedRowGroup, needsReviewList, selectedCategory])
 
-  // Summary statistics
+  // Summary statistics (Dynamic 107 characters)
   const summary: ProgressSummary = useMemo(() => {
-    const total = 46
+    const total = allCharacters.length || 107
     let memorized = 0
     let activeLearning = 0
 
@@ -284,7 +370,7 @@ function PracticeStudioContent() {
       active_learning_count: activeLearning,
       percentage,
     }
-  }, [progressMap])
+  }, [allCharacters.length, progressMap])
 
   // Advance to next character seamlessly
   const handleNextCharacter = useCallback(() => {
@@ -481,9 +567,26 @@ function PracticeStudioContent() {
 
           <div className="flex items-center gap-2.5">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-black text-slate-900 dark:text-white">
-                {selectedChar.character || selectedChar.symbol}
-              </span>
+              {(() => {
+                const selectedCharText = selectedChar.character || selectedChar.symbol || ''
+                if (selectedChar.category === 'yoon' && selectedCharText.length === 2) {
+                  return (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                        {selectedCharText[0]}+{selectedCharText[1]}=
+                      </span>
+                      <span className="text-2xl font-black text-sky-600 dark:text-sky-400">
+                        {selectedCharText}
+                      </span>
+                    </div>
+                  )
+                }
+                return (
+                  <span className="text-2xl font-black text-slate-900 dark:text-white">
+                    {selectedCharText}
+                  </span>
+                )
+              })()}
               <span className="text-sm font-mono font-bold text-sky-600 dark:text-sky-400">
                 /{selectedChar.readings?.[0]?.romaji}/
               </span>
@@ -593,8 +696,32 @@ function PracticeStudioContent() {
                   <span>{t('nav.learn_sub')}</span>
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                  {summary.memorized_count}/46 {t('nav.memorized')}
+                  {summary.memorized_count}/{allCharacters.length} {t('nav.memorized')}
                 </span>
+              </div>
+
+              {/* Category Filter Tabs */}
+              <div className="grid grid-cols-2 gap-1 mb-2">
+                {PRACTICE_CATEGORY_TABS.map((cat) => {
+                  const isCatSelected = selectedCategory === cat.id
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory(cat.id)
+                        setSelectedRowGroup('all')
+                      }}
+                      className={`py-1 px-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer text-center truncate ${
+                        isCatSelected
+                          ? 'bg-sky-600 text-white shadow-2xs'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {cat.label} ({cat.count})
+                    </button>
+                  )
+                })}
               </div>
 
               {/* Quick Filter Switch: All vs Needs Review */}
@@ -604,11 +731,11 @@ function PracticeStudioContent() {
                   onClick={() => setSelectedRowGroup('all')}
                   className={`py-1.5 px-2 rounded-xl text-[11px] font-bold transition cursor-pointer text-center ${
                     selectedRowGroup !== 'needs_review'
-                      ? 'bg-sky-600 text-white shadow-xs'
+                      ? 'bg-sky-50 dark:bg-sky-950/70 border border-sky-400 dark:border-sky-700 text-sky-700 dark:text-sky-300 font-extrabold shadow-2xs'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
                   }`}
                 >
-                  {t('common.all')} ({allCharacters.length})
+                  {t('common.all')} ({sidebarCategoryCharacters.length})
                 </button>
                 <button
                   type="button"
@@ -634,12 +761,13 @@ function PracticeStudioContent() {
                 <option value="needs_review">
                   ⚠️ {t('practice.srs_drawer_title')} ({needsReviewList.length})
                 </option>
-                <option value="all">Baris: {t('learn.row_all')} (46)</option>
-                {ROW_FILTERS.filter((r) => r.id !== 'all').map((r) => (
-                  <option key={r.id} value={r.id}>
-                    Baris: {r.label}
-                  </option>
-                ))}
+                {(ROW_FILTERS_BY_CATEGORY[selectedCategory] || ROW_FILTERS_BY_CATEGORY.all).map(
+                  (r) => (
+                    <option key={r.id} value={r.id}>
+                      Baris: {r.label}
+                    </option>
+                  )
+                )}
               </select>
             </div>
 
@@ -671,6 +799,8 @@ function PracticeStudioContent() {
                     progressMap,
                     latestExam
                   )
+                  const charText = char.character || char.symbol || ''
+                  const isYoon = char.category === 'yoon' && charText.length === 2
 
                   return (
                     <button
@@ -703,9 +833,25 @@ function PracticeStudioContent() {
                         </span>
                       )}
 
-                      <span className="text-xl font-bold leading-tight">
-                        {char.character || char.symbol}
-                      </span>
+                      {isYoon ? (
+                        <div className="flex flex-col items-center">
+                          <span
+                            className={`text-[8px] font-bold -mb-0.5 ${
+                              isSelected ? 'text-sky-200' : 'text-slate-400'
+                            }`}
+                          >
+                            {charText[0]}+{charText[1]}
+                          </span>
+                          <span className="text-lg font-black leading-tight">
+                            {charText}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xl font-bold leading-tight">
+                          {charText}
+                        </span>
+                      )}
+
                       <span
                         className={`text-[10px] font-mono leading-tight ${
                           isSelected ? 'text-sky-100' : 'text-slate-400'

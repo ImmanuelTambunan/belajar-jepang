@@ -10,10 +10,11 @@ import (
 	"gorm.io/gorm"
 )
 
-// HiraganaItem represents the raw JSON item from hiragana_46.json.
+// HiraganaItem represents the raw JSON item from hiragana_107.json or hiragana_46.json.
 type HiraganaItem struct {
 	Symbol      string   `json:"symbol"`
 	ScriptType  string   `json:"script_type"`
+	Category    string   `json:"category"`
 	RowGroup    string   `json:"row_group"`
 	StrokeCount int      `json:"stroke_count"`
 	Reading     string   `json:"reading"`
@@ -37,12 +38,21 @@ func AutoMigrate(db *gorm.DB) error {
 	return nil
 }
 
-// SeedHiraganaDataset reads backend/data/hiragana_46.json and seeds 46 Hiragana characters using db.FirstOrCreate().
+// SeedHiraganaDataset reads dataset and seeds Hiragana characters (Gojuon, Dakuon, Handakuon, Yoon) using db.FirstOrCreate().
 func SeedHiraganaDataset(db *gorm.DB) error {
-	log.Println("🌱 Memulai Seeder: Membaca dataset 46 karakter Hiragana...")
+	log.Println("🌱 Memulai Seeder: Membaca dataset Hiragana...")
+
+	// Ensure binary collation so Japanese dakuten / handakuten / yoon are treated distinctly
+	db.Exec("ALTER TABLE `characters` MODIFY `symbol` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL")
+	db.Exec("ALTER TABLE `characters` MODIFY `character` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL")
 
 	// Candidates for data file location
 	pathsToTry := []string{
+		"backend-go/data/hiragana_107.json",
+		"backend/data/hiragana_107.json",
+		"data/hiragana_107.json",
+		"../backend-go/data/hiragana_107.json",
+		"../backend/data/hiragana_107.json",
 		"backend/data/hiragana_46.json",
 		"backend-go/data/hiragana_46.json",
 		"data/hiragana_46.json",
@@ -64,7 +74,7 @@ func SeedHiraganaDataset(db *gorm.DB) error {
 	}
 
 	if len(rawData) == 0 {
-		return fmt.Errorf("gagal membaca file hiragana_46.json (terakhir mencoba %v): %w", pathsToTry, readErr)
+		return fmt.Errorf("gagal membaca file dataset hiragana (terakhir mencoba %v): %w", pathsToTry, readErr)
 	}
 
 	log.Printf("📂 Memuat dataset dari %s (%d bytes)", foundPath, len(rawData))
@@ -77,87 +87,71 @@ func SeedHiraganaDataset(db *gorm.DB) error {
 	jlptDefault := "N5"
 	seededCount := 0
 
-	for _, item := range items {
-		// 1. Model Character: simpan symbol, script_type, row_group, dan stroke_count
+	for idx, item := range items {
+		targetID := uint(idx + 1)
+		category := item.Category
+		if category == "" {
+			category = "gojuon"
+		}
+
 		char := models.Character{
+			ID:           targetID,
 			Symbol:       item.Symbol,
 			Character:    item.Symbol,
 			ScriptType:   item.ScriptType,
 			Type:         item.ScriptType,
+			Category:     category,
 			RowGroup:     item.RowGroup,
 			StrokeCount:  item.StrokeCount,
 			StrokesCount: item.StrokeCount,
 			JlptLevel:    &jlptDefault,
 		}
 
-		// FirstOrCreate based on symbol/character
-		if err := db.Where("`symbol` = ? OR `character` = ?", item.Symbol, item.Symbol).
-			Assign(models.Character{
-				Symbol:       item.Symbol,
-				Character:    item.Symbol,
-				ScriptType:   item.ScriptType,
-				Type:         item.ScriptType,
-				RowGroup:     item.RowGroup,
-				StrokeCount:  item.StrokeCount,
-				StrokesCount: item.StrokeCount,
-				JlptLevel:    &jlptDefault,
-			}).
+		// Upsert character by ID
+		if err := db.Where("`id` = ?", targetID).
+			Assign(char).
 			FirstOrCreate(&char).Error; err != nil {
-			log.Printf("⚠️ Gagal seeding Character %s: %v", item.Symbol, err)
+			log.Printf("⚠️ Gagal seeding Character #%d %s: %v", targetID, item.Symbol, err)
 			continue
 		}
 
-		if char.ID == 0 {
-			log.Printf("⚠️ Character %s ID bernilai 0 setelah FirstOrCreate, lewati relasi.", item.Symbol)
-			continue
-		}
+		// Clean old readings & strokes for targetID to avoid duplicates
+		db.Where("`character_id` = ?", targetID).Delete(&models.CharacterReading{})
+		db.Where("`character_id` = ?", targetID).Delete(&models.CharacterStroke{})
 
-		// 2. Model CharacterReading: relasikan ke CharacterID dengan field romaji
+		// Seed CharacterReading
 		readingMeaning := fmt.Sprintf("Karakter Hiragana %s (%s)", item.Symbol, item.Reading)
 		reading := models.CharacterReading{
-			CharacterID: char.ID,
+			CharacterID: targetID,
 			Romaji:      item.Reading,
 			Meaning:     &readingMeaning,
 		}
-
-		if err := db.Where("`character_id` = ? AND `romaji` = ?", char.ID, item.Reading).
-			Assign(models.CharacterReading{
-				CharacterID: char.ID,
-				Romaji:      item.Reading,
-				Meaning:     &readingMeaning,
-			}).
-			FirstOrCreate(&reading).Error; err != nil {
-			log.Printf("⚠️ Gagal seeding Reading untuk %s: %v", item.Symbol, err)
+		if err := db.Create(&reading).Error; err != nil {
+			log.Printf("⚠️ Gagal seeding Reading untuk #%d %s: %v", targetID, item.Symbol, err)
 		}
 
-		// 3. Model CharacterStroke: simpan urutan stroke_number (1..n) dan path_data SVG untuk tiap garis
-		for idx, pathData := range item.Strokes {
-			strokeNum := idx + 1
+		// Seed CharacterStrokes
+		for sIdx, pathData := range item.Strokes {
+			strokeNum := sIdx + 1
 			stroke := models.CharacterStroke{
-				CharacterID:  char.ID,
+				CharacterID:  targetID,
 				StrokeNumber: strokeNum,
 				StrokeOrder:  strokeNum,
 				PathData:     pathData,
 				SvgPath:      pathData,
 			}
-
-			if err := db.Where("`character_id` = ? AND (`stroke_number` = ? OR `stroke_order` = ?)", char.ID, strokeNum, strokeNum).
-				Assign(models.CharacterStroke{
-					CharacterID:  char.ID,
-					StrokeNumber: strokeNum,
-					StrokeOrder:  strokeNum,
-					PathData:     pathData,
-					SvgPath:      pathData,
-				}).
-				FirstOrCreate(&stroke).Error; err != nil {
-				log.Printf("⚠️ Gagal seeding Stroke %d untuk %s: %v", strokeNum, item.Symbol, err)
+			if err := db.Create(&stroke).Error; err != nil {
+				log.Printf("⚠️ Gagal seeding Stroke %d untuk #%d %s: %v", strokeNum, targetID, item.Symbol, err)
 			}
 		}
 
 		seededCount++
 	}
 
-	log.Printf("✅ Seeding Hiragana 46 Karakter berhasil (%d/%d karakter siap).", seededCount, len(items))
+	// Delete any character ID > len(items)
+	db.Where("`id` > ?", len(items)).Delete(&models.Character{})
+
+	log.Printf("✅ Seeding Hiragana berhasil (%d/%d karakter siap).", seededCount, len(items))
 	return nil
 }
 

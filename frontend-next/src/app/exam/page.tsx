@@ -10,24 +10,26 @@ import { generateExamQuestions, calculateExamGrade } from '@/utils/examGenerator
 import { useGamification } from '@/context/GamificationContext'
 import { useLanguage } from '@/context/LanguageContext'
 import { Award } from 'lucide-react'
-import rawHiraganaData from '@/data/hiragana_46.json'
+import rawHiraganaData from '@/data/hiragana_107.json'
 
 interface RawHiraganaItem {
   symbol: string
   script_type: string
+  category?: string
   row_group: string
   stroke_count: number
   reading: string
   strokes: string[]
 }
 
-// Complete 46 Hiragana fallback list
+// Complete 107 Hiragana fallback list
 const FALLBACK_ALL: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]).map((item, idx) => ({
   id: idx + 1,
   character: item.symbol,
   symbol: item.symbol,
   type: item.script_type,
   script_type: item.script_type,
+  category: item.category || 'gojuon',
   row_group: item.row_group,
   strokes_count: item.stroke_count,
   stroke_count: item.stroke_count,

@@ -1,5 +1,5 @@
 import { CharacterData } from '@/types/character'
-import { ExamConfig, ExamOption, ExamQuestion, ExamQuestionType } from '@/types/exam'
+import { ExamConfig, ExamOption, ExamQuestion, ExamQuestionType, ExamScope } from '@/types/exam'
 
 // Fisher-Yates array shuffle helper
 export function shuffleArray<T>(array: T[]): T[] {
@@ -9,6 +9,28 @@ export function shuffleArray<T>(array: T[]): T[] {
     ;[arr[i], arr[j]] = [arr[j], arr[i]]
   }
   return arr
+}
+
+/**
+ * Filters character candidates based on category scope (Gojuon, Dakuon/Handakuon, Yoon, or All).
+ */
+export function filterCandidatesByScope(
+  characters: CharacterData[],
+  scope?: ExamScope
+): CharacterData[] {
+  if (!scope || scope === 'all') return characters
+  if (scope === 'gojuon') {
+    return characters.filter((c) => !c.category || c.category === 'gojuon')
+  }
+  if (scope === 'dakuon_handakuon') {
+    return characters.filter(
+      (c) => c.category === 'dakuon' || c.category === 'handakuon'
+    )
+  }
+  if (scope === 'yoon') {
+    return characters.filter((c) => c.category === 'yoon')
+  }
+  return characters
 }
 
 /**
@@ -84,7 +106,8 @@ export function generateExamQuestions(
 ): ExamQuestion[] {
   if (!allCharacters || allCharacters.length === 0) return []
 
-  const candidates = filterCandidatesByRow(allCharacters, config.rowGroup)
+  const scopedCharacters = filterCandidatesByScope(allCharacters, config.scope)
+  const candidates = filterCandidatesByRow(scopedCharacters, config.rowGroup)
   if (candidates.length === 0) return []
 
   // Ensure enabledTypes has at least one type

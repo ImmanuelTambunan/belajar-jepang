@@ -190,9 +190,22 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
         {question.type === 'kana_to_romaji' && (
           <div className="text-center mb-6">
             <div className="inline-flex items-center gap-4">
-              <span className="text-7xl sm:text-8xl font-black text-slate-900 dark:text-white drop-shadow-sm select-none">
-                {targetSymbol}
-              </span>
+              {targetChar.category === 'yoon' && targetSymbol.length === 2 ? (
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400 text-xs font-bold mb-1">
+                    <span>{targetSymbol[0]}</span>
+                    <span className="text-sky-500">+</span>
+                    <span>{targetSymbol[1]}</span>
+                  </div>
+                  <span className="text-7xl sm:text-8xl font-black text-slate-900 dark:text-white drop-shadow-sm select-none">
+                    {targetSymbol}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-7xl sm:text-8xl font-black text-slate-900 dark:text-white drop-shadow-sm select-none">
+                  {targetSymbol}
+                </span>
+              )}
               <AudioSpeakerButton
                 character={targetChar}
                 isPlaying={isPlaying}
@@ -261,7 +274,16 @@ export const ExamQuestionCard: React.FC<ExamQuestionCardProps> = ({
                   disabled={isAnswered}
                   className={`p-6 rounded-2xl border-2 text-center transition cursor-pointer flex flex-col items-center justify-center ${btnStyle}`}
                 >
-                  <span className="text-4xl sm:text-5xl font-black">{opt.symbol}</span>
+                  {opt.symbol.length === 2 ? (
+                    <div className="flex flex-col items-center">
+                      <span className="text-[10px] font-bold opacity-60">
+                        {opt.symbol[0]}+{opt.symbol[1]}
+                      </span>
+                      <span className="text-3xl sm:text-4xl font-black">{opt.symbol}</span>
+                    </div>
+                  ) : (
+                    <span className="text-4xl sm:text-5xl font-black">{opt.symbol}</span>
+                  )}
                   {isAnswered && (
                     <span className="text-xs font-mono opacity-80 mt-1">/{opt.romaji}/</span>
                   )}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { ExamConfig, ExamQuestionType } from '@/types/exam'
+import { ExamConfig, ExamQuestionType, ExamScope } from '@/types/exam'
 import { useLanguage } from '@/context/LanguageContext'
 
 interface ExamConfigCardProps {
@@ -13,6 +13,7 @@ export const ExamConfigCard: React.FC<ExamConfigCardProps> = ({
 }) => {
   const { t, language } = useLanguage()
   const [questionCount, setQuestionCount] = useState<number>(10)
+  const [scope, setScope] = useState<ExamScope>('all')
   const [rowGroup, setRowGroup] = useState<string>('all')
   const [enabledTypes, setEnabledTypes] = useState<ExamQuestionType[]>([
     'romaji_to_kana',
@@ -33,6 +34,7 @@ export const ExamConfigCard: React.FC<ExamConfigCardProps> = ({
   const handleStart = () => {
     onStartExam({
       questionCount,
+      scope,
       rowGroup,
       enabledTypes,
       timerSecondsPerQuestion: timerSeconds,
@@ -55,29 +57,60 @@ export const ExamConfigCard: React.FC<ExamConfigCardProps> = ({
       </div>
 
       <div className="mt-6 space-y-6 max-w-2xl mx-auto">
-        {/* 1. JUMLAH SOAL */}
+        {/* 1. CAKUPAN KATEGORI KARAKTER */}
+        <div>
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-2.5">
+            {t('exam.section_scope')}
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {[
+              { id: 'all' as ExamScope, icon: '📚', label: t('exam.scope_all'), sub: t('exam.scope_all_sub') },
+              { id: 'gojuon' as ExamScope, icon: '🌱', label: t('exam.scope_gojuon'), sub: t('exam.scope_gojuon_sub') },
+              { id: 'dakuon_handakuon' as ExamScope, icon: '⚡', label: t('exam.scope_dakuon_handakuon'), sub: t('exam.scope_dakuon_handakuon_sub') },
+              { id: 'yoon' as ExamScope, icon: '✨', label: t('exam.scope_yoon'), sub: t('exam.scope_yoon_sub') },
+            ].map((sc) => (
+              <button
+                key={sc.id}
+                type="button"
+                onClick={() => setScope(sc.id)}
+                className={`p-3 rounded-2xl border text-center transition cursor-pointer flex flex-col items-center ${
+                  scope === sc.id
+                    ? 'bg-sky-50 dark:bg-sky-950/70 border-sky-500 text-sky-700 dark:text-sky-300 ring-2 ring-sky-400/30'
+                    : 'bg-slate-50 dark:bg-slate-850 border-slate-200 dark:border-slate-750 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                }`}
+              >
+                <span className="text-lg mb-1">{sc.icon}</span>
+                <span className="text-xs font-bold leading-tight">{sc.label}</span>
+                <span className="text-[10px] opacity-75 mt-0.5 leading-tight">{sc.sub}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 2. JUMLAH SOAL */}
         <div>
           <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-2.5">
             {t('exam.section_count')}
           </label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {[
               { count: 10, label: t('exam.count_10'), sub: t('exam.count_10_sub') },
               { count: 20, label: t('exam.count_20'), sub: t('exam.count_20_sub') },
               { count: 46, label: t('exam.count_46'), sub: t('exam.count_46_sub') },
+              { count: totalAvailableCharacters || 107, label: t('exam.count_all'), sub: t('exam.count_all_sub') },
             ].map((opt) => (
               <button
                 key={opt.count}
                 type="button"
                 onClick={() => setQuestionCount(opt.count)}
-                className={`p-3.5 rounded-2xl border text-center transition cursor-pointer ${
+                className={`p-3 rounded-2xl border text-center transition cursor-pointer ${
                   questionCount === opt.count
                     ? 'bg-sky-50 dark:bg-sky-950/70 border-sky-500 dark:border-sky-500 text-sky-700 dark:text-sky-300 ring-2 ring-sky-400/30'
                     : 'bg-slate-50 dark:bg-slate-850 border-slate-200 dark:border-slate-750 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
                 }`}
               >
-                <div className="text-base sm:text-lg font-black">{opt.label}</div>
-                <div className="text-[11px] opacity-75">{opt.sub}</div>
+                <div className="text-sm sm:text-base font-black">{opt.label}</div>
+                <div className="text-[10px] opacity-75">{opt.sub}</div>
               </button>
             ))}
           </div>

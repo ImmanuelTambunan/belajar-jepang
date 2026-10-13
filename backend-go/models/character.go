@@ -5,10 +5,11 @@ import "time"
 // Character represents a Japanese character (Hiragana, Katakana, or Kanji).
 type Character struct {
 	ID           uint               `gorm:"primaryKey;autoIncrement" json:"id"`
-	Symbol       string             `gorm:"size:10;not null;column:symbol" json:"symbol"`
-	Character    string             `gorm:"size:10;not null;column:character" json:"character"` // backwards compatibility
+	Symbol       string             `gorm:"size:20;collate:utf8mb4_bin;not null;column:symbol" json:"symbol"`
+	Character    string             `gorm:"size:20;collate:utf8mb4_bin;not null;column:character" json:"character"` // backwards compatibility
 	ScriptType   string             `gorm:"size:20;not null;column:script_type" json:"script_type"` // hiragana, katakana, kanji
 	Type         string             `gorm:"size:20;not null;column:type" json:"type"` // backwards compatibility
+	Category     string             `gorm:"size:20;default:'gojuon';column:category" json:"category"` // gojuon, dakuon, handakuon, yoon
 	RowGroup     string             `gorm:"size:20;not null;column:row_group" json:"row_group"` // vowel, ka, sa, etc.
 	StrokeCount  int                `gorm:"not null;column:stroke_count" json:"stroke_count"`
 	StrokesCount int                `gorm:"not null;column:strokes_count" json:"strokes_count"` // backwards compatibility

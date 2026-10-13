@@ -156,6 +156,12 @@ func GetAccuracyByRow(c *fiber.Ctx) error {
 		{"ya", "Baris Ya", "や, ゆ, よ"},
 		{"ra", "Baris Ra", "ら, り, る, れ, ろ"},
 		{"wa", "Baris Wa / N", "わ, を, ん"},
+		{"ga", "Dakuon Ga", "が, ぎ, ぐ, げ, ご"},
+		{"za", "Dakuon Za", "ざ, じ, ず, ぜ, ぞ"},
+		{"da", "Dakuon Da", "だ, ぢ, づ, で, ど"},
+		{"ba", "Dakuon Ba", "ば, び, ぶ, べ, ぼ"},
+		{"pa", "Handakuon Pa", "ぱ, ぴ, ぷ, ぺ, ぽ"},
+		{"yoon", "Gabungan Yōon", "きゃ, しゃ, ちゃ, ..."},
 	}
 
 	// Fetch all characters with their associated progress
@@ -179,8 +185,13 @@ func GetAccuracyByRow(c *fiber.Ctx) error {
 		var charsInRow []models.Character
 		for _, c := range characters {
 			rg := strings.ToLower(strings.TrimSpace(c.RowGroup))
+			cat := strings.ToLower(strings.TrimSpace(c.Category))
 			if def.RowGroup == "wa" {
 				if rg == "wa" || rg == "n" || rg == "wa_n" {
+					charsInRow = append(charsInRow, c)
+				}
+			} else if def.RowGroup == "yoon" {
+				if cat == "yoon" {
 					charsInRow = append(charsInRow, c)
 				}
 			} else if rg == def.RowGroup {

@@ -24,11 +24,12 @@ import {
   getCharactersNeedingReview,
   getLatestExamFromStorage,
 } from '@/utils/srs'
-import rawHiraganaData from '@/data/hiragana_46.json'
+import rawHiraganaData from '@/data/hiragana_107.json'
 
 interface RawHiraganaItem {
   symbol: string
   script_type: string
+  category?: string
   row_group: string
   stroke_count: number
   reading: string
@@ -42,6 +43,7 @@ const FALLBACK_HIRAGANA: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]
     symbol: item.symbol,
     type: item.script_type,
     script_type: item.script_type,
+    category: item.category || 'gojuon',
     row_group: item.row_group,
     strokes_count: item.stroke_count,
     stroke_count: item.stroke_count,
@@ -72,24 +74,60 @@ interface RowTab {
   rowGroups: string[]
 }
 
-const ROW_TABS: RowTab[] = [
-  {
-    id: 'all',
-    label: 'Semua',
-    sublabel: '46 Huruf',
-    rowGroups: ['vowel', 'ka', 'sa', 'ta', 'na', 'ha', 'ma', 'ya', 'ra', 'wa', 'n'],
-  },
-  { id: 'vowel', label: 'A', sublabel: 'A, I, U, E, O', rowGroups: ['vowel'] },
-  { id: 'ka', label: 'Ka', sublabel: 'Ka, Ki, Ku, Ke, Ko', rowGroups: ['ka'] },
-  { id: 'sa', label: 'Sa', sublabel: 'Sa, Shi, Su, Se, So', rowGroups: ['sa'] },
-  { id: 'ta', label: 'Ta', sublabel: 'Ta, Chi, Tsu, Te, To', rowGroups: ['ta'] },
-  { id: 'na', label: 'Na', sublabel: 'Na, Ni, Nu, Ne, No', rowGroups: ['na'] },
-  { id: 'ha', label: 'Ha', sublabel: 'Ha, Hi, Fu, He, Ho', rowGroups: ['ha'] },
-  { id: 'ma', label: 'Ma', sublabel: 'Ma, Mi, Mu, Me, Mo', rowGroups: ['ma'] },
-  { id: 'ya', label: 'Ya', sublabel: 'Ya, Yu, Yo', rowGroups: ['ya'] },
-  { id: 'ra', label: 'Ra', sublabel: 'Ra, Ri, Ru, Re, Ro', rowGroups: ['ra'] },
-  { id: 'wa_n', label: 'Wa/N', sublabel: 'Wa, Wo, N', rowGroups: ['wa', 'n'] },
+export type CategoryId = 'all' | 'gojuon' | 'dakuon_handakuon' | 'yoon'
+
+const CATEGORY_TABS: { id: CategoryId; label: string; count: number; sublabel: string; icon: string }[] = [
+  { id: 'all', label: 'Semua (107)', count: 107, sublabel: 'Koleksi Lengkap', icon: '📚' },
+  { id: 'gojuon', label: 'Gojūon (46)', count: 46, sublabel: 'Huruf Dasar', icon: '🌱' },
+  { id: 'dakuon_handakuon', label: 'Dakuon & Handakuon (25)', count: 25, sublabel: 'Variasi Turunan', icon: '⚡' },
+  { id: 'yoon', label: 'Yōon (36)', count: 36, sublabel: 'Gabungan (ゃ/ゅ/ょ)', icon: '✨' },
 ]
+
+const ROW_TABS_BY_CATEGORY: Record<CategoryId, RowTab[]> = {
+  all: [
+    { id: 'all', label: 'Semua', sublabel: '107 Karakter', rowGroups: [] },
+    { id: 'gojuon', label: 'Gojūon', sublabel: '46 Dasar', rowGroups: ['vowel', 'ka', 'sa', 'ta', 'na', 'ha', 'ma', 'ya', 'ra', 'wa', 'n'] },
+    { id: 'dakuon', label: 'Dakuon', sublabel: '20 Tenten (゛)', rowGroups: ['ga', 'za', 'da', 'ba'] },
+    { id: 'handakuon', label: 'Handakuon', sublabel: '5 Maru (゜)', rowGroups: ['pa'] },
+    { id: 'yoon', label: 'Yōon', sublabel: '36 Gabungan', rowGroups: ['kya', 'sha', 'cha', 'nya', 'hya', 'mya', 'rya', 'gya', 'ja', 'dya', 'bya', 'pya'] },
+  ],
+  gojuon: [
+    { id: 'all', label: 'Semua Gojūon', sublabel: '46 Huruf', rowGroups: ['vowel', 'ka', 'sa', 'ta', 'na', 'ha', 'ma', 'ya', 'ra', 'wa', 'n'] },
+    { id: 'vowel', label: 'A', sublabel: 'A, I, U, E, O', rowGroups: ['vowel'] },
+    { id: 'ka', label: 'Ka', sublabel: 'Ka, Ki, Ku, Ke, Ko', rowGroups: ['ka'] },
+    { id: 'sa', label: 'Sa', sublabel: 'Sa, Shi, Su, Se, So', rowGroups: ['sa'] },
+    { id: 'ta', label: 'Ta', sublabel: 'Ta, Chi, Tsu, Te, To', rowGroups: ['ta'] },
+    { id: 'na', label: 'Na', sublabel: 'Na, Ni, Nu, Ne, No', rowGroups: ['na'] },
+    { id: 'ha', label: 'Ha', sublabel: 'Ha, Hi, Fu, He, Ho', rowGroups: ['ha'] },
+    { id: 'ma', label: 'Ma', sublabel: 'Ma, Mi, Mu, Me, Mo', rowGroups: ['ma'] },
+    { id: 'ya', label: 'Ya', sublabel: 'Ya, Yu, Yo', rowGroups: ['ya'] },
+    { id: 'ra', label: 'Ra', sublabel: 'Ra, Ri, Ru, Re, Ro', rowGroups: ['ra'] },
+    { id: 'wa_n', label: 'Wa/N', sublabel: 'Wa, Wo, N', rowGroups: ['wa', 'n'] },
+  ],
+  dakuon_handakuon: [
+    { id: 'all', label: 'Semua Turunan', sublabel: '25 Huruf', rowGroups: ['ga', 'za', 'da', 'ba', 'pa'] },
+    { id: 'ga', label: 'Ga (が)', sublabel: 'Ga, Gi, Gu, Ge, Go', rowGroups: ['ga'] },
+    { id: 'za', label: 'Za (ざ)', sublabel: 'Za, Ji, Zu, Ze, Zo', rowGroups: ['za'] },
+    { id: 'da', label: 'Da (だ)', sublabel: 'Da, Ji, Zu, De, Do', rowGroups: ['da'] },
+    { id: 'ba', label: 'Ba (ば)', sublabel: 'Ba, Bi, Bu, Be, Bo', rowGroups: ['ba'] },
+    { id: 'pa', label: 'Pa (ぱ)', sublabel: 'Pa, Pi, Pu, Pe, Po', rowGroups: ['pa'] },
+  ],
+  yoon: [
+    { id: 'all', label: 'Semua Yōon', sublabel: '36 Huruf', rowGroups: ['kya', 'sha', 'cha', 'nya', 'hya', 'mya', 'rya', 'gya', 'ja', 'dya', 'bya', 'pya'] },
+    { id: 'kya', label: 'Kya', sublabel: 'きゃ, きゅ, きょ', rowGroups: ['kya'] },
+    { id: 'sha', label: 'Sha', sublabel: 'しゃ, しゅ, しょ', rowGroups: ['sha'] },
+    { id: 'cha', label: 'Cha', sublabel: 'ちゃ, ちゅ, ちょ', rowGroups: ['cha'] },
+    { id: 'nya', label: 'Nya', sublabel: 'にゃ, にゅ, にょ', rowGroups: ['nya'] },
+    { id: 'hya', label: 'Hya', sublabel: 'ひゃ, ひゅ, ひょ', rowGroups: ['hya'] },
+    { id: 'mya', label: 'Mya', sublabel: 'みゃ, みゅ, みょ', rowGroups: ['mya'] },
+    { id: 'rya', label: 'Rya', sublabel: 'りゃ, りゅ, りょ', rowGroups: ['rya'] },
+    { id: 'gya', label: 'Gya', sublabel: 'ぎゃ, ぎゅ, ぎょ', rowGroups: ['gya'] },
+    { id: 'ja', label: 'Ja', sublabel: 'じゃ, じゅ, じょ', rowGroups: ['ja'] },
+    { id: 'dya', label: 'Dya', sublabel: 'ぢゃ, ぢゅ, ぢょ', rowGroups: ['dya'] },
+    { id: 'bya', label: 'Bya', sublabel: 'びゃ, びゅ, びょ', rowGroups: ['bya'] },
+    { id: 'pya', label: 'Pya', sublabel: 'ぴゃ, ぴゅ, ぴょ', rowGroups: ['pya'] },
+  ],
+}
 
 const STROKE_COLORS = ['#0284c7', '#ec4899', '#10b981', '#f97316', '#8b5cf6', '#06b6d4']
 const LOCAL_STORAGE_KEY = 'nihongo_sora_character_progress'
@@ -100,6 +138,7 @@ export default function LearnPage() {
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
   const [characters, setCharacters] = useState<CharacterData[]>(FALLBACK_HIRAGANA)
+  const [selectedCategory, setSelectedCategory] = useState<CategoryId>('all')
   const [activeTab, setActiveTab] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [masteryFilter, setMasteryFilter] = useState<'all' | 'memorized' | 'learning' | 'needs_review'>('all')
@@ -197,9 +236,21 @@ export default function LearnPage() {
   const filteredList = useMemo(() => {
     let result = characters
 
-    // Filter by row group tab
-    const currentTab = ROW_TABS.find((t) => t.id === activeTab)
-    if (currentTab && currentTab.id !== 'all') {
+    // Filter by selected category
+    if (selectedCategory === 'gojuon') {
+      result = result.filter((c) => (c.category || 'gojuon') === 'gojuon')
+    } else if (selectedCategory === 'dakuon_handakuon') {
+      result = result.filter(
+        (c) => c.category === 'dakuon' || c.category === 'handakuon'
+      )
+    } else if (selectedCategory === 'yoon') {
+      result = result.filter((c) => c.category === 'yoon')
+    }
+
+    // Filter by row group tab within the active category
+    const rowTabs = ROW_TABS_BY_CATEGORY[selectedCategory] || ROW_TABS_BY_CATEGORY.all
+    const currentTab = rowTabs.find((t) => t.id === activeTab)
+    if (currentTab && currentTab.id !== 'all' && currentTab.rowGroups.length > 0) {
       result = result.filter((c) => {
         const row = (c.row_group || '').toLowerCase()
         return currentTab.rowGroups.includes(row)
@@ -229,7 +280,7 @@ export default function LearnPage() {
     }
 
     return result
-  }, [characters, activeTab, searchQuery, masteryFilter, progressMap, latestExam])
+  }, [characters, selectedCategory, activeTab, searchQuery, masteryFilter, progressMap, latestExam])
 
   // Count of characters needing review
   const needsReviewCount = useMemo(() => {
@@ -287,7 +338,7 @@ export default function LearnPage() {
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-100 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300 text-xs font-bold mb-2">
             <span>🎌</span>
-            <span>Tabel Gojūon (五十音)</span>
+            <span>{t('categories.all_count')} • {language === 'id' ? 'Koleksi Hiragana Lengkap' : 'Complete Hiragana Library'}</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
             {t('learn.title')}
@@ -305,7 +356,7 @@ export default function LearnPage() {
                 isLiveApi ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
               }`}
             />
-            <span>{isLiveApi ? 'Golang API Live' : 'Data Lokal (46)'}</span>
+            <span>{isLiveApi ? `Golang API Live (${characters.length})` : `Data Lokal (${characters.length})`}</span>
           </div>
 
           <button
@@ -318,6 +369,47 @@ export default function LearnPage() {
             <RotateCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
+      </div>
+
+      {/* CATEGORY TABS (Fase 8: Gojuon, Dakuon & Handakuon, Yoon, Semua) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        {CATEGORY_TABS.map((cat) => {
+          const isSelected = selectedCategory === cat.id
+          return (
+            <button
+              key={cat.id}
+              onClick={() => {
+                setSelectedCategory(cat.id)
+                setActiveTab('all')
+              }}
+              className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
+                isSelected
+                  ? 'bg-sky-50 dark:bg-sky-950/60 border-sky-500 dark:border-sky-400 shadow-md ring-2 ring-sky-500/20'
+                  : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/40'
+              }`}
+            >
+              <span className="text-2xl p-2 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0">
+                {cat.icon}
+              </span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`text-xs font-black truncate ${
+                      isSelected
+                        ? 'text-sky-700 dark:text-sky-300'
+                        : 'text-slate-800 dark:text-slate-200'
+                    }`}
+                  >
+                    {cat.label}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                  {cat.sublabel}
+                </p>
+              </div>
+            </button>
+          )
+        })}
       </div>
 
       {/* CONTROLS: SEARCH & STATUS FILTER */}
@@ -381,7 +473,7 @@ export default function LearnPage() {
 
       {/* ROW GROUP FILTER TABS */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-3 mb-6 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700">
-        {ROW_TABS.map((tab) => {
+        {(ROW_TABS_BY_CATEGORY[selectedCategory] || ROW_TABS_BY_CATEGORY.all).map((tab) => {
           const isActive = activeTab === tab.id
           return (
             <button
@@ -425,10 +517,11 @@ export default function LearnPage() {
           <button
             onClick={() => {
               setSearchQuery('')
+              setSelectedCategory('all')
               setActiveTab('all')
               setMasteryFilter('all')
             }}
-            className="mt-4 px-4 py-2 rounded-xl text-xs font-bold bg-sky-600 text-white hover:bg-sky-500 transition"
+            className="mt-4 px-4 py-2 rounded-xl text-xs font-bold bg-sky-600 text-white hover:bg-sky-500 transition cursor-pointer"
           >
             Reset Semua Filter
           </button>
@@ -444,6 +537,8 @@ export default function LearnPage() {
               progressMap,
               latestExam
             )
+            const charText = item.character || item.symbol || ''
+            const isYoonCombo = item.category === 'yoon' && charText.length === 2
 
             return (
               <div
@@ -460,7 +555,7 @@ export default function LearnPage() {
                     setModalChar(item)
                   }
                 }}
-                className={`group relative p-3 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center select-none ${
+                className={`group relative p-2.5 sm:p-3 rounded-2xl border transition-all cursor-pointer flex flex-col items-center justify-center select-none ${
                   reviewStatus.needsReview
                     ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/80 hover:border-amber-400 hover:shadow-md'
                     : 'bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 hover:border-sky-400 dark:hover:border-sky-500 hover:shadow-md'
@@ -495,14 +590,27 @@ export default function LearnPage() {
                     onPlay={() => handlePlayAudio(item)}
                     size="xs"
                     stopPropagation={true}
-                    title={`Putar audio pelafalan ${item.character}`}
+                    title={`Putar audio pelafalan ${charText}`}
                   />
                 </div>
 
-                {/* Big Kana Symbol */}
-                <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white mt-1 group-hover:scale-110 transition-transform">
-                  {item.character || item.symbol}
-                </span>
+                {/* Big Kana Symbol (Custom Yoon 2-Char Combination Layout) */}
+                {isYoonCombo ? (
+                  <div className="flex flex-col items-center justify-center mt-1">
+                    <div className="flex items-center gap-0.5 text-slate-500 dark:text-slate-400 text-[11px] font-bold">
+                      <span className="text-slate-700 dark:text-slate-300">{charText[0]}</span>
+                      <span className="text-sky-500 text-[9px]">+</span>
+                      <span className="text-indigo-600 dark:text-indigo-400 text-[10px]">{charText[1]}</span>
+                    </div>
+                    <span className="text-2xl sm:text-3xl font-black text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform tracking-tight">
+                      {charText}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white mt-1 group-hover:scale-110 transition-transform">
+                    {charText}
+                  </span>
+                )}
 
                 {/* Romaji */}
                 <span className="text-xs font-mono font-bold text-sky-700 dark:text-sky-400 mt-1 uppercase">
@@ -697,6 +805,28 @@ export default function LearnPage() {
                       /{modalChar.readings?.[0]?.romaji}/
                     </span>
                   </div>
+
+                  {/* Yoon Combination Breakdown Badge */}
+                  {(() => {
+                    const modalCharText = modalChar.character || modalChar.symbol || ''
+                    if (modalChar.category !== 'yoon' || modalCharText.length !== 2) return null
+                    return (
+                      <div className="mb-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800/60 text-xs text-indigo-700 dark:text-indigo-300 font-semibold">
+                        <span>{t('categories.combo_label')}:</span>
+                        <span className="font-black text-sm bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded shadow-2xs text-slate-900 dark:text-white">
+                          {modalCharText[0]}
+                        </span>
+                        <span className="text-sky-500 font-bold">+</span>
+                        <span className="font-black text-sm text-purple-600 dark:text-purple-400 bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded shadow-2xs">
+                          {modalCharText[1]}
+                        </span>
+                        <span>=</span>
+                        <span className="font-black text-sm text-indigo-600 dark:text-indigo-300">
+                          {modalCharText}
+                        </span>
+                      </div>
+                    )
+                  })()}
 
                   <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">
                     {modalChar.readings?.[0]?.meaning ||

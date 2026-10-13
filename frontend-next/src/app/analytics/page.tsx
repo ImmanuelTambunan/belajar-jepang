@@ -9,12 +9,13 @@ import {
 } from '@/types/analytics'
 import { UserProgress } from '@/types/progress'
 import { ExamResultSummary } from '@/types/exam'
-import rawHiraganaData from '@/data/hiragana_46.json'
+import rawHiraganaData from '@/data/hiragana_107.json'
 import { ResetConfirmModal } from '@/components/ResetConfirmModal'
 
 interface RawHiraganaItem {
   symbol: string
   script_type: string
+  category?: string
   row_group: string
   stroke_count: number
   reading: string
@@ -24,7 +25,7 @@ interface RawHiraganaItem {
 const LOCAL_STORAGE_PROGRESS_KEY = 'nihongo_sora_character_progress'
 const LOCAL_STORAGE_EXAM_KEY = 'nihongo_sora_exam_history'
 
-// Row definition list for standard Gojuon
+// Row definition list for standard Gojuon, Dakuon, Handakuon, and Yoon
 const ROW_DEFINITIONS = [
   { row_group: 'vowel', label: 'Baris A (Vokal)', sample_kana: 'あ, い, う, え, お' },
   { row_group: 'ka', label: 'Baris Ka', sample_kana: 'か, き, く, け, こ' },
@@ -36,6 +37,12 @@ const ROW_DEFINITIONS = [
   { row_group: 'ya', label: 'Baris Ya', sample_kana: 'や, ゆ, よ' },
   { row_group: 'ra', label: 'Baris Ra', sample_kana: 'ら, り, る, れ, ろ' },
   { row_group: 'wa', label: 'Baris Wa / N', sample_kana: 'わ, を, ん' },
+  { row_group: 'ga', label: 'Baris Ga (Dakuon)', sample_kana: 'が, ぎ, ぐ, げ, ご' },
+  { row_group: 'za', label: 'Baris Za (Dakuon)', sample_kana: 'ざ, じ, ず, ぜ, ぞ' },
+  { row_group: 'da', label: 'Baris Da (Dakuon)', sample_kana: 'だ, ぢ, づ, で, ど' },
+  { row_group: 'ba', label: 'Baris Ba (Dakuon)', sample_kana: 'ば, び, ぶ, べ, ぼ' },
+  { row_group: 'pa', label: 'Baris Pa (Handakuon)', sample_kana: 'ぱ, ぴ, ぷ, ぺ, ぽ' },
+  { row_group: 'yoon', label: 'Yōon (Gabungan)', sample_kana: 'きゃ, しゃ, ちゃ, にゃ, ...' },
 ]
 
 export default function AnalyticsDashboardPage() {
@@ -43,9 +50,9 @@ export default function AnalyticsDashboardPage() {
 
   // Dashboard Data State
   const [overview, setOverview] = useState<AnalyticsOverview>({
-    total_characters: 46,
+    total_characters: 107,
     memorized_count: 0,
-    learning_count: 46,
+    learning_count: 107,
     active_learning_count: 0,
     completion_rate: 0,
     overall_accuracy_avg: 0,
@@ -157,7 +164,7 @@ export default function AnalyticsDashboardPage() {
     }
 
     // 1. Overview computation
-    const totalChars = 46
+    const totalChars = rawList.length || 107
     let memorized = 0
     let activeLearning = 0
     let totalReviewCount = 0
@@ -211,6 +218,9 @@ export default function AnalyticsDashboardPage() {
           const rg = item.row_group?.toLowerCase().trim()
           if (rowDef.row_group === 'wa') {
             return rg === 'wa' || rg === 'n' || rg === 'wa_n'
+          }
+          if (rowDef.row_group === 'yoon') {
+            return item.category === 'yoon'
           }
           return rg === rowDef.row_group
         })
@@ -366,7 +376,7 @@ export default function AnalyticsDashboardPage() {
             Dasbor Statistik & Riwayat Belajar
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
-            Pantau kemajuan penguasaan 46 Hiragana, akurasi goresan kuas per baris Gojūon, serta grafik perkembangan nilai ujian Anda.
+            Pantau kemajuan penguasaan 107 Hiragana (Gojūon, Dakuon, Handakuon, &amp; Yōon), akurasi goresan kuas per baris, serta grafik perkembangan nilai ujian Anda.
           </p>
         </div>
 
@@ -495,8 +505,8 @@ export default function AnalyticsDashboardPage() {
                 </span>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span>Total Gojūon</span>
-                <span className="font-semibold text-slate-700 dark:text-slate-300">46 Huruf Dasar</span>
+                <span>Koleksi Hiragana</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">{overview.total_characters} Karakter Lengkap</span>
               </div>
             </div>
 

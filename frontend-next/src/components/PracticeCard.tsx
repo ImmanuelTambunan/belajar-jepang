@@ -88,9 +88,10 @@ export const PracticeCard: React.FC<PracticeCardProps> = ({
   }, [character.id, character.character, autoPlayAudio, play])
 
   const romaji = character.readings?.[0]?.romaji || '-'
+  const charText = character.character || character.symbol || ''
   const meaning =
     character.readings?.[0]?.meaning ||
-    `Karakter Hiragana ${character.character || character.symbol} (${romaji})`
+    `Karakter Hiragana ${charText} (${romaji})`
   const isMemorized = currentProgress?.status === 'memorized'
   const reviewCount = currentProgress?.review_count || 0
 
@@ -138,9 +139,23 @@ export const PracticeCard: React.FC<PracticeCardProps> = ({
       {/* CHARACTER RECALL & PRONUNCIATION SECTION */}
       <div className="py-8 flex flex-col items-center justify-center text-center">
         <div className="relative inline-block mb-3">
-          <h2 className="text-7xl sm:text-8xl font-black text-slate-900 dark:text-white tracking-normal drop-shadow-sm select-none">
-            {character.character || character.symbol}
-          </h2>
+          {character.category === 'yoon' && charText.length === 2 ? (
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-bold text-sm mb-1">
+                <span className="text-slate-800 dark:text-slate-200">{charText[0]}</span>
+                <span className="text-sky-500 font-extrabold">+</span>
+                <span className="text-indigo-600 dark:text-indigo-400">{charText[1]}</span>
+                <span className="text-slate-400 font-bold">=</span>
+              </div>
+              <h2 className="text-7xl sm:text-8xl font-black text-slate-900 dark:text-white tracking-normal drop-shadow-sm select-none">
+                {charText}
+              </h2>
+            </div>
+          ) : (
+            <h2 className="text-7xl sm:text-8xl font-black text-slate-900 dark:text-white tracking-normal drop-shadow-sm select-none">
+              {charText}
+            </h2>
+          )}
 
           {/* Quick Corner Audio Button */}
           <div className="absolute -right-12 top-2">

@@ -27,11 +27,12 @@ import {
   getCharactersNeedingReview,
   getLatestExamFromStorage,
 } from '@/utils/srs'
-import rawHiraganaData from '@/data/hiragana_46.json'
+import rawHiraganaData from '@/data/hiragana_107.json'
 
 interface RawHiraganaItem {
   symbol: string
   script_type: string
+  category?: string
   row_group: string
   stroke_count: number
   reading: string
@@ -45,6 +46,7 @@ const FALLBACK_ALL: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]).map
     symbol: item.symbol,
     type: item.script_type,
     script_type: item.script_type,
+    category: item.category || 'gojuon',
     row_group: item.row_group,
     strokes_count: item.stroke_count,
     stroke_count: item.stroke_count,
@@ -164,7 +166,7 @@ export default function HomePage() {
 
   // Progress summary calculation
   const stats = useMemo(() => {
-    const total = 46
+    const total = FALLBACK_ALL.length || 107
     let memorized = 0
     let learning = 0
     let totalScore = 0
