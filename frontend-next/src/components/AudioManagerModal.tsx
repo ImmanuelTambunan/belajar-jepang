@@ -401,7 +401,7 @@ export const AudioManagerModal: React.FC<AudioManagerModalProps> = ({
 
                 return (
                   <button
-                    key={item.romaji}
+                    key={item.symbol}
                     type="button"
                     onClick={() => setSelectedRomaji(item.romaji)}
                     className={`p-2 rounded-2xl border transition text-center relative cursor-pointer select-none flex flex-col items-center justify-center ${

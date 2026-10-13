@@ -145,6 +145,7 @@ export default function SettingsPage() {
     'all' | 'gojuon' | 'dakuon_handakuon' | 'yoon'
   >('all')
   const [selectedRomaji, setSelectedRomaji] = useState<string>('a')
+  const [selectedSymbol, setSelectedSymbol] = useState<string>('あ')
   const [selectedRowGroup, setSelectedRowGroup] = useState<string>('all')
   const [customAudioMap, setCustomAudioMap] = useState<Record<string, CustomAudioRecord>>({})
   const [stagedFile, setStagedFile] = useState<File | null>(null)
@@ -239,8 +240,10 @@ export default function SettingsPage() {
   })
 
   const currentCharObj =
-    ALL_HIRAGANA.find((h) => h.romaji === selectedRomaji) || ALL_HIRAGANA[0]
-  const currentCustomRecord = customAudioMap[selectedRomaji]
+    ALL_HIRAGANA.find((h) => h.symbol === selectedSymbol) ||
+    ALL_HIRAGANA.find((h) => h.romaji === selectedRomaji) ||
+    ALL_HIRAGANA[0]
+  const currentCustomRecord = customAudioMap[currentCharObj.romaji]
 
   // File Upload Handlers
   const handleSelectFile = (file: File) => {
@@ -330,7 +333,7 @@ export default function SettingsPage() {
 
   // Play testing audio
   const handleTestAudio = async (item: { symbol: string; romaji: string }) => {
-    setIsAudioPlaying(item.romaji)
+    setIsAudioPlaying(item.symbol)
     try {
       await playCharacterAudio(
         { symbol: item.symbol, romaji: item.romaji },
@@ -632,7 +635,7 @@ export default function SettingsPage() {
                   className="p-3 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition cursor-pointer"
                   title="Dengarkan suara saat ini"
                 >
-                  <Play className={`w-4 h-4 ${isAudioPlaying === currentCharObj.romaji ? 'text-amber-500' : ''}`} />
+                  <Play className={`w-4 h-4 ${isAudioPlaying === currentCharObj.symbol ? 'text-amber-500' : ''}`} />
                 </button>
               </div>
 
@@ -736,14 +739,17 @@ export default function SettingsPage() {
                 {/* Character Grid */}
                 <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-96 overflow-y-auto pr-1">
                   {filteredHiragana.map((item) => {
-                    const isSelected = item.romaji === selectedRomaji
+                    const isSelected = item.symbol === currentCharObj.symbol
                     const hasCustom = !!customAudioMap[item.romaji]
                     const isYoon = item.category === 'yoon' && item.symbol.length === 2
 
                     return (
                       <div
-                        key={item.romaji}
-                        onClick={() => setSelectedRomaji(item.romaji)}
+                        key={item.symbol}
+                        onClick={() => {
+                          setSelectedSymbol(item.symbol)
+                          setSelectedRomaji(item.romaji)
+                        }}
                         className={`p-2.5 rounded-xl border flex flex-col items-center justify-center cursor-pointer transition relative select-none ${
                           isSelected
                             ? 'bg-amber-500 text-white border-amber-500 shadow-md ring-2 ring-amber-300'
