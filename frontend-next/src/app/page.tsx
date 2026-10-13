@@ -28,8 +28,9 @@ import {
   getLatestExamFromStorage,
 } from '@/utils/srs'
 import rawHiraganaData from '@/data/hiragana_107.json'
+import rawKatakanaData from '@/data/katakana_107.json'
 
-interface RawHiraganaItem {
+interface RawKanaItem {
   symbol: string
   script_type: string
   category?: string
@@ -39,13 +40,13 @@ interface RawHiraganaItem {
   strokes: string[]
 }
 
-const FALLBACK_ALL: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]).map(
-  (item, idx) => ({
+const FALLBACK_ALL: CharacterData[] = [
+  ...(rawHiraganaData as RawKanaItem[]).map((item, idx) => ({
     id: idx + 1,
     character: item.symbol,
     symbol: item.symbol,
-    type: item.script_type,
-    script_type: item.script_type,
+    type: 'hiragana',
+    script_type: 'hiragana',
     category: item.category || 'gojuon',
     row_group: item.row_group,
     strokes_count: item.stroke_count,
@@ -67,8 +68,36 @@ const FALLBACK_ALL: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]).map
       svg_path: st,
       path_data: st,
     })),
-  })
-)
+  })),
+  ...(rawKatakanaData as RawKanaItem[]).map((item, idx) => ({
+    id: 107 + idx + 1,
+    character: item.symbol,
+    symbol: item.symbol,
+    type: 'katakana',
+    script_type: 'katakana',
+    category: item.category || 'gojuon',
+    row_group: item.row_group,
+    strokes_count: item.stroke_count,
+    stroke_count: item.stroke_count,
+    jlpt_level: 'N5',
+    readings: [
+      {
+        id: 107 + idx + 1,
+        character_id: 107 + idx + 1,
+        romaji: item.reading,
+        meaning: `Karakter Katakana ${item.symbol} (${item.reading})`,
+      },
+    ],
+    strokes: item.strokes.map((st, sIdx) => ({
+      id: (107 + idx) * 100 + sIdx + 1,
+      character_id: 107 + idx + 1,
+      stroke_order: sIdx + 1,
+      stroke_number: sIdx + 1,
+      svg_path: st,
+      path_data: st,
+    })),
+  })),
+]
 
 const LOCAL_STORAGE_KEY = 'nihongo_sora_character_progress'
 const LOCAL_STORAGE_EXAM_KEY = 'nihongo_sora_exam_history'
@@ -368,7 +397,7 @@ export default function HomePage() {
                   {stats.memorized}
                 </span>
                 <span className="text-sm font-semibold text-slate-400">
-                  / 46 Huruf
+                  / {stats.total} Aksara
                 </span>
               </div>
               {/* Progress Bar */}
@@ -379,7 +408,7 @@ export default function HomePage() {
                 />
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
-                {stats.percent}% kurikulum Hiragana Gojūon terkuasai
+                {stats.percent}% kurikulum Hiragana & Katakana terkuasai
               </p>
             </div>
           </div>

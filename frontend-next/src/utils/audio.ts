@@ -78,6 +78,56 @@ export const ROMAJI_TO_HIRAGANA: Record<string, string> = Object.entries(
 }, {})
 
 /**
+ * 107 Katakana to Romaji mapping table
+ */
+export const KATAKANA_TO_ROMAJI: Record<string, string> = {
+  // Gojūon 46 Dasar
+  ア: 'a', イ: 'i', ウ: 'u', エ: 'e', オ: 'o',
+  カ: 'ka', キ: 'ki', ク: 'ku', ケ: 'ke', コ: 'ko',
+  サ: 'sa', シ: 'shi', ス: 'su', セ: 'se', ソ: 'so',
+  タ: 'ta', チ: 'chi', ツ: 'tsu', テ: 'te', ト: 'to',
+  ナ: 'na', ニ: 'ni', ヌ: 'nu', ネ: 'ne', ノ: 'no',
+  ハ: 'ha', ヒ: 'hi', フ: 'fu', ヘ: 'he', ホ: 'ho',
+  マ: 'ma', ミ: 'mi', ム: 'mu', メ: 'me', モ: 'mo',
+  ヤ: 'ya', ユ: 'yu', ヨ: 'yo',
+  ラ: 'ra', リ: 'ri', ル: 'ru', レ: 're', ロ: 'ro',
+  ワ: 'wa', ヲ: 'wo', ン: 'n',
+
+  // Dakuon 20
+  ガ: 'ga', ギ: 'gi', グ: 'gu', ゲ: 'ge', ゴ: 'go',
+  ザ: 'za', ジ: 'ji', ズ: 'zu', ゼ: 'ze', ゾ: 'zo',
+  ダ: 'da', ヂ: 'ji', ヅ: 'zu', デ: 'de', ド: 'do',
+  バ: 'ba', ビ: 'bi', ブ: 'bu', ベ: 'be', ボ: 'bo',
+
+  // Handakuon 5
+  パ: 'pa', ピ: 'pi', プ: 'pu', ペ: 'pe', ポ: 'po',
+
+  // Yōon 36 Gabungan
+  キャ: 'kya', キュ: 'kyu', キョ: 'kyo',
+  シャ: 'sha', シュ: 'shu', ショ: 'sho',
+  チャ: 'cha', チュ: 'chu', チョ: 'cho',
+  ニャ: 'nya', ニュ: 'nyu', ニョ: 'nyo',
+  ヒャ: 'hya', ヒュ: 'hyu', ヒョ: 'hyo',
+  ミャ: 'mya', ミュ: 'myu', ミョ: 'myo',
+  リャ: 'rya', リュ: 'ryu', リョ: 'ryo',
+  ギャ: 'gya', ギュ: 'gyu', ギョ: 'gyo',
+  ジャ: 'ja', ジュ: 'ju', ジョ: 'jo',
+  ヂャ: 'dya', ヂュ: 'dyu', ヂョ: 'dyo',
+  ビャ: 'bya', ビュ: 'byu', ビョ: 'byo',
+  ピャ: 'pya', ピュ: 'pyu', ピョ: 'pyo',
+}
+
+/**
+ * Reverse mapping Romaji to Katakana
+ */
+export const ROMAJI_TO_KATAKANA: Record<string, string> = Object.entries(
+  KATAKANA_TO_ROMAJI
+).reduce<Record<string, string>>((acc, [kana, rom]) => {
+  acc[rom] = kana
+  return acc
+}, {})
+
+/**
  * Normalizes and extracts symbol and romaji from any character input representation
  */
 export function extractCharacterAudioInfo(input: CharacterAudioInput): {
@@ -91,12 +141,21 @@ export function extractCharacterAudioInfo(input: CharacterAudioInput): {
     ''
   ).toLowerCase().trim()
 
-  if (!romaji && symbol && HIRAGANA_TO_ROMAJI[symbol]) {
-    romaji = HIRAGANA_TO_ROMAJI[symbol]
+  if (!romaji && symbol) {
+    if (HIRAGANA_TO_ROMAJI[symbol]) {
+      romaji = HIRAGANA_TO_ROMAJI[symbol]
+    } else if (KATAKANA_TO_ROMAJI[symbol]) {
+      romaji = KATAKANA_TO_ROMAJI[symbol]
+    }
   }
 
-  if (!symbol && romaji && ROMAJI_TO_HIRAGANA[romaji]) {
-    return { symbol: ROMAJI_TO_HIRAGANA[romaji], romaji }
+  if (!symbol && romaji) {
+    if (HIRAGANA_TO_ROMAJI[romaji] || ROMAJI_TO_HIRAGANA[romaji]) {
+      return { symbol: ROMAJI_TO_HIRAGANA[romaji] || romaji, romaji }
+    }
+    if (KATAKANA_TO_ROMAJI[romaji] || ROMAJI_TO_KATAKANA[romaji]) {
+      return { symbol: ROMAJI_TO_KATAKANA[romaji] || romaji, romaji }
+    }
   }
 
   return { symbol, romaji }

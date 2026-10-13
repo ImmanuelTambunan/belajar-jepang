@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
-import { ExamConfig, ExamQuestionType, ExamScope } from '@/types/exam'
+import { ExamConfig, ExamQuestionType, ExamScope, ExamScriptMode } from '@/types/exam'
 import { useLanguage } from '@/context/LanguageContext'
+import { useScript } from '@/context/ScriptContext'
 
 interface ExamConfigCardProps {
   onStartExam: (config: ExamConfig) => void
@@ -12,6 +13,8 @@ export const ExamConfigCard: React.FC<ExamConfigCardProps> = ({
   totalAvailableCharacters,
 }) => {
   const { t, language } = useLanguage()
+  const { script } = useScript()
+  const [scriptMode, setScriptMode] = useState<ExamScriptMode>(script || 'hiragana')
   const [questionCount, setQuestionCount] = useState<number>(10)
   const [scope, setScope] = useState<ExamScope>('all')
   const [rowGroup, setRowGroup] = useState<string>('all')
@@ -33,6 +36,7 @@ export const ExamConfigCard: React.FC<ExamConfigCardProps> = ({
 
   const handleStart = () => {
     onStartExam({
+      scriptMode,
       questionCount,
       scope,
       rowGroup,
@@ -57,6 +61,50 @@ export const ExamConfigCard: React.FC<ExamConfigCardProps> = ({
       </div>
 
       <div className="mt-6 space-y-6 max-w-2xl mx-auto">
+        {/* 0. PILIHAN AKSARA (HIRAGANA, KATAKANA, CAMPURAN) */}
+        <div>
+          <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-2.5">
+            {t('exam.section_script')}
+          </label>
+          <div className="grid grid-cols-3 gap-2.5">
+            {[
+              {
+                id: 'hiragana' as ExamScriptMode,
+                icon: 'あ',
+                label: t('exam.script_hiragana'),
+                sub: t('exam.script_hiragana_sub'),
+              },
+              {
+                id: 'katakana' as ExamScriptMode,
+                icon: 'ア',
+                label: t('exam.script_katakana'),
+                sub: t('exam.script_katakana_sub'),
+              },
+              {
+                id: 'mixed' as ExamScriptMode,
+                icon: 'あ/ア',
+                label: t('exam.script_mixed'),
+                sub: t('exam.script_mixed_sub'),
+              },
+            ].map((sc) => (
+              <button
+                key={sc.id}
+                type="button"
+                onClick={() => setScriptMode(sc.id)}
+                className={`p-3 rounded-2xl border text-center transition cursor-pointer flex flex-col items-center ${
+                  scriptMode === sc.id
+                    ? 'bg-sky-50 dark:bg-sky-950/70 border-sky-500 text-sky-700 dark:text-sky-300 ring-2 ring-sky-400/30'
+                    : 'bg-slate-50 dark:bg-slate-850 border-slate-200 dark:border-slate-750 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <span className="text-xl font-serif font-black mb-1">{sc.icon}</span>
+                <span className="text-xs font-bold leading-tight">{sc.label}</span>
+                <span className="text-[10px] opacity-75 mt-0.5 leading-tight">{sc.sub}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* 1. CAKUPAN KATEGORI KARAKTER */}
         <div>
           <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block mb-2.5">

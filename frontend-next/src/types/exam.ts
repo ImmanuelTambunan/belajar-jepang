@@ -21,9 +21,11 @@ export interface ExamQuestion {
   timeSpentSeconds: number
 }
 
+export type ExamScriptMode = 'hiragana' | 'katakana' | 'mixed'
 export type ExamScope = 'all' | 'gojuon' | 'dakuon_handakuon' | 'yoon'
 
 export interface ExamConfig {
+  scriptMode?: ExamScriptMode // 'hiragana' | 'katakana' | 'mixed'
   questionCount: number // 10, 20, 46, 107
   scope?: ExamScope // 'all', 'gojuon', 'dakuon_handakuon', 'yoon'
   rowGroup: string // 'all', 'vowel_ka', 'sa_ta', 'na_ha_ma', 'ya_ra_wa_n', etc.
@@ -33,6 +35,7 @@ export interface ExamConfig {
 
 export interface ExamResultSummary {
   id?: number
+  scriptMode?: ExamScriptMode
   totalQuestions: number
   correctAnswers: number
   wrongAnswers: number

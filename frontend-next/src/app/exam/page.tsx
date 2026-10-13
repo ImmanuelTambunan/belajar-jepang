@@ -11,8 +11,9 @@ import { useGamification } from '@/context/GamificationContext'
 import { useLanguage } from '@/context/LanguageContext'
 import { Award } from 'lucide-react'
 import rawHiraganaData from '@/data/hiragana_107.json'
+import rawKatakanaData from '@/data/katakana_107.json'
 
-interface RawHiraganaItem {
+interface RawKanaItem {
   symbol: string
   script_type: string
   category?: string
@@ -23,12 +24,12 @@ interface RawHiraganaItem {
 }
 
 // Complete 107 Hiragana fallback list
-const FALLBACK_ALL: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]).map((item, idx) => ({
+const FALLBACK_HIRAGANA: CharacterData[] = (rawHiraganaData as RawKanaItem[]).map((item, idx) => ({
   id: idx + 1,
   character: item.symbol,
   symbol: item.symbol,
-  type: item.script_type,
-  script_type: item.script_type,
+  type: 'hiragana',
+  script_type: 'hiragana',
   category: item.category || 'gojuon',
   row_group: item.row_group,
   strokes_count: item.stroke_count,
@@ -51,6 +52,38 @@ const FALLBACK_ALL: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]).map
     path_data: st,
   })),
 }))
+
+// Complete 107 Katakana fallback list
+const FALLBACK_KATAKANA: CharacterData[] = (rawKatakanaData as RawKanaItem[]).map((item, idx) => ({
+  id: 107 + idx + 1,
+  character: item.symbol,
+  symbol: item.symbol,
+  type: 'katakana',
+  script_type: 'katakana',
+  category: item.category || 'gojuon',
+  row_group: item.row_group,
+  strokes_count: item.stroke_count,
+  stroke_count: item.stroke_count,
+  jlpt_level: 'N5',
+  readings: [
+    {
+      id: 107 + idx + 1,
+      character_id: 107 + idx + 1,
+      romaji: item.reading,
+      meaning: `Karakter Katakana ${item.symbol} (${item.reading})`,
+    },
+  ],
+  strokes: item.strokes.map((st, sIdx) => ({
+    id: (107 + idx) * 100 + sIdx + 1,
+    character_id: 107 + idx + 1,
+    stroke_order: sIdx + 1,
+    stroke_number: sIdx + 1,
+    svg_path: st,
+    path_data: st,
+  })),
+}))
+
+const FALLBACK_ALL: CharacterData[] = [...FALLBACK_HIRAGANA, ...FALLBACK_KATAKANA]
 
 const LOCAL_STORAGE_EXAM_HISTORY = 'nihongo_sora_exam_history'
 
@@ -75,7 +108,7 @@ export default function ExamPage() {
   useEffect(() => {
     const fetchCharacters = async () => {
       try {
-        const res = await fetch(`${apiBaseUrl}/characters`)
+        const res = await fetch(`${apiBaseUrl}/characters?script=all`)
         if (res.ok) {
           const json = await res.json()
           if (json.data && json.data.length > 0) {
@@ -172,6 +205,7 @@ export default function ExamPage() {
     const gradeInfo = calculateExamGrade(finalScore)
 
     const summary: ExamResultSummary = {
+      scriptMode: currentConfig?.scriptMode || 'hiragana',
       totalQuestions: total,
       correctAnswers: correct,
       wrongAnswers: wrong,
@@ -216,6 +250,7 @@ export default function ExamPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          script_type: currentConfig?.scriptMode || 'hiragana',
           total_questions: total,
           correct_answers: correct,
           score: finalScore,
@@ -226,7 +261,7 @@ export default function ExamPage() {
     } catch {
       // silent fail in offline mode
     }
-  }, [currentIndex, questions, startTime, apiBaseUrl, awardXP])
+  }, [currentIndex, questions, startTime, apiBaseUrl, awardXP, currentConfig, t])
 
   // Retake exam with the same configuration
   const handleRetakeExam = useCallback(() => {

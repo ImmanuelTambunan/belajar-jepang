@@ -21,14 +21,17 @@ import { AudioSpeakerButton } from '@/components/AudioSpeakerButton'
 import { useCharacterAudio } from '@/hooks/useCharacterAudio'
 import { useGamification } from '@/context/GamificationContext'
 import { useLanguage } from '@/context/LanguageContext'
+import { useScript } from '@/context/ScriptContext'
+import { KanaSwitcher } from '@/components/KanaSwitcher'
 import {
   evaluateCharacterReviewStatus,
   getCharactersNeedingReview,
   getLatestExamFromStorage,
 } from '@/utils/srs'
 import rawHiraganaData from '@/data/hiragana_107.json'
+import rawKatakanaData from '@/data/katakana_107.json'
 
-interface RawHiraganaItem {
+interface RawKanaItem {
   symbol: string
   script_type: string
   category?: string
@@ -38,12 +41,12 @@ interface RawHiraganaItem {
   strokes: string[]
 }
 
-const FALLBACK_ALL: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]).map((item, idx) => ({
+const FALLBACK_HIRAGANA: CharacterData[] = (rawHiraganaData as RawKanaItem[]).map((item, idx) => ({
   id: idx + 1,
   character: item.symbol,
   symbol: item.symbol,
-  type: item.script_type,
-  script_type: item.script_type,
+  type: 'hiragana',
+  script_type: 'hiragana',
   category: item.category || 'gojuon',
   row_group: item.row_group,
   strokes_count: item.stroke_count,
@@ -67,6 +70,35 @@ const FALLBACK_ALL: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]).map
   })),
 }))
 
+const FALLBACK_KATAKANA: CharacterData[] = (rawKatakanaData as RawKanaItem[]).map((item, idx) => ({
+  id: 107 + idx + 1,
+  character: item.symbol,
+  symbol: item.symbol,
+  type: 'katakana',
+  script_type: 'katakana',
+  category: item.category || 'gojuon',
+  row_group: item.row_group,
+  strokes_count: item.stroke_count,
+  stroke_count: item.stroke_count,
+  jlpt_level: 'N5',
+  readings: [
+    {
+      id: 107 + idx + 1,
+      character_id: 107 + idx + 1,
+      romaji: item.reading,
+      meaning: `Huruf Katakana ${item.symbol} (${item.reading})`,
+    },
+  ],
+  strokes: item.strokes.map((st, sIdx) => ({
+    id: (107 + idx) * 100 + sIdx + 1,
+    character_id: 107 + idx + 1,
+    stroke_order: sIdx + 1,
+    stroke_number: sIdx + 1,
+    svg_path: st,
+    path_data: st,
+  })),
+}))
+
 const PRACTICE_CATEGORY_TABS = [
   { id: 'all', label: 'Semua', count: 107 },
   { id: 'gojuon', label: 'Gojūon', count: 46 },
@@ -74,82 +106,87 @@ const PRACTICE_CATEGORY_TABS = [
   { id: 'yoon', label: 'Yōon', count: 36 },
 ] as const
 
-const ROW_FILTERS_BY_CATEGORY: Record<string, { id: string; label: string }[]> = {
-  all: [
-    { id: 'all', label: 'Semua (107)' },
-    { id: 'vowel', label: 'A, I, U, E, O' },
-    { id: 'ka', label: 'Ka - Ko' },
-    { id: 'sa', label: 'Sa - So' },
-    { id: 'ta', label: 'Ta - To' },
-    { id: 'na', label: 'Na - No' },
-    { id: 'ha', label: 'Ha - Ho' },
-    { id: 'ma', label: 'Ma - Mo' },
-    { id: 'ya', label: 'Ya, Yu, Yo' },
-    { id: 'ra', label: 'Ra - Ro' },
-    { id: 'wa_n', label: 'Wa, Wo, N' },
-    { id: 'ga', label: 'Ga - Go (が)' },
-    { id: 'za', label: 'Za - Zo (ざ)' },
-    { id: 'da', label: 'Da - Do (だ)' },
-    { id: 'ba', label: 'Ba - Bo (ば)' },
-    { id: 'pa', label: 'Pa - Po (ぱ)' },
-    { id: 'kya', label: 'Kya, Kyu, Kyo' },
-    { id: 'sha', label: 'Sha, Shu, Sho' },
-    { id: 'cha', label: 'Cha, Chu, Cho' },
-    { id: 'nya', label: 'Nya, Nyu, Nyo' },
-    { id: 'hya', label: 'Hya, Hyu, Hyo' },
-    { id: 'mya', label: 'Mya, Myu, Myo' },
-    { id: 'rya', label: 'Rya, Ryu, Ryo' },
-    { id: 'gya', label: 'Gya, Gyu, Gyo' },
-    { id: 'ja', label: 'Ja, Ju, Jo' },
-    { id: 'dya', label: 'Dya, Dyu, Dyo' },
-    { id: 'bya', label: 'Bya, Byu, Byo' },
-    { id: 'pya', label: 'Pya, Pyu, Pyo' },
-  ],
-  gojuon: [
-    { id: 'all', label: 'Semua Gojūon (46)' },
-    { id: 'vowel', label: 'A (Vokal)' },
-    { id: 'ka', label: 'Ka' },
-    { id: 'sa', label: 'Sa' },
-    { id: 'ta', label: 'Ta' },
-    { id: 'na', label: 'Na' },
-    { id: 'ha', label: 'Ha' },
-    { id: 'ma', label: 'Ma' },
-    { id: 'ya', label: 'Ya' },
-    { id: 'ra', label: 'Ra' },
-    { id: 'wa_n', label: 'Wa / N' },
-  ],
-  dakuon_handakuon: [
-    { id: 'all', label: 'Semua Turunan (25)' },
-    { id: 'ga', label: 'Ga (が)' },
-    { id: 'za', label: 'Za (ざ)' },
-    { id: 'da', label: 'Da (だ)' },
-    { id: 'ba', label: 'Ba (ば)' },
-    { id: 'pa', label: 'Pa (ぱ)' },
-  ],
-  yoon: [
-    { id: 'all', label: 'Semua Yōon (36)' },
-    { id: 'kya', label: 'Kya (きゃ)' },
-    { id: 'sha', label: 'Sha (しゃ)' },
-    { id: 'cha', label: 'Cha (ちゃ)' },
-    { id: 'nya', label: 'Nya (にゃ)' },
-    { id: 'hya', label: 'Hya (ひゃ)' },
-    { id: 'mya', label: 'Mya (みゃ)' },
-    { id: 'rya', label: 'Rya (りゃ)' },
-    { id: 'gya', label: 'Gya (ぎゃ)' },
-    { id: 'ja', label: 'Ja (じゃ)' },
-    { id: 'dya', label: 'Dya (ぢゃ)' },
-    { id: 'bya', label: 'Bya (びゃ)' },
-    { id: 'pya', label: 'Pya (ぴゃ)' },
-  ],
+function getRowFiltersByCategory(script: 'hiragana' | 'katakana'): Record<string, { id: string; label: string }[]> {
+  const isKatakana = script === 'katakana'
+  return {
+    all: [
+      { id: 'all', label: 'Semua (107)' },
+      { id: 'vowel', label: isKatakana ? 'A, I, U, E, O (ア..オ)' : 'A, I, U, E, O (あ..お)' },
+      { id: 'ka', label: isKatakana ? 'Ka - Ko (カ..コ)' : 'Ka - Ko (か..こ)' },
+      { id: 'sa', label: isKatakana ? 'Sa - So (サ..ソ)' : 'Sa - So (さ..そ)' },
+      { id: 'ta', label: isKatakana ? 'Ta - To (タ..ト)' : 'Ta - To (た..と)' },
+      { id: 'na', label: isKatakana ? 'Na - No (ナ..ノ)' : 'Na - No (な..の)' },
+      { id: 'ha', label: isKatakana ? 'Ha - Ho (ハ..ホ)' : 'Ha - Ho (は..ほ)' },
+      { id: 'ma', label: isKatakana ? 'Ma - Mo (マ..モ)' : 'Ma - Mo (ま..も)' },
+      { id: 'ya', label: isKatakana ? 'Ya, Yu, Yo (ヤ, ユ, ヨ)' : 'Ya, Yu, Yo (や, ゆ, よ)' },
+      { id: 'ra', label: isKatakana ? 'Ra - Ro (ラ..ロ)' : 'Ra - Ro (ら..ろ)' },
+      { id: 'wa_n', label: isKatakana ? 'Wa, Wo, N (ワ, ヲ, ン)' : 'Wa, Wo, N (わ, を, ん)' },
+      { id: 'ga', label: isKatakana ? 'Ga - Go (ガ..ゴ)' : 'Ga - Go (が..ご)' },
+      { id: 'za', label: isKatakana ? 'Za - Zo (ザ..ゾ)' : 'Za - Zo (ざ..ぞ)' },
+      { id: 'da', label: isKatakana ? 'Da - Do (ダ..ド)' : 'Da - Do (だ..ど)' },
+      { id: 'ba', label: isKatakana ? 'Ba - Bo (バ..ボ)' : 'Ba - Bo (ば..ぼ)' },
+      { id: 'pa', label: isKatakana ? 'Pa - Po (パ..ポ)' : 'Pa - Po (ぱ..ぽ)' },
+      { id: 'kya', label: isKatakana ? 'Kya (キャ)' : 'Kya (きゃ)' },
+      { id: 'sha', label: isKatakana ? 'Sha (シャ)' : 'Sha (しゃ)' },
+      { id: 'cha', label: isKatakana ? 'Cha (チャ)' : 'Cha (ちゃ)' },
+      { id: 'nya', label: isKatakana ? 'Nya (ニャ)' : 'Nya (にゃ)' },
+      { id: 'hya', label: isKatakana ? 'Hya (ヒャ)' : 'Hya (ひゃ)' },
+      { id: 'mya', label: isKatakana ? 'Mya (ミャ)' : 'Mya (みゃ)' },
+      { id: 'rya', label: isKatakana ? 'Rya (リャ)' : 'Rya (りゃ)' },
+      { id: 'gya', label: isKatakana ? 'Gya (ギャ)' : 'Gya (ぎゃ)' },
+      { id: 'ja', label: isKatakana ? 'Ja (ジャ)' : 'Ja (じゃ)' },
+      { id: 'dya', label: isKatakana ? 'Dya (ヂャ)' : 'Dya (ぢゃ)' },
+      { id: 'bya', label: isKatakana ? 'Bya (ビャ)' : 'Bya (びゃ)' },
+      { id: 'pya', label: isKatakana ? 'Pya (ピャ)' : 'Pya (ぴゃ)' },
+    ],
+    gojuon: [
+      { id: 'all', label: 'Semua Gojūon (46)' },
+      { id: 'vowel', label: isKatakana ? 'A (ア)' : 'A (あ)' },
+      { id: 'ka', label: isKatakana ? 'Ka (カ)' : 'Ka (か)' },
+      { id: 'sa', label: isKatakana ? 'Sa (サ)' : 'Sa (さ)' },
+      { id: 'ta', label: isKatakana ? 'Ta (タ)' : 'Ta (た)' },
+      { id: 'na', label: isKatakana ? 'Na (ナ)' : 'Na (な)' },
+      { id: 'ha', label: isKatakana ? 'Ha (ハ)' : 'Ha (は)' },
+      { id: 'ma', label: isKatakana ? 'Ma (マ)' : 'Ma (ま)' },
+      { id: 'ya', label: isKatakana ? 'Ya (ヤ)' : 'Ya (や)' },
+      { id: 'ra', label: isKatakana ? 'Ra (ラ)' : 'Ra (ら)' },
+      { id: 'wa_n', label: isKatakana ? 'Wa / N (ワ/ン)' : 'Wa / N (わ/ん)' },
+    ],
+    dakuon_handakuon: [
+      { id: 'all', label: 'Semua Turunan (25)' },
+      { id: 'ga', label: isKatakana ? 'Ga (ガ)' : 'Ga (が)' },
+      { id: 'za', label: isKatakana ? 'Za (ザ)' : 'Za (ざ)' },
+      { id: 'da', label: isKatakana ? 'Da (ダ)' : 'Da (だ)' },
+      { id: 'ba', label: isKatakana ? 'Ba (バ)' : 'Ba (ば)' },
+      { id: 'pa', label: isKatakana ? 'Pa (パ)' : 'Pa (ぱ)' },
+    ],
+    yoon: [
+      { id: 'all', label: 'Semua Yōon (36)' },
+      { id: 'kya', label: isKatakana ? 'Kya (キャ)' : 'Kya (きゃ)' },
+      { id: 'sha', label: isKatakana ? 'Sha (シャ)' : 'Sha (しゃ)' },
+      { id: 'cha', label: isKatakana ? 'Cha (チャ)' : 'Cha (ちゃ)' },
+      { id: 'nya', label: isKatakana ? 'Nya (ニャ)' : 'Nya (にゃ)' },
+      { id: 'hya', label: isKatakana ? 'Hya (ヒャ)' : 'Hya (ひゃ)' },
+      { id: 'mya', label: isKatakana ? 'Mya (ミャ)' : 'Mya (みゃ)' },
+      { id: 'rya', label: isKatakana ? 'Rya (リャ)' : 'Rya (りゃ)' },
+      { id: 'gya', label: isKatakana ? 'Gya (ギャ)' : 'Gya (ぎゃ)' },
+      { id: 'ja', label: isKatakana ? 'Ja (ジャ)' : 'Ja (じゃ)' },
+      { id: 'dya', label: isKatakana ? 'Dya (ヂャ)' : 'Dya (ぢゃ)' },
+      { id: 'bya', label: isKatakana ? 'Bya (ビャ)' : 'Bya (びゃ)' },
+      { id: 'pya', label: isKatakana ? 'Pya (ピャ)' : 'Pya (ぴゃ)' },
+    ],
+  }
 }
 
 const LOCAL_STORAGE_KEY = 'nihongo_sora_character_progress'
 
 function PracticeStudioContent() {
   const { t } = useLanguage()
+  const { script, setScript } = useScript()
   const searchParams = useSearchParams()
   const initialCharParam = searchParams.get('char')
   const initialIdParam = searchParams.get('id')
+  const initialScriptParam = searchParams.get('script')
   const initialFilterParam = searchParams.get('filter')
 
   const { awardXP } = useGamification()
@@ -157,7 +194,9 @@ function PracticeStudioContent() {
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
   // Master character pool & progress
-  const [allCharacters, setAllCharacters] = useState<CharacterData[]>(FALLBACK_ALL)
+  const [allCharacters, setAllCharacters] = useState<CharacterData[]>(
+    script === 'katakana' ? FALLBACK_KATAKANA : FALLBACK_HIRAGANA
+  )
   const [progressMap, setProgressMap] = useState<Record<number, UserProgress>>({})
   const [latestExam, setLatestExam] = useState<ExamResultSummary | null>(null)
   const [isLiveApi, setIsLiveApi] = useState<boolean>(false)
@@ -168,11 +207,16 @@ function PracticeStudioContent() {
   const [selectedCategory, setSelectedCategory] = useState<
     'all' | 'gojuon' | 'dakuon_handakuon' | 'yoon'
   >('all')
-  const [selectedChar, setSelectedChar] = useState<CharacterData>(FALLBACK_ALL[0])
+  const [selectedChar, setSelectedChar] = useState<CharacterData>(
+    script === 'katakana' ? FALLBACK_KATAKANA[0] : FALLBACK_HIRAGANA[0]
+  )
   const [selectedRowGroup, setSelectedRowGroup] = useState<string>(
     initialFilterParam === 'needs_review' ? 'needs_review' : 'all'
   )
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true)
+
+  // Dynamic row filters by category
+  const rowFiltersByCategory = useMemo(() => getRowFiltersByCategory(script), [script])
 
   // Session stats
   const [sessionStats, setSessionStats] = useState<PracticeSessionStats>({
@@ -196,6 +240,28 @@ function PracticeStudioContent() {
     },
     [playAudio]
   )
+
+  // Synchronize script from query params if specified
+  useEffect(() => {
+    if (initialScriptParam === 'katakana' && script !== 'katakana') {
+      setScript('katakana')
+    } else if (initialScriptParam === 'hiragana' && script !== 'hiragana') {
+      setScript('hiragana')
+    } else if (initialCharParam) {
+      // Check if requested character is in Katakana dataset
+      const isKatakanaChar = FALLBACK_KATAKANA.some(
+        (k) => k.character === initialCharParam || k.symbol === initialCharParam
+      )
+      if (isKatakanaChar && script !== 'katakana') {
+        setScript('katakana')
+      }
+    } else if (initialIdParam) {
+      const numId = parseInt(initialIdParam, 10)
+      if (numId > 107 && script !== 'katakana') {
+        setScript('katakana')
+      }
+    }
+  }, [initialScriptParam, initialCharParam, initialIdParam, script, setScript])
 
   // Load progress and latest exam from localStorage on mount
   const loadLocalData = useCallback(() => {
@@ -239,7 +305,7 @@ function PracticeStudioContent() {
   const fetchCharacters = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${apiBaseUrl}/characters/hiragana`)
+      const res = await fetch(`${apiBaseUrl}/characters?script=${script}`)
       if (res.ok) {
         const json = await res.json()
         if (json.data && json.data.length > 0) {
@@ -278,7 +344,11 @@ function PracticeStudioContent() {
             }
           }
 
-          setSelectedChar(normalized[0])
+          // Ensure selectedChar belongs to current script
+          setSelectedChar((prev) => {
+            const belongsToScript = normalized.some((item) => item.id === prev?.id)
+            return belongsToScript ? prev : normalized[0]
+          })
           setLoading(false)
           return
         }
@@ -286,18 +356,35 @@ function PracticeStudioContent() {
       throw new Error('API offline')
     } catch {
       setIsLiveApi(false)
-      setAllCharacters(FALLBACK_ALL)
+      const fallback = script === 'katakana' ? FALLBACK_KATAKANA : FALLBACK_HIRAGANA
+      setAllCharacters(fallback)
 
       if (initialCharParam) {
-        const found = FALLBACK_ALL.find(
+        const found = fallback.find(
           (item) => item.character === initialCharParam || item.symbol === initialCharParam
         )
-        if (found) setSelectedChar(found)
+        if (found) {
+          setSelectedChar(found)
+          setLoading(false)
+          return
+        }
+      } else if (initialIdParam) {
+        const found = fallback.find((item) => String(item.id) === initialIdParam)
+        if (found) {
+          setSelectedChar(found)
+          setLoading(false)
+          return
+        }
       }
+
+      setSelectedChar((prev) => {
+        const belongs = fallback.some((item) => item.id === prev?.id)
+        return belongs ? prev : fallback[0]
+      })
     } finally {
       setLoading(false)
     }
-  }, [apiBaseUrl, initialCharParam, initialIdParam])
+  }, [apiBaseUrl, script, initialCharParam, initialIdParam])
 
   useEffect(() => {
     fetchCharacters()
@@ -351,15 +438,16 @@ function PracticeStudioContent() {
     return sidebarCategoryCharacters.filter((c) => c.row_group === selectedRowGroup)
   }, [sidebarCategoryCharacters, selectedRowGroup, needsReviewList, selectedCategory])
 
-  // Summary statistics (Dynamic 107 characters)
+  // Summary statistics (Dynamic 107 characters for active script)
   const summary: ProgressSummary = useMemo(() => {
     const total = allCharacters.length || 107
     let memorized = 0
     let activeLearning = 0
 
-    Object.values(progressMap).forEach((p) => {
-      if (p.status === 'memorized') memorized++
-      else if (p.status === 'learning') activeLearning++
+    allCharacters.forEach((c) => {
+      const p = progressMap[c.id]
+      if (p?.status === 'memorized') memorized++
+      else if (p?.status === 'learning') activeLearning++
     })
 
     const percentage = total > 0 ? Math.round((memorized / total) * 1000) / 10 : 0
@@ -370,7 +458,7 @@ function PracticeStudioContent() {
       active_learning_count: activeLearning,
       percentage,
     }
-  }, [allCharacters.length, progressMap])
+  }, [allCharacters, progressMap])
 
   // Advance to next character seamlessly
   const handleNextCharacter = useCallback(() => {
@@ -632,8 +720,10 @@ function PracticeStudioContent() {
           </div>
         </div>
 
-        {/* Right: Quick Spaced Repetition Actions */}
+        {/* Right: Quick Spaced Repetition Actions & Kana Switcher */}
         <div className="flex items-center gap-2">
+          <KanaSwitcher size="sm" />
+
           {/* Previous Button */}
           <button
             type="button"
@@ -693,7 +783,7 @@ function PracticeStudioContent() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-sky-500" />
-                  <span>{t('nav.learn_sub')}</span>
+                  <span>{script === 'katakana' ? '107 Katakana' : '107 Hiragana'}</span>
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                   {summary.memorized_count}/{allCharacters.length} {t('nav.memorized')}
@@ -761,7 +851,7 @@ function PracticeStudioContent() {
                 <option value="needs_review">
                   ⚠️ {t('practice.srs_drawer_title')} ({needsReviewList.length})
                 </option>
-                {(ROW_FILTERS_BY_CATEGORY[selectedCategory] || ROW_FILTERS_BY_CATEGORY.all).map(
+                {(rowFiltersByCategory[selectedCategory] || rowFiltersByCategory.all).map(
                   (r) => (
                     <option key={r.id} value={r.id}>
                       Baris: {r.label}

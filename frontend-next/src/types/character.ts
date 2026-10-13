@@ -18,12 +18,14 @@ export interface CharacterReading {
   meaning?: string | null
 }
 
+export type ScriptType = 'hiragana' | 'katakana'
+
 export interface CharacterData {
   id: number
   character: string
   symbol?: string
   type: string
-  script_type?: string
+  script_type?: ScriptType | string
   category?: 'gojuon' | 'dakuon' | 'handakuon' | 'yoon' | string
   row_group?: string
   strokes_count: number

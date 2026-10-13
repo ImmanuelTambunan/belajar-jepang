@@ -21,6 +21,7 @@ import {
   RotateCcw,
 } from 'lucide-react'
 import { useLanguage } from '@/context/LanguageContext'
+import { useScript } from '@/context/ScriptContext'
 import { useGamification } from '@/context/GamificationContext'
 import { ResetConfirmModal } from '@/components/ResetConfirmModal'
 import { performFullReset } from '@/utils/reset'
@@ -105,7 +106,7 @@ const SETTINGS_ROW_FILTERS: Record<string, { id: string; label: string }[]> = {
     { id: 'ma', label: 'Ma' },
     { id: 'ya', label: 'Ya' },
     { id: 'ra', label: 'Ra' },
-    { id: 'wa_n', label: 'Wa/N' },
+    { id: 'wa_n', label: 'Wa / N' },
   ],
   dakuon_handakuon: [
     { id: 'all', label: 'Semua Turunan (25)' },
@@ -134,6 +135,7 @@ const SETTINGS_ROW_FILTERS: Record<string, { id: string; label: string }[]> = {
 
 export default function SettingsPage() {
   const { language, setLanguage, t } = useLanguage()
+  const { script, setScript } = useScript()
   const { resetGamification } = useGamification()
   const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
@@ -552,6 +554,63 @@ export default function SettingsPage() {
               <p className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed font-medium">
                 {t('settings.lang_note')}
               </p>
+            </div>
+
+            {/* Active Script Preference Card */}
+            <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+              <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <span>🎌</span>
+                <span>{language === 'id' ? 'Pilihan Aksara Utama (Active Script)' : 'Active Script Preference'}</span>
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {language === 'id'
+                  ? 'Tentukan aksara yang aktif secara default di seluruh antarmuka (Koleksi Huruf, Studio Tracing, dan Evaluasi).'
+                  : 'Select your default active script across the entire app (Library, Tracing Studio, and Evaluation).'}
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setScript('hiragana')}
+                  className={`p-4 rounded-2xl border-2 text-left transition flex items-center justify-between cursor-pointer ${
+                    script === 'hiragana'
+                      ? 'border-sky-500 bg-sky-50/60 dark:bg-sky-950/30 shadow-md ring-2 ring-sky-400/40'
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl font-black text-sky-600 dark:text-sky-400 font-serif">あ</span>
+                    <div>
+                      <div className="text-sm font-black text-slate-900 dark:text-white">Hiragana (ひらがな)</div>
+                      <div className="text-[11px] text-slate-500">107 Aksara Baku (Gojūon, Dakuon, Yōon)</div>
+                    </div>
+                  </div>
+                  {script === 'hiragana' && (
+                    <span className="text-xs font-bold text-sky-600 dark:text-sky-400">✓ {language === 'id' ? 'Aktif' : 'Active'}</span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setScript('katakana')}
+                  className={`p-4 rounded-2xl border-2 text-left transition flex items-center justify-between cursor-pointer ${
+                    script === 'katakana'
+                      ? 'border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/30 shadow-md ring-2 ring-indigo-400/40'
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 font-serif">ア</span>
+                    <div>
+                      <div className="text-sm font-black text-slate-900 dark:text-white">Katakana (カタカナ)</div>
+                      <div className="text-[11px] text-slate-500">107 Aksara Lengkap (Gojūon, Dakuon, Yōon)</div>
+                    </div>
+                  </div>
+                  {script === 'katakana' && (
+                    <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">✓ {language === 'id' ? 'Aktif' : 'Active'}</span>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

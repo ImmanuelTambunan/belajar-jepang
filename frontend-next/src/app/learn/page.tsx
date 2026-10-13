@@ -19,14 +19,17 @@ import { ExamResultSummary } from '@/types/exam'
 import { AudioSpeakerButton } from '@/components/AudioSpeakerButton'
 import { useCharacterAudio } from '@/hooks/useCharacterAudio'
 import { useLanguage } from '@/context/LanguageContext'
+import { useScript } from '@/context/ScriptContext'
+import { KanaSwitcher } from '@/components/KanaSwitcher'
 import {
   evaluateCharacterReviewStatus,
   getCharactersNeedingReview,
   getLatestExamFromStorage,
 } from '@/utils/srs'
 import rawHiraganaData from '@/data/hiragana_107.json'
+import rawKatakanaData from '@/data/katakana_107.json'
 
-interface RawHiraganaItem {
+interface RawKanaItem {
   symbol: string
   script_type: string
   category?: string
@@ -36,13 +39,13 @@ interface RawHiraganaItem {
   strokes: string[]
 }
 
-const FALLBACK_HIRAGANA: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]).map(
+const FALLBACK_HIRAGANA: CharacterData[] = (rawHiraganaData as RawKanaItem[]).map(
   (item, idx) => ({
     id: idx + 1,
     character: item.symbol,
     symbol: item.symbol,
-    type: item.script_type,
-    script_type: item.script_type,
+    type: 'hiragana',
+    script_type: 'hiragana',
     category: item.category || 'gojuon',
     row_group: item.row_group,
     strokes_count: item.stroke_count,
@@ -67,6 +70,37 @@ const FALLBACK_HIRAGANA: CharacterData[] = (rawHiraganaData as RawHiraganaItem[]
   })
 )
 
+const FALLBACK_KATAKANA: CharacterData[] = (rawKatakanaData as RawKanaItem[]).map(
+  (item, idx) => ({
+    id: 107 + idx + 1,
+    character: item.symbol,
+    symbol: item.symbol,
+    type: 'katakana',
+    script_type: 'katakana',
+    category: item.category || 'gojuon',
+    row_group: item.row_group,
+    strokes_count: item.stroke_count,
+    stroke_count: item.stroke_count,
+    jlpt_level: 'N5',
+    readings: [
+      {
+        id: 107 + idx + 1,
+        character_id: 107 + idx + 1,
+        romaji: item.reading,
+        meaning: `Karakter Katakana ${item.symbol} (${item.reading})`,
+      },
+    ],
+    strokes: item.strokes.map((st, sIdx) => ({
+      id: (107 + idx) * 100 + sIdx + 1,
+      character_id: 107 + idx + 1,
+      stroke_order: sIdx + 1,
+      stroke_number: sIdx + 1,
+      svg_path: st,
+      path_data: st,
+    })),
+  })
+)
+
 interface RowTab {
   id: string
   label: string
@@ -76,57 +110,54 @@ interface RowTab {
 
 export type CategoryId = 'all' | 'gojuon' | 'dakuon_handakuon' | 'yoon'
 
-const CATEGORY_TABS: { id: CategoryId; label: string; count: number; sublabel: string; icon: string }[] = [
-  { id: 'all', label: 'Semua (107)', count: 107, sublabel: 'Koleksi Lengkap', icon: '📚' },
-  { id: 'gojuon', label: 'Gojūon (46)', count: 46, sublabel: 'Huruf Dasar', icon: '🌱' },
-  { id: 'dakuon_handakuon', label: 'Dakuon & Handakuon (25)', count: 25, sublabel: 'Variasi Turunan', icon: '⚡' },
-  { id: 'yoon', label: 'Yōon (36)', count: 36, sublabel: 'Gabungan (ゃ/ゅ/ょ)', icon: '✨' },
-]
+function getRowTabsByCategory(script: 'hiragana' | 'katakana'): Record<CategoryId, RowTab[]> {
+  const isKatakana = script === 'katakana'
 
-const ROW_TABS_BY_CATEGORY: Record<CategoryId, RowTab[]> = {
-  all: [
-    { id: 'all', label: 'Semua', sublabel: '107 Karakter', rowGroups: [] },
-    { id: 'gojuon', label: 'Gojūon', sublabel: '46 Dasar', rowGroups: ['vowel', 'ka', 'sa', 'ta', 'na', 'ha', 'ma', 'ya', 'ra', 'wa', 'n'] },
-    { id: 'dakuon', label: 'Dakuon', sublabel: '20 Tenten (゛)', rowGroups: ['ga', 'za', 'da', 'ba'] },
-    { id: 'handakuon', label: 'Handakuon', sublabel: '5 Maru (゜)', rowGroups: ['pa'] },
-    { id: 'yoon', label: 'Yōon', sublabel: '36 Gabungan', rowGroups: ['kya', 'sha', 'cha', 'nya', 'hya', 'mya', 'rya', 'gya', 'ja', 'dya', 'bya', 'pya'] },
-  ],
-  gojuon: [
-    { id: 'all', label: 'Semua Gojūon', sublabel: '46 Huruf', rowGroups: ['vowel', 'ka', 'sa', 'ta', 'na', 'ha', 'ma', 'ya', 'ra', 'wa', 'n'] },
-    { id: 'vowel', label: 'A', sublabel: 'A, I, U, E, O', rowGroups: ['vowel'] },
-    { id: 'ka', label: 'Ka', sublabel: 'Ka, Ki, Ku, Ke, Ko', rowGroups: ['ka'] },
-    { id: 'sa', label: 'Sa', sublabel: 'Sa, Shi, Su, Se, So', rowGroups: ['sa'] },
-    { id: 'ta', label: 'Ta', sublabel: 'Ta, Chi, Tsu, Te, To', rowGroups: ['ta'] },
-    { id: 'na', label: 'Na', sublabel: 'Na, Ni, Nu, Ne, No', rowGroups: ['na'] },
-    { id: 'ha', label: 'Ha', sublabel: 'Ha, Hi, Fu, He, Ho', rowGroups: ['ha'] },
-    { id: 'ma', label: 'Ma', sublabel: 'Ma, Mi, Mu, Me, Mo', rowGroups: ['ma'] },
-    { id: 'ya', label: 'Ya', sublabel: 'Ya, Yu, Yo', rowGroups: ['ya'] },
-    { id: 'ra', label: 'Ra', sublabel: 'Ra, Ri, Ru, Re, Ro', rowGroups: ['ra'] },
-    { id: 'wa_n', label: 'Wa/N', sublabel: 'Wa, Wo, N', rowGroups: ['wa', 'n'] },
-  ],
-  dakuon_handakuon: [
-    { id: 'all', label: 'Semua Turunan', sublabel: '25 Huruf', rowGroups: ['ga', 'za', 'da', 'ba', 'pa'] },
-    { id: 'ga', label: 'Ga (が)', sublabel: 'Ga, Gi, Gu, Ge, Go', rowGroups: ['ga'] },
-    { id: 'za', label: 'Za (ざ)', sublabel: 'Za, Ji, Zu, Ze, Zo', rowGroups: ['za'] },
-    { id: 'da', label: 'Da (だ)', sublabel: 'Da, Ji, Zu, De, Do', rowGroups: ['da'] },
-    { id: 'ba', label: 'Ba (ば)', sublabel: 'Ba, Bi, Bu, Be, Bo', rowGroups: ['ba'] },
-    { id: 'pa', label: 'Pa (ぱ)', sublabel: 'Pa, Pi, Pu, Pe, Po', rowGroups: ['pa'] },
-  ],
-  yoon: [
-    { id: 'all', label: 'Semua Yōon', sublabel: '36 Huruf', rowGroups: ['kya', 'sha', 'cha', 'nya', 'hya', 'mya', 'rya', 'gya', 'ja', 'dya', 'bya', 'pya'] },
-    { id: 'kya', label: 'Kya', sublabel: 'きゃ, きゅ, きょ', rowGroups: ['kya'] },
-    { id: 'sha', label: 'Sha', sublabel: 'しゃ, しゅ, しょ', rowGroups: ['sha'] },
-    { id: 'cha', label: 'Cha', sublabel: 'ちゃ, ちゅ, ちょ', rowGroups: ['cha'] },
-    { id: 'nya', label: 'Nya', sublabel: 'にゃ, にゅ, にょ', rowGroups: ['nya'] },
-    { id: 'hya', label: 'Hya', sublabel: 'ひゃ, ひゅ, ひょ', rowGroups: ['hya'] },
-    { id: 'mya', label: 'Mya', sublabel: 'みゃ, みゅ, みょ', rowGroups: ['mya'] },
-    { id: 'rya', label: 'Rya', sublabel: 'りゃ, りゅ, りょ', rowGroups: ['rya'] },
-    { id: 'gya', label: 'Gya', sublabel: 'ぎゃ, ぎゅ, ぎょ', rowGroups: ['gya'] },
-    { id: 'ja', label: 'Ja', sublabel: 'じゃ, じゅ, じょ', rowGroups: ['ja'] },
-    { id: 'dya', label: 'Dya', sublabel: 'ぢゃ, ぢゅ, ぢょ', rowGroups: ['dya'] },
-    { id: 'bya', label: 'Bya', sublabel: 'びゃ, びゅ, びょ', rowGroups: ['bya'] },
-    { id: 'pya', label: 'Pya', sublabel: 'ぴゃ, ぴゅ, ぴょ', rowGroups: ['pya'] },
-  ],
+  return {
+    all: [
+      { id: 'all', label: 'Semua', sublabel: '107 Karakter', rowGroups: [] },
+      { id: 'gojuon', label: 'Gojūon', sublabel: '46 Dasar', rowGroups: ['vowel', 'ka', 'sa', 'ta', 'na', 'ha', 'ma', 'ya', 'ra', 'wa', 'n'] },
+      { id: 'dakuon', label: 'Dakuon', sublabel: isKatakana ? '20 Tenten (ガ..ボ)' : '20 Tenten (が..ぼ)', rowGroups: ['ga', 'za', 'da', 'ba'] },
+      { id: 'handakuon', label: 'Handakuon', sublabel: isKatakana ? '5 Maru (パ..ポ)' : '5 Maru (ぱ..ぽ)', rowGroups: ['pa'] },
+      { id: 'yoon', label: 'Yōon', sublabel: isKatakana ? '36 Gabungan (キャ..)' : '36 Gabungan (きゃ..)', rowGroups: ['kya', 'sha', 'cha', 'nya', 'hya', 'mya', 'rya', 'gya', 'ja', 'dya', 'bya', 'pya'] },
+    ],
+    gojuon: [
+      { id: 'all', label: 'Semua Gojūon', sublabel: '46 Huruf', rowGroups: ['vowel', 'ka', 'sa', 'ta', 'na', 'ha', 'ma', 'ya', 'ra', 'wa', 'n'] },
+      { id: 'vowel', label: 'A', sublabel: isKatakana ? 'ア, イ, ウ, エ, オ' : 'あ, い, う, え, お', rowGroups: ['vowel'] },
+      { id: 'ka', label: 'Ka', sublabel: isKatakana ? 'カ, キ, ク, ケ, コ' : 'か, き, く, け, こ', rowGroups: ['ka'] },
+      { id: 'sa', label: 'Sa', sublabel: isKatakana ? 'サ, シ, ス, セ, ソ' : 'さ, し, す, せ, そ', rowGroups: ['sa'] },
+      { id: 'ta', label: 'Ta', sublabel: isKatakana ? 'タ, チ, ツ, テ, ト' : 'た, ち, つ, て, と', rowGroups: ['ta'] },
+      { id: 'na', label: 'Na', sublabel: isKatakana ? 'ナ, ニ, ヌ, ネ, ノ' : 'な, に, ぬ, ね, の', rowGroups: ['na'] },
+      { id: 'ha', label: 'Ha', sublabel: isKatakana ? 'ハ, ヒ, フ, ヘ, ホ' : 'は, ひ, ふ, へ, ほ', rowGroups: ['ha'] },
+      { id: 'ma', label: 'Ma', sublabel: isKatakana ? 'マ, ミ, ム, メ, モ' : 'ま, み, む, め, も', rowGroups: ['ma'] },
+      { id: 'ya', label: 'Ya', sublabel: isKatakana ? 'ヤ, ユ, ヨ' : 'や, ゆ, よ', rowGroups: ['ya'] },
+      { id: 'ra', label: 'Ra', sublabel: isKatakana ? 'ラ, リ, ル, レ, ロ' : 'ら, り, る, れ, ろ', rowGroups: ['ra'] },
+      { id: 'wa_n', label: 'Wa/N', sublabel: isKatakana ? 'ワ, ヲ, ン' : 'わ, を, ん', rowGroups: ['wa', 'n'] },
+    ],
+    dakuon_handakuon: [
+      { id: 'all', label: 'Semua Turunan', sublabel: '25 Huruf', rowGroups: ['ga', 'za', 'da', 'ba', 'pa'] },
+      { id: 'ga', label: isKatakana ? 'Ga (ガ)' : 'Ga (が)', sublabel: isKatakana ? 'ガ, ギ, グ, ゲ, ゴ' : 'が, ぎ, ぐ, げ, ご', rowGroups: ['ga'] },
+      { id: 'za', label: isKatakana ? 'Za (ザ)' : 'Za (ざ)', sublabel: isKatakana ? 'ザ, ジ, ズ, ゼ, ゾ' : 'ざ, じ, ず, ぜ, ぞ', rowGroups: ['za'] },
+      { id: 'da', label: isKatakana ? 'Da (ダ)' : 'Da (だ)', sublabel: isKatakana ? 'ダ, ヂ, ヅ, デ, ド' : 'だ, ぢ, づ, で, ど', rowGroups: ['da'] },
+      { id: 'ba', label: isKatakana ? 'Ba (バ)' : 'Ba (ば)', sublabel: isKatakana ? 'バ, ビ, ブ, ベ, ボ' : 'ば, び, ぶ, べ, ぼ', rowGroups: ['ba'] },
+      { id: 'pa', label: isKatakana ? 'Pa (パ)' : 'Pa (ぱ)', sublabel: isKatakana ? 'パ, ピ, プ, ペ, ポ' : 'ぱ, ぴ, ぷ, ぺ, ぽ', rowGroups: ['pa'] },
+    ],
+    yoon: [
+      { id: 'all', label: 'Semua Yōon', sublabel: '36 Huruf', rowGroups: ['kya', 'sha', 'cha', 'nya', 'hya', 'mya', 'rya', 'gya', 'ja', 'dya', 'bya', 'pya'] },
+      { id: 'kya', label: 'Kya', sublabel: isKatakana ? 'キャ, キュ, キョ' : 'きゃ, きゅ, きょ', rowGroups: ['kya'] },
+      { id: 'sha', label: 'Sha', sublabel: isKatakana ? 'シャ, シュ, ショ' : 'しゃ, しゅ, しょ', rowGroups: ['sha'] },
+      { id: 'cha', label: 'Cha', sublabel: isKatakana ? 'チャ, チュ, チョ' : 'ちゃ, ちゅ, ちょ', rowGroups: ['cha'] },
+      { id: 'nya', label: 'Nya', sublabel: isKatakana ? 'ニャ, ニュ, ニョ' : 'にゃ, にゅ, にょ', rowGroups: ['nya'] },
+      { id: 'hya', label: 'Hya', sublabel: isKatakana ? 'ヒャ, ヒュ, ヒョ' : 'ひゃ, ひゅ, ひょ', rowGroups: ['hya'] },
+      { id: 'mya', label: 'Mya', sublabel: isKatakana ? 'ミャ, ミュ, ミョ' : 'みゃ, みゅ, みょ', rowGroups: ['mya'] },
+      { id: 'rya', label: 'Rya', sublabel: isKatakana ? 'リャ, リュ, リョ' : 'りゃ, りゅ, りょ', rowGroups: ['rya'] },
+      { id: 'gya', label: 'Gya', sublabel: isKatakana ? 'ギャ, ギュ, ギョ' : 'ぎゃ, ぎゅ, ぎょ', rowGroups: ['gya'] },
+      { id: 'ja', label: 'Ja', sublabel: isKatakana ? 'ジャ, ジュ, ジョ' : 'じゃ, じゅ, じょ', rowGroups: ['ja'] },
+      { id: 'dya', label: 'Dya', sublabel: isKatakana ? 'ヂャ, ヂュ, ヂョ' : 'ぢゃ, ぢゅ, ぢょ', rowGroups: ['dya'] },
+      { id: 'bya', label: 'Bya', sublabel: isKatakana ? 'ビャ, ビュ, ビョ' : 'びゃ, びゅ, びょ', rowGroups: ['bya'] },
+      { id: 'pya', label: 'Pya', sublabel: isKatakana ? 'ピャ, ピュ, ピョ' : 'ぴゃ, ぴゅ, ぴょ', rowGroups: ['pya'] },
+    ],
+  }
 }
 
 const STROKE_COLORS = ['#0284c7', '#ec4899', '#10b981', '#f97316', '#8b5cf6', '#06b6d4']
@@ -134,16 +165,33 @@ const LOCAL_STORAGE_KEY = 'nihongo_sora_character_progress'
 
 export default function LearnPage() {
   const { t, language } = useLanguage()
+  const { script } = useScript()
   const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
-  const [characters, setCharacters] = useState<CharacterData[]>(FALLBACK_HIRAGANA)
+  const [characters, setCharacters] = useState<CharacterData[]>(
+    script === 'katakana' ? FALLBACK_KATAKANA : FALLBACK_HIRAGANA
+  )
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>('all')
   const [activeTab, setActiveTab] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [masteryFilter, setMasteryFilter] = useState<'all' | 'memorized' | 'learning' | 'needs_review'>('all')
   const [loading, setLoading] = useState<boolean>(false)
   const [isLiveApi, setIsLiveApi] = useState<boolean>(false)
+
+  // Dynamic row tabs based on active script
+  const rowTabsByCategory = useMemo(() => getRowTabsByCategory(script), [script])
+
+  // Category navigation tabs
+  const categoryTabs = useMemo<{ id: CategoryId; label: string; sublabel: string; icon: string }[]>(
+    () => [
+      { id: 'all', label: t('categories.all'), sublabel: t('categories.all_count'), icon: '🎴' },
+      { id: 'gojuon', label: t('categories.gojuon'), sublabel: t('categories.gojuon_sub'), icon: '🌱' },
+      { id: 'dakuon_handakuon', label: t('categories.dakuon_handakuon'), sublabel: t('categories.dakuon_handakuon_sub'), icon: '⚡' },
+      { id: 'yoon', label: t('categories.yoon'), sublabel: t('categories.yoon_sub'), icon: '✨' },
+    ],
+    [t]
+  )
 
   // User progress map & latest exam history
   const [progressMap, setProgressMap] = useState<Record<number, UserProgress>>({})
@@ -187,7 +235,7 @@ export default function LearnPage() {
   const fetchCharacters = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${apiBaseUrl}/characters/hiragana`)
+      const res = await fetch(`${apiBaseUrl}/characters?script=${script}`)
       if (res.ok) {
         const json = await res.json()
         if (json.data && json.data.length > 0) {
@@ -212,11 +260,11 @@ export default function LearnPage() {
       throw new Error('API offline')
     } catch {
       setIsLiveApi(false)
-      setCharacters(FALLBACK_HIRAGANA)
+      setCharacters(script === 'katakana' ? FALLBACK_KATAKANA : FALLBACK_HIRAGANA)
     } finally {
       setLoading(false)
     }
-  }, [apiBaseUrl])
+  }, [apiBaseUrl, script])
 
   useEffect(() => {
     fetchCharacters()
@@ -231,6 +279,11 @@ export default function LearnPage() {
       window.removeEventListener('storage', handleProgress)
     }
   }, [fetchCharacters, loadProgress])
+
+  // Reset tab to all on script or category change if needed
+  useEffect(() => {
+    setActiveTab('all')
+  }, [script, selectedCategory])
 
   // Filtered characters
   const filteredList = useMemo(() => {
@@ -248,7 +301,7 @@ export default function LearnPage() {
     }
 
     // Filter by row group tab within the active category
-    const rowTabs = ROW_TABS_BY_CATEGORY[selectedCategory] || ROW_TABS_BY_CATEGORY.all
+    const rowTabs = rowTabsByCategory[selectedCategory] || rowTabsByCategory.all
     const currentTab = rowTabs.find((t) => t.id === activeTab)
     if (currentTab && currentTab.id !== 'all' && currentTab.rowGroups.length > 0) {
       result = result.filter((c) => {
@@ -280,7 +333,7 @@ export default function LearnPage() {
     }
 
     return result
-  }, [characters, selectedCategory, activeTab, searchQuery, masteryFilter, progressMap, latestExam])
+  }, [characters, selectedCategory, rowTabsByCategory, activeTab, searchQuery, masteryFilter, progressMap, latestExam])
 
   // Count of characters needing review
   const needsReviewCount = useMemo(() => {
@@ -338,18 +391,29 @@ export default function LearnPage() {
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-100 dark:bg-sky-950/80 text-sky-800 dark:text-sky-300 text-xs font-bold mb-2">
             <span>🎌</span>
-            <span>{t('categories.all_count')} • {language === 'id' ? 'Koleksi Hiragana Lengkap' : 'Complete Hiragana Library'}</span>
+            <span>
+              {t('categories.all_count')} •{' '}
+              {script === 'katakana'
+                ? language === 'id'
+                  ? 'Koleksi Katakana Lengkap'
+                  : 'Complete Katakana Library'
+                : language === 'id'
+                ? 'Koleksi Hiragana Lengkap'
+                : 'Complete Hiragana Library'}
+            </span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-            {t('learn.title')}
+            {script === 'katakana' ? t('learn.title_katakana') : t('learn.title_hiragana')}
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
-            {t('learn.subtitle')}
+            {script === 'katakana' ? t('learn.subtitle_katakana') : t('learn.subtitle_hiragana')}
           </p>
         </div>
 
-        {/* Live sync & status */}
-        <div className="flex items-center gap-3">
+        {/* Live sync, script switcher & status */}
+        <div className="flex items-center flex-wrap gap-3">
+          <KanaSwitcher size="md" />
+
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-600 dark:text-slate-300 shadow-2xs">
             <span
               className={`w-2 h-2 rounded-full ${
@@ -371,9 +435,9 @@ export default function LearnPage() {
         </div>
       </div>
 
-      {/* CATEGORY TABS (Fase 8: Gojuon, Dakuon & Handakuon, Yoon, Semua) */}
+      {/* CATEGORY TABS (Fase 9: Gojuon, Dakuon & Handakuon, Yoon, Semua) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        {CATEGORY_TABS.map((cat) => {
+        {categoryTabs.map((cat) => {
           const isSelected = selectedCategory === cat.id
           return (
             <button
@@ -473,7 +537,7 @@ export default function LearnPage() {
 
       {/* ROW GROUP FILTER TABS */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-3 mb-6 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700">
-        {(ROW_TABS_BY_CATEGORY[selectedCategory] || ROW_TABS_BY_CATEGORY.all).map((tab) => {
+        {(rowTabsByCategory[selectedCategory] || rowTabsByCategory.all).map((tab) => {
           const isActive = activeTab === tab.id
           return (
             <button
@@ -724,7 +788,7 @@ export default function LearnPage() {
                     </div>
                   </div>
                   <Link
-                    href={`/practice?char=${modalChar.symbol || modalChar.character}`}
+                    href={`/practice?char=${encodeURIComponent(modalChar.symbol || modalChar.character || '')}&script=${modalChar.script_type || script}`}
                     className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs whitespace-nowrap self-start sm:self-auto shadow-xs"
                   >
                     {language === 'id' ? 'Latih di Studio Tracing →' : 'Practice in Studio →'}
@@ -875,7 +939,7 @@ export default function LearnPage() {
                 {/* Direct CTA: Jump to Tracing Studio */}
                 <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800">
                   <Link
-                    href={`/practice?char=${modalChar.character || modalChar.symbol}`}
+                    href={`/practice?char=${encodeURIComponent(modalChar.character || modalChar.symbol || '')}&script=${modalChar.script_type || script}`}
                     className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 hover:from-sky-500 hover:to-purple-500 text-white font-bold text-sm shadow-md flex items-center justify-center gap-2 transition active:scale-98"
                   >
                     <PenTool className="w-4 h-4" />

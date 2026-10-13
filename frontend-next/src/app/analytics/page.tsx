@@ -10,9 +10,12 @@ import {
 import { UserProgress } from '@/types/progress'
 import { ExamResultSummary } from '@/types/exam'
 import rawHiraganaData from '@/data/hiragana_107.json'
+import rawKatakanaData from '@/data/katakana_107.json'
 import { ResetConfirmModal } from '@/components/ResetConfirmModal'
+import { useScript } from '@/context/ScriptContext'
+import { KanaSwitcher } from '@/components/KanaSwitcher'
 
-interface RawHiraganaItem {
+interface RawKanaItem {
   symbol: string
   script_type: string
   category?: string
@@ -25,27 +28,31 @@ interface RawHiraganaItem {
 const LOCAL_STORAGE_PROGRESS_KEY = 'nihongo_sora_character_progress'
 const LOCAL_STORAGE_EXAM_KEY = 'nihongo_sora_exam_history'
 
-// Row definition list for standard Gojuon, Dakuon, Handakuon, and Yoon
-const ROW_DEFINITIONS = [
-  { row_group: 'vowel', label: 'Baris A (Vokal)', sample_kana: 'あ, い, う, え, お' },
-  { row_group: 'ka', label: 'Baris Ka', sample_kana: 'か, き, く, け, こ' },
-  { row_group: 'sa', label: 'Baris Sa', sample_kana: 'さ, し, す, せ, そ' },
-  { row_group: 'ta', label: 'Baris Ta', sample_kana: 'た, ち, つ, て, と' },
-  { row_group: 'na', label: 'Baris Na', sample_kana: 'な, に, ぬ, ね, の' },
-  { row_group: 'ha', label: 'Baris Ha', sample_kana: 'は, ひ, ふ, へ, ほ' },
-  { row_group: 'ma', label: 'Baris Ma', sample_kana: 'ま, み, む, め, も' },
-  { row_group: 'ya', label: 'Baris Ya', sample_kana: 'や, ゆ, よ' },
-  { row_group: 'ra', label: 'Baris Ra', sample_kana: 'ら, り, る, れ, ろ' },
-  { row_group: 'wa', label: 'Baris Wa / N', sample_kana: 'わ, を, ん' },
-  { row_group: 'ga', label: 'Baris Ga (Dakuon)', sample_kana: 'が, ぎ, ぐ, げ, ご' },
-  { row_group: 'za', label: 'Baris Za (Dakuon)', sample_kana: 'ざ, じ, ず, ぜ, ぞ' },
-  { row_group: 'da', label: 'Baris Da (Dakuon)', sample_kana: 'だ, ぢ, づ, で, ど' },
-  { row_group: 'ba', label: 'Baris Ba (Dakuon)', sample_kana: 'ば, び, ぶ, べ, ぼ' },
-  { row_group: 'pa', label: 'Baris Pa (Handakuon)', sample_kana: 'ぱ, ぴ, ぷ, ぺ, ぽ' },
-  { row_group: 'yoon', label: 'Yōon (Gabungan)', sample_kana: 'きゃ, しゃ, ちゃ, にゃ, ...' },
-]
+// Row definition list for Gojuon, Dakuon, Handakuon, and Yoon
+function getRowDefinitions(script: 'hiragana' | 'katakana') {
+  const isKatakana = script === 'katakana'
+  return [
+    { row_group: 'vowel', label: 'Baris A (Vokal)', sample_kana: isKatakana ? 'ア, イ, ウ, エ, オ' : 'あ, い, う, え, お' },
+    { row_group: 'ka', label: 'Baris Ka', sample_kana: isKatakana ? 'カ, キ, ク, ケ, コ' : 'か, き, く, け, こ' },
+    { row_group: 'sa', label: 'Baris Sa', sample_kana: isKatakana ? 'サ, シ, ス, セ, ソ' : 'さ, し, す, せ, そ' },
+    { row_group: 'ta', label: 'Baris Ta', sample_kana: isKatakana ? 'タ, チ, ツ, テ, ト' : 'た, ち, つ, て, と' },
+    { row_group: 'na', label: 'Baris Na', sample_kana: isKatakana ? 'ナ, ニ, ヌ, ネ, ノ' : 'な, に, ぬ, ネ, の' },
+    { row_group: 'ha', label: 'Baris Ha', sample_kana: isKatakana ? 'ハ, ヒ, フ, ヘ, ホ' : 'は, ひ, ふ, へ, ほ' },
+    { row_group: 'ma', label: 'Baris Ma', sample_kana: isKatakana ? 'マ, ミ, ム, メ, モ' : 'ま, み, む, め, も' },
+    { row_group: 'ya', label: 'Baris Ya', sample_kana: isKatakana ? 'ヤ, ユ, ヨ' : 'や, ゆ, よ' },
+    { row_group: 'ra', label: 'Baris Ra', sample_kana: isKatakana ? 'ラ, リ, ル, レ, ロ' : 'ら, り, る, れ, ろ' },
+    { row_group: 'wa', label: 'Baris Wa / N', sample_kana: isKatakana ? 'ワ, ヲ, ン' : 'わ, を, ん' },
+    { row_group: 'ga', label: 'Baris Ga (Dakuon)', sample_kana: isKatakana ? 'ガ, ギ, グ, ゲ, ゴ' : 'が, ぎ, ぐ, げ, ご' },
+    { row_group: 'za', label: 'Baris Za (Dakuon)', sample_kana: isKatakana ? 'ザ, ジ, ズ, ゼ, ゾ' : 'ざ, じ, ず, ぜ, ぞ' },
+    { row_group: 'da', label: 'Baris Da (Dakuon)', sample_kana: isKatakana ? 'ダ, ヂ, ヅ, デ, ド' : 'だ, ぢ, づ, で, ど' },
+    { row_group: 'ba', label: 'Baris Ba (Dakuon)', sample_kana: isKatakana ? 'バ, ビ, ブ, ベ, ボ' : 'ば, び, ぶ, べ, ぼ' },
+    { row_group: 'pa', label: 'Baris Pa (Handakuon)', sample_kana: isKatakana ? 'パ, ピ, プ, ペ, ポ' : 'ぱ, ぴ, ぷ, ぺ, ぽ' },
+    { row_group: 'yoon', label: 'Yōon (Gabungan)', sample_kana: isKatakana ? 'キャ, シャ, チャ, ニャ, ...' : 'きゃ, しゃ, ちゃ, にゃ, ...' },
+  ]
+}
 
 export default function AnalyticsDashboardPage() {
+  const { script } = useScript()
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
   // Dashboard Data State
@@ -143,7 +150,9 @@ export default function AnalyticsDashboardPage() {
 
   // Local Offline Analytics Calculator (Fallback when Golang API is unreachable)
   const computeOfflineAnalytics = useCallback(() => {
-    const rawList = rawHiraganaData as RawHiraganaItem[]
+    const isKatakana = script === 'katakana'
+    const rawList = (isKatakana ? rawKatakanaData : rawHiraganaData) as RawKanaItem[]
+    const idOffset = isKatakana ? 107 : 0
     let progressMap: Record<number, UserProgress> = {}
     let storedExams: ExamResultSummary[] = []
 
@@ -171,7 +180,7 @@ export default function AnalyticsDashboardPage() {
     const accuracyScores: number[] = []
 
     rawList.forEach((_, idx) => {
-      const charId = idx + 1
+      const charId = idOffset + idx + 1
       const p = progressMap[charId]
       if (p) {
         if (p.status === 'memorized') memorized++
@@ -189,12 +198,14 @@ export default function AnalyticsDashboardPage() {
         : 0
 
     let totalExamScoreSum = 0
-    storedExams.forEach((e) => {
+    // Filter exams by script if recorded
+    const filteredExams = storedExams.filter((e) => !e.scriptMode || e.scriptMode === script || e.scriptMode === 'mixed')
+    filteredExams.forEach((e) => {
       totalExamScoreSum += e.score || 0
     })
     const examAvgScore =
-      storedExams.length > 0
-        ? Math.round((totalExamScoreSum / storedExams.length) * 10) / 10
+      filteredExams.length > 0
+        ? Math.round((totalExamScoreSum / filteredExams.length) * 10) / 10
         : 0
 
     const computedOverview: AnalyticsOverview = {
@@ -205,15 +216,16 @@ export default function AnalyticsDashboardPage() {
       completion_rate: Math.round((memorized / totalChars) * 1000) / 10,
       overall_accuracy_avg: overallAvgAcc,
       total_practice_count: totalReviewCount,
-      total_exams_taken: storedExams.length,
+      total_exams_taken: filteredExams.length,
       exam_average_score: examAvgScore,
     }
 
     // 2. Row accuracy computation
-    const computedRows: RowAccuracyMetric[] = ROW_DEFINITIONS.map((rowDef) => {
+    const rowDefs = getRowDefinitions(script)
+    const computedRows: RowAccuracyMetric[] = rowDefs.map((rowDef) => {
       // Find characters matching row_group
       const matching = rawList
-        .map((item, idx) => ({ ...item, id: idx + 1 }))
+        .map((item, idx) => ({ ...item, id: idOffset + idx + 1 }))
         .filter((item) => {
           const rg = item.row_group?.toLowerCase().trim()
           if (rowDef.row_group === 'wa') {
@@ -264,7 +276,7 @@ export default function AnalyticsDashboardPage() {
     })
 
     // 3. Exam history formatting
-    const formattedExams: ExamHistoryAnalyticsItem[] = storedExams.map((e, idx) => ({
+    const formattedExams: ExamHistoryAnalyticsItem[] = filteredExams.map((e, idx) => ({
       id: e.id || idx + 1,
       exam_id: e.id || idx + 1,
       total_questions: e.totalQuestions || 0,
@@ -280,7 +292,7 @@ export default function AnalyticsDashboardPage() {
     setOverview(computedOverview)
     setRowMetrics(computedRows)
     setExamHistory(formattedExams)
-  }, [])
+  }, [script])
 
   // Load Data with dual-mode support (Live Backend -> Local Offline Fallback)
   const loadDashboardData = useCallback(async () => {
@@ -288,9 +300,9 @@ export default function AnalyticsDashboardPage() {
     try {
       // Parallel fetch to backend
       const [resOverview, resRowAcc, resExamHistory] = await Promise.all([
-        fetch(`${apiBaseUrl}/analytics/overview`),
-        fetch(`${apiBaseUrl}/analytics/accuracy-by-row`),
-        fetch(`${apiBaseUrl}/analytics/exam-history`),
+        fetch(`${apiBaseUrl}/analytics/overview?script=${script}`),
+        fetch(`${apiBaseUrl}/analytics/accuracy-by-row?script=${script}`),
+        fetch(`${apiBaseUrl}/analytics/exam-history?script=${script}`),
       ])
 
       if (resOverview.ok && resRowAcc.ok && resExamHistory.ok) {
@@ -312,7 +324,7 @@ export default function AnalyticsDashboardPage() {
     } finally {
       setLoading(false)
     }
-  }, [apiBaseUrl, computeOfflineAnalytics])
+  }, [apiBaseUrl, computeOfflineAnalytics, script])
 
   useEffect(() => {
     loadDashboardData()
@@ -330,7 +342,7 @@ export default function AnalyticsDashboardPage() {
       window.removeEventListener('nihongo_sora_gamification_updated', handleUpdate)
       window.removeEventListener('storage', handleUpdate)
     }
-  }, [loadDashboardData])
+  }, [loadDashboardData, script])
 
   // Tracing accuracy grade letter helper
   const accuracyGrade = useMemo(() => {
@@ -376,12 +388,14 @@ export default function AnalyticsDashboardPage() {
             Dasbor Statistik & Riwayat Belajar
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
-            Pantau kemajuan penguasaan 107 Hiragana (Gojūon, Dakuon, Handakuon, &amp; Yōon), akurasi goresan kuas per baris, serta grafik perkembangan nilai ujian Anda.
+            Pantau kemajuan penguasaan 107 {script === 'katakana' ? 'Katakana' : 'Hiragana'} (Gojūon, Dakuon, Handakuon, &amp; Yōon), akurasi goresan kuas per baris, serta grafik perkembangan nilai ujian Anda.
           </p>
         </div>
 
         {/* Status Pill & Action Buttons */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          <KanaSwitcher size="sm" />
+
           <div
             className={`px-3 py-1.5 rounded-xl text-xs font-medium border flex items-center gap-2 shadow-xs ${
               isLiveBackend

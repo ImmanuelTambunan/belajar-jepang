@@ -1,5 +1,12 @@
 import { CharacterData } from '@/types/character'
-import { ExamConfig, ExamOption, ExamQuestion, ExamQuestionType, ExamScope } from '@/types/exam'
+import {
+  ExamConfig,
+  ExamOption,
+  ExamQuestion,
+  ExamQuestionType,
+  ExamScope,
+  ExamScriptMode,
+} from '@/types/exam'
 
 // Fisher-Yates array shuffle helper
 export function shuffleArray<T>(array: T[]): T[] {
@@ -9,6 +16,19 @@ export function shuffleArray<T>(array: T[]): T[] {
     ;[arr[i], arr[j]] = [arr[j], arr[i]]
   }
   return arr
+}
+
+/**
+ * Filters candidates based on script mode ('hiragana', 'katakana', or 'mixed').
+ */
+export function filterCandidatesByScript(
+  characters: CharacterData[],
+  scriptMode?: ExamScriptMode
+): CharacterData[] {
+  if (!scriptMode || scriptMode === 'mixed') return characters
+  return characters.filter(
+    (c) => c.script_type === scriptMode || c.type === scriptMode
+  )
 }
 
 /**
@@ -106,7 +126,14 @@ export function generateExamQuestions(
 ): ExamQuestion[] {
   if (!allCharacters || allCharacters.length === 0) return []
 
-  const scopedCharacters = filterCandidatesByScope(allCharacters, config.scope)
+  const scriptFilteredCharacters = filterCandidatesByScript(
+    allCharacters,
+    config.scriptMode
+  )
+  const scopedCharacters = filterCandidatesByScope(
+    scriptFilteredCharacters,
+    config.scope
+  )
   const candidates = filterCandidatesByRow(scopedCharacters, config.rowGroup)
   if (candidates.length === 0) return []
 
@@ -130,7 +157,7 @@ export function generateExamQuestions(
 
     let options: ExamOption[] | undefined
     if (chosenType === 'romaji_to_kana' || chosenType === 'kana_to_romaji') {
-      options = generateOptions(char, allCharacters)
+      options = generateOptions(char, scriptFilteredCharacters.length >= 4 ? scriptFilteredCharacters : allCharacters)
     }
 
     return {

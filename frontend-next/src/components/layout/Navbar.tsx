@@ -19,8 +19,10 @@ import {
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import { KanaSwitcher } from '@/components/KanaSwitcher'
 import { useGamification } from '@/context/GamificationContext'
 import { useLanguage } from '@/context/LanguageContext'
+import { useScript } from '@/context/ScriptContext'
 
 interface NavItem {
   href: string
@@ -33,6 +35,7 @@ export const Navbar: React.FC = () => {
   const pathname = usePathname()
   const { dailyStreak, levelInfo } = useGamification()
   const { t } = useLanguage()
+  const { script } = useScript()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isBackendLive, setIsBackendLive] = useState<boolean | null>(null)
   const [memorizedCount, setMemorizedCount] = useState<number>(0)
@@ -81,7 +84,7 @@ export const Navbar: React.FC = () => {
   const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
-  // Read memorized count from localStorage or progress API
+  // Read memorized count from localStorage or progress API based on active script
   const refreshMasteryBadge = useCallback(() => {
     if (typeof window === 'undefined') return
     try {
@@ -89,13 +92,18 @@ export const Navbar: React.FC = () => {
       if (stored) {
         const parsed = JSON.parse(stored)
         let count = 0
-        Object.values(parsed).forEach((item: unknown) => {
+        Object.entries(parsed).forEach(([key, item]: [string, unknown]) => {
           if (
             typeof item === 'object' &&
             item !== null &&
             (item as { status?: string }).status === 'memorized'
           ) {
-            count++
+            const charId = Number((item as { character_id?: number }).character_id ?? key)
+            if (script === 'hiragana' && charId >= 1 && charId <= 107) {
+              count++
+            } else if (script === 'katakana' && charId >= 108 && charId <= 214) {
+              count++
+            }
           }
         })
         setMemorizedCount((prev) => (prev === count ? prev : count))
@@ -105,7 +113,7 @@ export const Navbar: React.FC = () => {
     } catch {
       setMemorizedCount((prev) => (prev === 0 ? prev : 0))
     }
-  }, [])
+  }, [script])
 
   // Check backend health
   const checkBackendStatus = useCallback(async () => {
@@ -125,7 +133,7 @@ export const Navbar: React.FC = () => {
     }
   }, [apiBaseUrl])
 
-  // Listen to custom progress update events (mount only)
+  // Listen to custom progress & script update events
   useEffect(() => {
     refreshMasteryBadge()
 
@@ -134,14 +142,15 @@ export const Navbar: React.FC = () => {
     }
 
     window.addEventListener('nihongo_sora_progress_updated', handleProgressUpdate)
+    window.addEventListener('nihongo_sora_script_changed', handleProgressUpdate)
     window.addEventListener('storage', handleProgressUpdate)
 
     return () => {
       window.removeEventListener('nihongo_sora_progress_updated', handleProgressUpdate)
+      window.removeEventListener('nihongo_sora_script_changed', handleProgressUpdate)
       window.removeEventListener('storage', handleProgressUpdate)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [refreshMasteryBadge])
 
   // Periodic backend status check
   useEffect(() => {
@@ -262,15 +271,17 @@ export const Navbar: React.FC = () => {
           <div className="flex items-center gap-2 sm:gap-2.5">
             {/* Daily Streak Fire Badge */}
             <div
+              suppressHydrationWarning
               className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/60 text-orange-700 dark:text-orange-400 shadow-2xs"
               title={t('nav.streak_title', { count: dailyStreak })}
             >
               <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500 animate-pulse" />
-              <span>{dailyStreak} {t('nav.streak')}</span>
+              <span suppressHydrationWarning>{dailyStreak} {t('nav.streak')}</span>
             </div>
 
             {/* Level & XP Bar Badge */}
             <div
+              suppressHydrationWarning
               className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-800 dark:text-indigo-300 shadow-2xs"
               title={t('nav.level_tooltip', {
                 level: levelInfo.level,
@@ -289,21 +300,27 @@ export const Navbar: React.FC = () => {
                   style={{ width: `${levelInfo.percentage}%` }}
                 />
               </div>
-              <span className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 hidden xl:inline">
+              <span suppressHydrationWarning className="text-[10px] font-mono text-indigo-600 dark:text-indigo-400 hidden xl:inline">
                 {levelInfo.currentLevelXP} XP
               </span>
+            </div>
+
+            {/* Global Kana Switcher (Hiragana | Katakana) */}
+            <div className="hidden lg:block">
+              <KanaSwitcher size="sm" />
             </div>
 
             {/* Quick Character Mastery Badge */}
             <Link
               href="/learn"
+              suppressHydrationWarning
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition shadow-2xs"
               title={t('nav.memorized_title')}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-spin-slow" />
-              <span>
+              <span suppressHydrationWarning>
                 <strong className="font-extrabold">{memorizedCount}</strong>/{totalCharactersCount}{' '}
-                {t('nav.memorized')}
+                {script === 'katakana' ? 'Katakana' : t('nav.memorized')}
               </span>
             </Link>
 
@@ -363,9 +380,16 @@ export const Navbar: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
                   <span className="font-mono">{levelInfo.currentLevelXP} / {levelInfo.nextLevelXP} XP ({levelInfo.totalXP} Total)</span>
-                  <span className="font-bold text-amber-600 dark:text-amber-400">{memorizedCount}/{totalCharactersCount} {t('nav.memorized')}</span>
+                  <span className="font-bold text-amber-600 dark:text-amber-400">
+                    {memorizedCount}/{totalCharactersCount} {script === 'katakana' ? 'Katakana' : t('nav.memorized')}
+                  </span>
                 </div>
               </div>
+            </div>
+
+            {/* Mobile Kana Switcher */}
+            <div className="pb-1.5 flex justify-center">
+              <KanaSwitcher size="md" className="w-full justify-center" />
             </div>
 
             {navItems.map((item) => {
