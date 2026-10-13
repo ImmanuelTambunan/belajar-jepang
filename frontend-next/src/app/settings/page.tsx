@@ -18,8 +18,12 @@ import {
   Headphones,
   Languages,
   Sparkles,
+  RotateCcw,
 } from 'lucide-react'
 import { useLanguage } from '@/context/LanguageContext'
+import { useGamification } from '@/context/GamificationContext'
+import { ResetConfirmModal } from '@/components/ResetConfirmModal'
+import { performFullReset } from '@/utils/reset'
 import {
   saveCustomAudio,
   deleteCustomAudio,
@@ -66,6 +70,7 @@ const ROW_FILTERS = [
 
 export default function SettingsPage() {
   const { language, setLanguage, t } = useLanguage()
+  const { resetGamification } = useGamification()
   const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
@@ -94,6 +99,8 @@ export default function SettingsPage() {
   // Practice Preferences State
   const [autoPlayAudio, setAutoPlayAudio] = useState<boolean>(true)
   const [confirmResetProgress, setConfirmResetProgress] = useState(false)
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false)
+  const [resetSuccessText, setResetSuccessText] = useState('')
   const [resetDoneMsg, setResetDoneMsg] = useState(false)
 
   // Backend System State
@@ -294,16 +301,14 @@ export default function SettingsPage() {
   }
 
   // Reset Progress
-  const handleResetAllProgress = () => {
+  const handleResetAllProgress = async () => {
     try {
-      localStorage.removeItem('nihongo_sora_character_progress')
-      localStorage.removeItem('nihongo_sora_exam_history')
-      localStorage.removeItem('nihongo_sora_gamification')
-      window.dispatchEvent(new Event('nihongo_sora_progress_updated'))
-      window.dispatchEvent(new Event('nihongo_sora_gamification_updated'))
+      resetGamification()
+      const res = await performFullReset(apiBaseUrl)
+      setResetSuccessText(res.message || t('settings.practice_reset_done'))
       setConfirmResetProgress(false)
       setResetDoneMsg(true)
-      setTimeout(() => setResetDoneMsg(false), 3000)
+      setTimeout(() => setResetDoneMsg(false), 4000)
     } catch {
       // ignore
     }
@@ -850,9 +855,9 @@ export default function SettingsPage() {
           </div>
 
           {resetDoneMsg && (
-            <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center gap-2">
-              <Check className="w-4 h-4" />
-              <span>{t('settings.practice_reset_done')}</span>
+            <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+              <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>{resetSuccessText || t('settings.practice_reset_done')}</span>
             </div>
           )}
 
@@ -886,32 +891,14 @@ export default function SettingsPage() {
               {t('settings.practice_danger_desc')}
             </p>
 
-            {!confirmResetProgress ? (
-              <button
-                type="button"
-                onClick={() => setConfirmResetProgress(true)}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition cursor-pointer shadow-xs"
-              >
-                {t('settings.practice_reset_btn')}
-              </button>
-            ) : (
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleResetAllProgress}
-                  className="px-4 py-2 rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-xs font-bold transition cursor-pointer"
-                >
-                  {t('settings.practice_reset_confirm_btn')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmResetProgress(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 cursor-pointer"
-                >
-                  {t('settings.practice_cancel_btn')}
-                </button>
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={() => setIsResetModalOpen(true)}
+              className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition cursor-pointer shadow-xs flex items-center gap-2"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>{t('settings.practice_reset_btn')}</span>
+            </button>
           </div>
         </div>
       )}
@@ -985,6 +972,17 @@ export default function SettingsPage() {
           )}
         </div>
       )}
+
+      {/* FULL RESET CONFIRMATION MODAL */}
+      <ResetConfirmModal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+        onSuccess={(msg) => {
+          setResetSuccessText(msg)
+          setResetDoneMsg(true)
+          setTimeout(() => setResetDoneMsg(false), 4000)
+        }}
+      />
     </main>
   )
 }

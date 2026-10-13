@@ -207,3 +207,35 @@ func GetPracticeQueue(c *fiber.Ctx) error {
 		"progress": progressMap,
 	})
 }
+
+// ResetProgressAndAnalytics clears all user character progress and exam results from database.
+// POST /api/progress/reset
+// DELETE /api/analytics/reset
+func ResetProgressAndAnalytics(c *fiber.Ctx) error {
+	// Execute inside database transaction to ensure atomicity
+	err := config.DB.Transaction(func(tx *gorm.DB) error {
+		// 1. Delete all user character progress records
+		if err := tx.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.UserCharacterProgress{}).Error; err != nil {
+			return err
+		}
+
+		// 2. Delete all exam results records
+		if err := tx.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.ExamResult{}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Gagal mereset data progres dan analitik: " + err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"status":  "ok",
+		"message": "Seluruh riwayat dan progres berhasil direset",
+	})
+}

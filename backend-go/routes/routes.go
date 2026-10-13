@@ -22,6 +22,7 @@ func SetupRoutes(app *fiber.App) {
 	progress.Get("/summary", controllers.GetProgressSummary)
 	progress.Post("/update", controllers.UpdateProgress)
 	progress.Get("/practice-queue", controllers.GetPracticeQueue)
+	progress.Post("/reset", controllers.ResetProgressAndAnalytics)
 
 	// Exam endpoints
 	exam := api.Group("/exam")
@@ -33,4 +34,6 @@ func SetupRoutes(app *fiber.App) {
 	analytics.Get("/overview", controllers.GetAnalyticsOverview)
 	analytics.Get("/accuracy-by-row", controllers.GetAccuracyByRow)
 	analytics.Get("/exam-history", controllers.GetExamHistoryAnalytics)
+	analytics.Delete("/reset", controllers.ResetProgressAndAnalytics)
+	analytics.Post("/reset", controllers.ResetProgressAndAnalytics)
 }

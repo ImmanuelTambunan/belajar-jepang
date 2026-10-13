@@ -33,6 +33,7 @@ interface GamificationContextValue {
   levelUpModal: LevelUpEvent | null
   dismissLevelUpModal: () => void
   refreshGamification: () => void
+  resetGamification: () => void
 }
 
 const GamificationContext = createContext<GamificationContextValue | undefined>(
@@ -149,6 +150,23 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({
     setLevelUpModal(null)
   }, [])
 
+  // Reset gamification state (XP = 0, Level = 1, Streak = 0)
+  const resetGamification = useCallback(() => {
+    const freshState: GamificationState = {
+      currentXP: 0,
+      currentLevel: 1,
+      dailyStreak: 0,
+      lastActiveDate: null,
+    }
+    setState(freshState)
+    saveGamificationToStorage(freshState)
+    setActiveToasts([])
+    setLevelUpModal(null)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(GAMIFICATION_UPDATE_EVENT))
+    }
+  }, [])
+
   const levelInfo = useMemo(() => {
     return calculateLevelInfo(state.currentXP)
   }, [state.currentXP])
@@ -166,6 +184,7 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({
         levelUpModal,
         dismissLevelUpModal,
         refreshGamification,
+        resetGamification,
       }}
     >
       {children}

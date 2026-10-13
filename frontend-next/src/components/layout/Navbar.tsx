@@ -98,9 +98,11 @@ export const Navbar: React.FC = () => {
           }
         })
         setMemorizedCount(count)
+      } else {
+        setMemorizedCount(0)
       }
     } catch {
-      // ignore
+      setMemorizedCount(0)
     }
   }, [])
 
@@ -129,6 +131,7 @@ export const Navbar: React.FC = () => {
     // Listen to custom progress update events
     const handleProgressUpdate = () => refreshMasteryBadge()
     window.addEventListener('nihongo_sora_progress_updated', handleProgressUpdate)
+    window.addEventListener('nihongo_sora_gamification_updated', handleProgressUpdate)
     window.addEventListener('storage', handleProgressUpdate)
 
     // Periodic backend status check every 30s
@@ -136,6 +139,7 @@ export const Navbar: React.FC = () => {
 
     return () => {
       window.removeEventListener('nihongo_sora_progress_updated', handleProgressUpdate)
+      window.removeEventListener('nihongo_sora_gamification_updated', handleProgressUpdate)
       window.removeEventListener('storage', handleProgressUpdate)
       clearInterval(interval)
     }

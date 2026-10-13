@@ -10,6 +10,7 @@ import {
 import { UserProgress } from '@/types/progress'
 import { ExamResultSummary } from '@/types/exam'
 import rawHiraganaData from '@/data/hiragana_46.json'
+import { ResetConfirmModal } from '@/components/ResetConfirmModal'
 
 interface RawHiraganaItem {
   symbol: string
@@ -59,6 +60,8 @@ export default function AnalyticsDashboardPage() {
   const [loading, setLoading] = useState<boolean>(true)
   const [activeTab, setActiveTab] = useState<'all' | 'accuracy' | 'exams'>('all')
   const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(null)
+  const [isResetModalOpen, setIsResetModalOpen] = useState<boolean>(false)
+  const [successToast, setSuccessToast] = useState<string | null>(null)
 
   // Format Helper: Seconds to mm:ss
   const formatDuration = (seconds: number): string => {
@@ -303,6 +306,20 @@ export default function AnalyticsDashboardPage() {
 
   useEffect(() => {
     loadDashboardData()
+
+    const handleUpdate = () => {
+      loadDashboardData()
+    }
+
+    window.addEventListener('nihongo_sora_progress_updated', handleUpdate)
+    window.addEventListener('nihongo_sora_gamification_updated', handleUpdate)
+    window.addEventListener('storage', handleUpdate)
+
+    return () => {
+      window.removeEventListener('nihongo_sora_progress_updated', handleUpdate)
+      window.removeEventListener('nihongo_sora_gamification_updated', handleUpdate)
+      window.removeEventListener('storage', handleUpdate)
+    }
   }, [loadDashboardData])
 
   // Tracing accuracy grade letter helper
@@ -382,8 +399,33 @@ export default function AnalyticsDashboardPage() {
             <span className={loading ? 'animate-spin' : ''}>🔄</span>
             <span>Segarkan</span>
           </button>
+
+          <button
+            onClick={() => setIsResetModalOpen(true)}
+            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+            title="Reset seluruh progres belajar & database"
+          >
+            <span>🗑️</span>
+            <span>Reset Progres</span>
+          </button>
         </div>
       </div>
+
+      {/* SUCCESS TOAST ALERT */}
+      {successToast && (
+        <div className="mb-6 p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center justify-between shadow-sm animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <span>✅</span>
+            <span>{successToast}</span>
+          </div>
+          <button
+            onClick={() => setSuccessToast(null)}
+            className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-200 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* TABS NAVIGATION */}
       <div className="flex items-center gap-2 mb-8 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto">
@@ -1020,6 +1062,17 @@ export default function AnalyticsDashboardPage() {
           </div>
         </Link>
       </section>
+
+      {/* FULL RESET MODAL */}
+      <ResetConfirmModal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
+        onSuccess={(msg) => {
+          setSuccessToast(msg)
+          loadDashboardData()
+          setTimeout(() => setSuccessToast(null), 4000)
+        }}
+      />
     </main>
   )
 }
