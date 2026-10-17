@@ -20,7 +20,7 @@ export const ScriptProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (typeof window === 'undefined') return
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved === 'katakana' || saved === 'hiragana') {
+      if (saved === 'katakana' || saved === 'hiragana' || saved === 'kanji') {
         setScriptState(saved)
       }
     } catch {
@@ -43,7 +43,7 @@ export const ScriptProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [])
 
   const toggleScript = useCallback(() => {
-    setScript(script === 'hiragana' ? 'katakana' : 'hiragana')
+    setScript(script === 'hiragana' ? 'katakana' : script === 'katakana' ? 'kanji' : 'hiragana')
   }, [script, setScript])
 
   return (

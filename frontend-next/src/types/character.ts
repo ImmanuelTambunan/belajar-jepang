@@ -18,7 +18,29 @@ export interface CharacterReading {
   meaning?: string | null
 }
 
-export type ScriptType = 'hiragana' | 'katakana'
+export type ScriptType = 'hiragana' | 'katakana' | 'kanji'
+
+export interface KanjiExample {
+  word: string
+  reading: string
+  meaning_id: string
+  meaning_en: string
+}
+
+export interface KanjiData {
+  id: number
+  character: string
+  jlpt_level: string
+  stroke_count: number
+  onyomi: string
+  kunyomi: string
+  meaning_id: string
+  meaning_en: string
+  category: string
+  svg_strokes: string
+  strokes: string[]
+  examples?: KanjiExample[]
+}
 
 export interface CharacterData {
   id: number
@@ -26,13 +48,18 @@ export interface CharacterData {
   symbol?: string
   type: string
   script_type?: ScriptType | string
-  category?: 'gojuon' | 'dakuon' | 'handakuon' | 'yoon' | string
+  category?: 'gojuon' | 'dakuon' | 'handakuon' | 'yoon' | 'numbers' | 'calendar_time' | string
   row_group?: string
   strokes_count: number
   stroke_count?: number
   jlpt_level?: string | null
   readings: CharacterReading[]
   strokes: StrokeItem[]
+  onyomi?: string
+  kunyomi?: string
+  meaning_id?: string
+  meaning_en?: string
+  examples?: KanjiExample[]
 }
 
 export interface ApiResponse<T> {

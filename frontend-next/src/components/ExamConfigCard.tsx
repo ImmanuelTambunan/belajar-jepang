@@ -14,7 +14,9 @@ export const ExamConfigCard: React.FC<ExamConfigCardProps> = ({
 }) => {
   const { t, language } = useLanguage()
   const { script } = useScript()
-  const [scriptMode, setScriptMode] = useState<ExamScriptMode>(script || 'hiragana')
+  const [scriptMode, setScriptMode] = useState<ExamScriptMode>(
+    script === 'katakana' ? 'katakana' : 'hiragana'
+  )
   const [questionCount, setQuestionCount] = useState<number>(10)
   const [scope, setScope] = useState<ExamScope>('all')
   const [rowGroup, setRowGroup] = useState<string>('all')

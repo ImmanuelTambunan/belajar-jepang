@@ -30,6 +30,7 @@ import {
 } from '@/utils/srs'
 import rawHiraganaData from '@/data/hiragana_107.json'
 import rawKatakanaData from '@/data/katakana_107.json'
+import rawKanjiData from '@/data/kanji_n5_batch1.json'
 
 interface RawKanaItem {
   symbol: string
@@ -39,6 +40,26 @@ interface RawKanaItem {
   stroke_count: number
   reading: string
   strokes: string[]
+}
+
+interface RawKanjiItem {
+  id: number
+  character: string
+  jlpt_level: string
+  stroke_count: number
+  onyomi: string
+  kunyomi: string
+  meaning_id: string
+  meaning_en: string
+  category: string
+  strokes: string[]
+  svg_strokes: string
+  examples: Array<{
+    word: string
+    reading: string
+    meaning_id: string
+    meaning_en: string
+  }>
 }
 
 const FALLBACK_HIRAGANA: CharacterData[] = (rawHiraganaData as RawKanaItem[]).map((item, idx) => ({
@@ -99,6 +120,42 @@ const FALLBACK_KATAKANA: CharacterData[] = (rawKatakanaData as RawKanaItem[]).ma
   })),
 }))
 
+const FALLBACK_KANJI: CharacterData[] = (rawKanjiData as RawKanjiItem[]).map((item) => ({
+  id: 2000 + item.id,
+  character: item.character,
+  symbol: item.character,
+  type: 'kanji',
+  script_type: 'kanji',
+  category: item.category,
+  row_group: item.category,
+  strokes_count: item.stroke_count,
+  stroke_count: item.stroke_count,
+  jlpt_level: item.jlpt_level || 'N5',
+  onyomi: item.onyomi,
+  kunyomi: item.kunyomi,
+  meaning_id: item.meaning_id,
+  meaning_en: item.meaning_en,
+  examples: item.examples,
+  readings: [
+    {
+      id: 2000 + item.id,
+      character_id: 2000 + item.id,
+      romaji: item.kunyomi || item.onyomi,
+      onyomi: item.onyomi,
+      kunyomi: item.kunyomi,
+      meaning: item.meaning_id,
+    },
+  ],
+  strokes: item.strokes.map((st, sIdx) => ({
+    id: (2000 + item.id) * 100 + sIdx + 1,
+    character_id: 2000 + item.id,
+    stroke_order: sIdx + 1,
+    stroke_number: sIdx + 1,
+    svg_path: st,
+    path_data: st,
+  })),
+}))
+
 const PRACTICE_CATEGORY_TABS = [
   { id: 'all', label: 'Semua', count: 107 },
   { id: 'gojuon', label: 'Gojūon', count: 46 },
@@ -106,7 +163,29 @@ const PRACTICE_CATEGORY_TABS = [
   { id: 'yoon', label: 'Yōon', count: 36 },
 ] as const
 
-function getRowFiltersByCategory(script: 'hiragana' | 'katakana'): Record<string, { id: string; label: string }[]> {
+const KANJI_PRACTICE_CATEGORY_TABS = [
+  { id: 'all', label: 'Semua', count: 23 },
+  { id: 'numbers', label: 'Angka', count: 13 },
+  { id: 'calendar_time', label: 'Hari/Waktu', count: 10 },
+] as const
+
+function getRowFiltersByCategory(script: 'hiragana' | 'katakana' | 'kanji'): Record<string, { id: string; label: string }[]> {
+  if (script === 'kanji') {
+    return {
+      all: [
+        { id: 'all', label: 'Semua Kanji N5 (23)' },
+        { id: 'numbers', label: 'Angka & Kuantitas (13)' },
+        { id: 'calendar_time', label: 'Hari & Waktu (10)' },
+      ],
+      numbers: [
+        { id: 'all', label: 'Semua Angka (13)' },
+      ],
+      calendar_time: [
+        { id: 'all', label: 'Semua Hari & Waktu (10)' },
+      ],
+    }
+  }
+
   const isKatakana = script === 'katakana'
   return {
     all: [
@@ -181,7 +260,7 @@ function getRowFiltersByCategory(script: 'hiragana' | 'katakana'): Record<string
 const LOCAL_STORAGE_KEY = 'nihongo_sora_character_progress'
 
 function PracticeStudioContent() {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const { script, setScript } = useScript()
   const searchParams = useSearchParams()
   const initialCharParam = searchParams.get('char')
@@ -195,7 +274,11 @@ function PracticeStudioContent() {
 
   // Master character pool & progress
   const [allCharacters, setAllCharacters] = useState<CharacterData[]>(
-    script === 'katakana' ? FALLBACK_KATAKANA : FALLBACK_HIRAGANA
+    script === 'kanji'
+      ? FALLBACK_KANJI
+      : script === 'katakana'
+      ? FALLBACK_KATAKANA
+      : FALLBACK_HIRAGANA
   )
   const [progressMap, setProgressMap] = useState<Record<number, UserProgress>>({})
   const [latestExam, setLatestExam] = useState<ExamResultSummary | null>(null)
@@ -204,11 +287,13 @@ function PracticeStudioContent() {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
 
   // Selected character & queue
-  const [selectedCategory, setSelectedCategory] = useState<
-    'all' | 'gojuon' | 'dakuon_handakuon' | 'yoon'
-  >('all')
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedChar, setSelectedChar] = useState<CharacterData>(
-    script === 'katakana' ? FALLBACK_KATAKANA[0] : FALLBACK_HIRAGANA[0]
+    script === 'kanji'
+      ? FALLBACK_KANJI[0]
+      : script === 'katakana'
+      ? FALLBACK_KATAKANA[0]
+      : FALLBACK_HIRAGANA[0]
   )
   const [selectedRowGroup, setSelectedRowGroup] = useState<string>(
     initialFilterParam === 'needs_review' ? 'needs_review' : 'all'
@@ -243,11 +328,21 @@ function PracticeStudioContent() {
 
   // Synchronize script from query params if specified
   useEffect(() => {
-    if (initialScriptParam === 'katakana' && script !== 'katakana') {
+    if (initialScriptParam === 'kanji' && script !== 'kanji') {
+      setScript('kanji')
+    } else if (initialScriptParam === 'katakana' && script !== 'katakana') {
       setScript('katakana')
     } else if (initialScriptParam === 'hiragana' && script !== 'hiragana') {
       setScript('hiragana')
     } else if (initialCharParam) {
+      // Check if requested character is in Kanji dataset
+      const isKanjiChar = FALLBACK_KANJI.some(
+        (k) => k.character === initialCharParam || k.symbol === initialCharParam
+      )
+      if (isKanjiChar && script !== 'kanji') {
+        setScript('kanji')
+        return
+      }
       // Check if requested character is in Katakana dataset
       const isKatakanaChar = FALLBACK_KATAKANA.some(
         (k) => k.character === initialCharParam || k.symbol === initialCharParam
@@ -257,7 +352,9 @@ function PracticeStudioContent() {
       }
     } else if (initialIdParam) {
       const numId = parseInt(initialIdParam, 10)
-      if (numId > 107 && script !== 'katakana') {
+      if (numId > 2000 && script !== 'kanji') {
+        setScript('kanji')
+      } else if (numId > 107 && numId <= 2000 && script !== 'katakana') {
         setScript('katakana')
       }
     }
@@ -305,58 +402,154 @@ function PracticeStudioContent() {
   const fetchCharacters = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${apiBaseUrl}/characters?script=${script}`)
-      if (res.ok) {
-        const json = await res.json()
-        if (json.data && json.data.length > 0) {
-          const normalized: CharacterData[] = json.data.map((c: CharacterData) => ({
-            ...c,
-            character: c.character || c.symbol || '',
-            symbol: c.symbol || c.character || '',
-            strokes_count: c.strokes_count || c.stroke_count || c.strokes?.length || 0,
-            strokes: (c.strokes || []).map((s, sIdx) => ({
-              ...s,
-              stroke_order: s.stroke_order ?? s.stroke_number ?? sIdx + 1,
-              stroke_number: s.stroke_number ?? s.stroke_order ?? sIdx + 1,
-              svg_path: s.svg_path || s.path_data || '',
-              path_data: s.path_data || s.svg_path || '',
-            })),
-          }))
-          setAllCharacters(normalized)
-          setIsLiveApi(true)
+      if (script === 'kanji') {
+        const res = await fetch(`${apiBaseUrl}/kanjis`)
+        if (res.ok) {
+          const json = await res.json()
+          if (json.data && json.data.length > 0) {
+            const normalized: CharacterData[] = json.data.map((k: any) => {
+              const strokesList: string[] = Array.isArray(k.strokes)
+                ? k.strokes
+                : k.svg_strokes
+                ? JSON.parse(k.svg_strokes)
+                : []
+              const examplesList = Array.isArray(k.examples)
+                ? k.examples
+                : k.examples
+                ? JSON.parse(k.examples)
+                : []
+              const kanjiId = k.id > 2000 ? k.id : 2000 + k.id
+              return {
+                id: kanjiId,
+                character: k.character,
+                symbol: k.character,
+                type: 'kanji',
+                script_type: 'kanji',
+                category: k.category,
+                row_group: k.category,
+                strokes_count: k.stroke_count || strokesList.length,
+                stroke_count: k.stroke_count || strokesList.length,
+                jlpt_level: k.jlpt_level || 'N5',
+                onyomi: k.onyomi,
+                kunyomi: k.kunyomi,
+                meaning_id: k.meaning_id,
+                meaning_en: k.meaning_en,
+                examples: examplesList,
+                readings: [
+                  {
+                    id: kanjiId,
+                    character_id: kanjiId,
+                    romaji: k.kunyomi || k.onyomi,
+                    onyomi: k.onyomi,
+                    kunyomi: k.kunyomi,
+                    meaning: k.meaning_id,
+                  },
+                ],
+                strokes: strokesList.map((st: string, sIdx: number) => ({
+                  id: kanjiId * 100 + sIdx + 1,
+                  character_id: kanjiId,
+                  stroke_order: sIdx + 1,
+                  stroke_number: sIdx + 1,
+                  svg_path: st,
+                  path_data: st,
+                })),
+              }
+            })
+            setAllCharacters(normalized)
+            setIsLiveApi(true)
 
-          // Pick target character from query param if available
-          if (initialCharParam) {
-            const found = normalized.find(
-              (item) => item.character === initialCharParam || item.symbol === initialCharParam
-            )
-            if (found) {
-              setSelectedChar(found)
-              setLoading(false)
-              return
+            // Pick target character from query param if available
+            if (initialCharParam) {
+              const found = normalized.find(
+                (item) => item.character === initialCharParam || item.symbol === initialCharParam
+              )
+              if (found) {
+                setSelectedChar(found)
+                setLoading(false)
+                return
+              }
+            } else if (initialIdParam) {
+              const numId = parseInt(initialIdParam, 10)
+              const found = normalized.find(
+                (item) =>
+                  String(item.id) === initialIdParam ||
+                  item.id === numId ||
+                  item.id === 2000 + numId
+              )
+              if (found) {
+                setSelectedChar(found)
+                setLoading(false)
+                return
+              }
             }
-          } else if (initialIdParam) {
-            const found = normalized.find((item) => String(item.id) === initialIdParam)
-            if (found) {
-              setSelectedChar(found)
-              setLoading(false)
-              return
-            }
+
+            setSelectedChar((prev) => {
+              const belongsToScript = normalized.some((item) => item.id === prev?.id)
+              return belongsToScript ? prev : normalized[0]
+            })
+            setLoading(false)
+            return
           }
+        }
+      } else {
+        const res = await fetch(`${apiBaseUrl}/characters?script=${script}`)
+        if (res.ok) {
+          const json = await res.json()
+          if (json.data && json.data.length > 0) {
+            const normalized: CharacterData[] = json.data.map((c: CharacterData) => ({
+              ...c,
+              character: c.character || c.symbol || '',
+              symbol: c.symbol || c.character || '',
+              strokes_count: c.strokes_count || c.stroke_count || c.strokes?.length || 0,
+              strokes: (c.strokes || []).map((s, sIdx) => ({
+                ...s,
+                stroke_order: s.stroke_order ?? s.stroke_number ?? sIdx + 1,
+                stroke_number: s.stroke_number ?? s.stroke_order ?? sIdx + 1,
+                svg_path: s.svg_path || s.path_data || '',
+                path_data: s.path_data || s.svg_path || '',
+              })),
+            }))
+            setAllCharacters(normalized)
+            setIsLiveApi(true)
 
-          // Ensure selectedChar belongs to current script
-          setSelectedChar((prev) => {
-            const belongsToScript = normalized.some((item) => item.id === prev?.id)
-            return belongsToScript ? prev : normalized[0]
-          })
-          setLoading(false)
-          return
+            // Pick target character from query param if available
+            if (initialCharParam) {
+              const found = normalized.find(
+                (item) => item.character === initialCharParam || item.symbol === initialCharParam
+              )
+              if (found) {
+                setSelectedChar(found)
+                setLoading(false)
+                return
+              }
+            } else if (initialIdParam) {
+              const found = normalized.find((item) => String(item.id) === initialIdParam)
+              if (found) {
+                setSelectedChar(found)
+                setLoading(false)
+                return
+              }
+            }
+
+            // Ensure selectedChar belongs to current script
+            setSelectedChar((prev) => {
+              const belongsToScript = normalized.some((item) => item.id === prev?.id)
+              return belongsToScript ? prev : normalized[0]
+            })
+            setLoading(false)
+            return
+          }
         }
       }
       throw new Error('API offline')
     } catch {
       setIsLiveApi(false)
-      const fallback = script === 'katakana' ? FALLBACK_KATAKANA : FALLBACK_HIRAGANA
+      const fallback =
+        script === 'kanji'
+          ? FALLBACK_KANJI
+          : script === 'katakana'
+          ? FALLBACK_KATAKANA
+          : FALLBACK_HIRAGANA
       setAllCharacters(fallback)
 
       if (initialCharParam) {
@@ -369,7 +562,13 @@ function PracticeStudioContent() {
           return
         }
       } else if (initialIdParam) {
-        const found = fallback.find((item) => String(item.id) === initialIdParam)
+        const numId = parseInt(initialIdParam, 10)
+        const found = fallback.find(
+          (item) =>
+            String(item.id) === initialIdParam ||
+            item.id === numId ||
+            item.id === 2000 + numId
+        )
         if (found) {
           setSelectedChar(found)
           setLoading(false)
@@ -410,6 +609,15 @@ function PracticeStudioContent() {
   // Characters in current active category
   const sidebarCategoryCharacters = useMemo(() => {
     let list = allCharacters
+    if (script === 'kanji') {
+      if (selectedCategory === 'numbers') {
+        list = list.filter((c) => c.category === 'numbers')
+      } else if (selectedCategory === 'calendar_time') {
+        list = list.filter((c) => c.category === 'calendar_time')
+      }
+      return list
+    }
+
     if (selectedCategory === 'gojuon') {
       list = list.filter((c) => (c.category || 'gojuon') === 'gojuon')
     } else if (selectedCategory === 'dakuon_handakuon') {
@@ -418,12 +626,17 @@ function PracticeStudioContent() {
       list = list.filter((c) => c.category === 'yoon')
     }
     return list
-  }, [allCharacters, selectedCategory])
+  }, [allCharacters, selectedCategory, script])
 
   // Filtered sidebar characters
   const sidebarCharacters = useMemo(() => {
     if (selectedRowGroup === 'needs_review') {
       return needsReviewList.filter((c) => {
+        if (script === 'kanji') {
+          if (selectedCategory === 'numbers') return c.category === 'numbers'
+          if (selectedCategory === 'calendar_time') return c.category === 'calendar_time'
+          return true
+        }
         if (selectedCategory === 'gojuon') return (c.category || 'gojuon') === 'gojuon'
         if (selectedCategory === 'dakuon_handakuon')
           return c.category === 'dakuon' || c.category === 'handakuon'
@@ -432,11 +645,14 @@ function PracticeStudioContent() {
       })
     }
     if (selectedRowGroup === 'all') return sidebarCategoryCharacters
+    if (script === 'kanji') {
+      return sidebarCategoryCharacters.filter((c) => c.category === selectedRowGroup)
+    }
     if (selectedRowGroup === 'wa_n') {
       return sidebarCategoryCharacters.filter((c) => c.row_group === 'wa' || c.row_group === 'n')
     }
     return sidebarCategoryCharacters.filter((c) => c.row_group === selectedRowGroup)
-  }, [sidebarCategoryCharacters, selectedRowGroup, needsReviewList, selectedCategory])
+  }, [sidebarCategoryCharacters, selectedRowGroup, needsReviewList, selectedCategory, script])
 
   // Summary statistics (Dynamic 107 characters for active script)
   const summary: ProgressSummary = useMemo(() => {
@@ -514,7 +730,7 @@ function PracticeStudioContent() {
       newlyMemorized: prev.newlyMemorized + (existing.status !== 'memorized' ? 1 : 0),
     }))
 
-    if (isLiveApi) {
+    if (isLiveApi && script !== 'kanji') {
       try {
         await fetch(`${apiBaseUrl}/progress/update`, {
           method: 'POST',
@@ -562,7 +778,7 @@ function PracticeStudioContent() {
       repeatedCount: prev.repeatedCount + 1,
     }))
 
-    if (isLiveApi) {
+    if (isLiveApi && script !== 'kanji') {
       try {
         await fetch(`${apiBaseUrl}/progress/update`, {
           method: 'POST',
@@ -610,7 +826,7 @@ function PracticeStudioContent() {
       )
     }
 
-    if (isLiveApi) {
+    if (isLiveApi && script !== 'kanji') {
       try {
         await fetch(`${apiBaseUrl}/progress/update`, {
           method: 'POST',
@@ -670,23 +886,60 @@ function PracticeStudioContent() {
                   )
                 }
                 return (
-                  <span className="text-2xl font-black text-slate-900 dark:text-white">
+                  <span className={`text-2xl font-black text-slate-900 dark:text-white ${script === 'kanji' ? 'font-serif' : ''}`}>
                     {selectedCharText}
                   </span>
                 )
               })()}
-              <span className="text-sm font-mono font-bold text-sky-600 dark:text-sky-400">
-                /{selectedChar.readings?.[0]?.romaji}/
-              </span>
+              {script === 'kanji' ? (
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                  {language === 'id'
+                    ? selectedChar.meaning_id || selectedChar.readings?.[0]?.meaning
+                    : selectedChar.meaning_en || selectedChar.meaning_id || selectedChar.readings?.[0]?.meaning}
+                </span>
+              ) : (
+                <span className="text-sm font-mono font-bold text-sky-600 dark:text-sky-400">
+                  /{selectedChar.readings?.[0]?.romaji}/
+                </span>
+              )}
             </div>
 
             <div className="hidden sm:flex items-center gap-1.5">
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300">
-                Baris {selectedChar.row_group}
-              </span>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                {selectedChar.strokes_count} Goresan
-              </span>
+              {script === 'kanji' ? (
+                <>
+                  <span className="text-[11px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                    JLPT {selectedChar.jlpt_level || 'N5'}
+                  </span>
+                  {selectedChar.onyomi && (
+                    <span
+                      className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300 font-mono"
+                      title={`On'yomi: ${selectedChar.onyomi}`}
+                    >
+                      ON: {selectedChar.onyomi.split(',')[0]}
+                    </span>
+                  )}
+                  {selectedChar.kunyomi && (
+                    <span
+                      className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 font-mono"
+                      title={`Kun'yomi: ${selectedChar.kunyomi}`}
+                    >
+                      KUN: {selectedChar.kunyomi.split(',')[0]}
+                    </span>
+                  )}
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                    {selectedChar.strokes_count || selectedChar.stroke_count} {language === 'id' ? 'Goresan' : 'Strokes'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300">
+                    Baris {selectedChar.row_group}
+                  </span>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                    {selectedChar.strokes_count} Goresan
+                  </span>
+                </>
+              )}
               {isCurrentMemorized && (
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 flex items-center gap-1">
                   ✓ {t('common.mastered')}
@@ -783,7 +1036,7 @@ function PracticeStudioContent() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-sky-500" />
-                  <span>{script === 'katakana' ? '107 Katakana' : '107 Hiragana'}</span>
+                  <span>{script === 'kanji' ? '23 Kanji N5' : script === 'katakana' ? '107 Katakana' : '107 Hiragana'}</span>
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                   {summary.memorized_count}/{allCharacters.length} {t('nav.memorized')}
@@ -796,8 +1049,8 @@ function PracticeStudioContent() {
               </div>
 
               {/* Category Filter Tabs */}
-              <div className="grid grid-cols-2 gap-1 mb-2">
-                {PRACTICE_CATEGORY_TABS.map((cat) => {
+              <div className={`grid ${script === 'kanji' ? 'grid-cols-3' : 'grid-cols-2'} gap-1 mb-2`}>
+                {(script === 'kanji' ? KANJI_PRACTICE_CATEGORY_TABS : PRACTICE_CATEGORY_TABS).map((cat) => {
                   const isCatSelected = selectedCategory === cat.id
                   return (
                     <button
@@ -942,17 +1195,28 @@ function PracticeStudioContent() {
                           </span>
                         </div>
                       ) : (
-                        <span className="text-xl font-bold leading-tight">
+                        <span className={`text-xl font-bold leading-tight ${script === 'kanji' ? 'font-serif' : ''}`}>
                           {charText}
                         </span>
                       )}
 
                       <span
-                        className={`text-[10px] font-mono leading-tight ${
-                          isSelected ? 'text-sky-100' : 'text-slate-400'
+                        className={`text-[9px] font-medium leading-tight truncate max-w-full px-0.5 ${
+                          isSelected ? 'text-sky-100' : 'text-slate-500 dark:text-slate-400'
                         }`}
+                        title={
+                          (script === 'kanji'
+                            ? (language === 'id'
+                                ? (char.meaning_id || char.readings?.[0]?.meaning)
+                                : (char.meaning_en || char.meaning_id))
+                            : char.readings?.[0]?.romaji) || undefined
+                        }
                       >
-                        {char.readings?.[0]?.romaji}
+                        {script === 'kanji'
+                          ? (language === 'id'
+                              ? (char.meaning_id || char.readings?.[0]?.romaji || char.readings?.[0]?.meaning || '')
+                              : (char.meaning_en || char.meaning_id || ''))
+                          : char.readings?.[0]?.romaji}
                       </span>
 
                       {score !== undefined && score !== null && (

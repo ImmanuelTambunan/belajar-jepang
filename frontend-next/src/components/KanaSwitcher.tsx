@@ -82,6 +82,33 @@ export const KanaSwitcher: React.FC<KanaSwitcherProps> = ({
           <span className="hidden xs:inline-block w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
         )}
       </button>
+
+      {/* Kanji (N5) option */}
+      <button
+        type="button"
+        onClick={() => setScript('kanji')}
+        className={`flex items-center gap-1.5 sm:gap-2 rounded-xl font-bold transition-all duration-200 cursor-pointer ${
+          isSmall
+            ? 'px-2.5 py-1 text-xs'
+            : isLarge
+            ? 'px-4 py-2 text-sm sm:text-base'
+            : 'px-3 sm:px-3.5 py-1.5 text-xs sm:text-sm'
+        } ${
+          script === 'kanji'
+            ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-200/60 dark:border-slate-700 ring-2 ring-emerald-500/20'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
+        }`}
+        title={t('script.kanji_desc') || 'Koleksi 23 Kanji JLPT N5 Batch 1'}
+        aria-pressed={script === 'kanji'}
+      >
+        <span className="font-serif text-sm sm:text-base leading-none text-emerald-500 dark:text-emerald-400">
+          漢
+        </span>
+        <span>Kanji (N5)</span>
+        {showBadge && script === 'kanji' && (
+          <span className="hidden xs:inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        )}
+      </button>
     </div>
   )
 }

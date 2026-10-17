@@ -427,6 +427,12 @@ export async function playCharacterAudio(
     return
   }
 
+  // For Kanji, immediately speak using Web Speech API ja-JP
+  if (input.script_type === 'kanji') {
+    await speakWithWebSpeech(input, options)
+    return
+  }
+
   const basePath = options.nativeBasePath || '/audio/hiragana'
 
   // Helper to fallback to speech synthesis

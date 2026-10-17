@@ -33,6 +33,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&models.CharacterStroke{},
 		&models.UserCharacterProgress{},
 		&models.ExamResult{},
+		&models.Kanji{},
 	)
 	if err != nil {
 		return fmt.Errorf("gagal migrasi: %w", err)
@@ -247,7 +248,78 @@ func SeedKatakanaDataset(db *gorm.DB) error {
 	return nil
 }
 
-// AutoMigrateAndSeed runs AutoMigrate, SeedHiraganaDataset, and SeedKatakanaDataset sequentially.
+// RawKanjiItem represents the raw JSON item from kanji_n5_batch1.json.
+type RawKanjiItem struct {
+	ID          uint                 `json:"id"`
+	Character   string               `json:"character"`
+	JlptLevel   string               `json:"jlpt_level"`
+	StrokeCount int                  `json:"stroke_count"`
+	Onyomi      string               `json:"onyomi"`
+	Kunyomi     string               `json:"kunyomi"`
+	MeaningID   string               `json:"meaning_id"`
+	MeaningEN   string               `json:"meaning_en"`
+	Category    string               `json:"category"`
+	Strokes     []string             `json:"strokes"`
+	SvgStrokes  string               `json:"svg_strokes"`
+	Examples    []models.KanjiExample `json:"examples"`
+}
+
+// SeedKanjiDataset reads dataset and seeds 23 N5 Kanji Batch 1.
+func SeedKanjiDataset(db *gorm.DB) error {
+	log.Println("🌱 Memulai Seeder: Membaca dataset Kanji N5 Batch 1...")
+
+	// Ensure binary collation so Japanese kanji symbols are treated with exact precision
+	db.Exec("ALTER TABLE `kanjis` MODIFY `character` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL")
+
+	rawData, foundPath, err := loadDatasetFile("kanji_n5_batch1.json")
+	if err != nil {
+		return err
+	}
+
+	log.Printf("📂 Memuat dataset Kanji dari %s (%d bytes)", foundPath, len(rawData))
+
+	var items []RawKanjiItem
+	if err := json.Unmarshal(rawData, &items); err != nil {
+		return fmt.Errorf("gagal parsing JSON dataset Kanji: %w", err)
+	}
+
+	seededCount := 0
+	for _, item := range items {
+		examplesJSON, _ := json.Marshal(item.Examples)
+		svgStrokes := item.SvgStrokes
+		if svgStrokes == "" && len(item.Strokes) > 0 {
+			rawSvg, _ := json.Marshal(item.Strokes)
+			svgStrokes = string(rawSvg)
+		}
+
+		kanji := models.Kanji{
+			ID:          item.ID,
+			Character:   item.Character,
+			JlptLevel:   item.JlptLevel,
+			StrokeCount: item.StrokeCount,
+			Onyomi:      item.Onyomi,
+			Kunyomi:     item.Kunyomi,
+			MeaningID:   item.MeaningID,
+			MeaningEN:   item.MeaningEN,
+			Category:    item.Category,
+			SvgStrokes:  svgStrokes,
+			Examples:    string(examplesJSON),
+		}
+
+		if err := db.Where("`id` = ? OR `character` = ?", item.ID, item.Character).
+			Assign(kanji).
+			FirstOrCreate(&kanji).Error; err != nil {
+			log.Printf("⚠️ Gagal seeding Kanji #%d %s: %v", item.ID, item.Character, err)
+			continue
+		}
+		seededCount++
+	}
+
+	log.Printf("✅ Seeding Kanji N5 Batch 1 berhasil (%d/%d kanji siap).", seededCount, len(items))
+	return nil
+}
+
+// AutoMigrateAndSeed runs AutoMigrate, SeedHiraganaDataset, SeedKatakanaDataset, and SeedKanjiDataset sequentially.
 func AutoMigrateAndSeed(db *gorm.DB) error {
 	if err := AutoMigrate(db); err != nil {
 		return err
@@ -256,6 +328,9 @@ func AutoMigrateAndSeed(db *gorm.DB) error {
 		return err
 	}
 	if err := SeedKatakanaDataset(db); err != nil {
+		return err
+	}
+	if err := SeedKanjiDataset(db); err != nil {
 		return err
 	}
 	// Clean obsolete character IDs > 214

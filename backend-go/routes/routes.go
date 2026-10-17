@@ -18,6 +18,10 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/characters", controllers.GetAllCharacters)
 	api.Get("/characters/:id", controllers.GetCharacterDetail)
 
+	// Kanji endpoints (Fase 10.1 JLPT N5)
+	api.Get("/kanjis", controllers.GetKanjis)
+	api.Get("/kanjis/:id", controllers.GetKanjiDetail)
+
 	// User progress & practice memorization endpoints
 	progress := api.Group("/progress")
 	progress.Get("/summary", controllers.GetProgressSummary)
