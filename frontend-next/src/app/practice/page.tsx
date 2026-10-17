@@ -164,7 +164,11 @@ const PRACTICE_CATEGORY_TABS = [
 ] as const
 
 const KANJI_PRACTICE_CATEGORY_TABS = [
-  { id: 'all', label: 'Semua', count: 48 },
+  { id: 'all', label: 'Semua', count: 75 },
+  { id: 'nature_weather', label: 'Alam/Cuaca', count: 8 },
+  { id: 'animals', label: 'Hewan', count: 3 },
+  { id: 'school_education', label: 'Sekolah', count: 6 },
+  { id: 'places_transport', label: 'Tempat/Trans.', count: 10 },
   { id: 'people_family', label: 'Manusia', count: 9 },
   { id: 'body_parts', label: 'Tubuh', count: 5 },
   { id: 'direction_size', label: 'Arah/Ukuran', count: 9 },
@@ -177,7 +181,11 @@ function getRowFiltersByCategory(script: 'hiragana' | 'katakana' | 'kanji'): Rec
   if (script === 'kanji') {
     return {
       all: [
-        { id: 'all', label: 'Semua Kanji N5 (48)' },
+        { id: 'all', label: 'Semua Kanji N5 (75)' },
+        { id: 'nature_weather', label: 'Alam & Cuaca (8)' },
+        { id: 'animals', label: 'Hewan (3)' },
+        { id: 'school_education', label: 'Sekolah & Belajar (6)' },
+        { id: 'places_transport', label: 'Tempat & Transportasi (10)' },
         { id: 'people_family', label: 'Manusia & Keluarga (9)' },
         { id: 'body_parts', label: 'Bagian Tubuh (5)' },
         { id: 'direction_size', label: 'Arah & Ukuran (9)' },
@@ -185,6 +193,10 @@ function getRowFiltersByCategory(script: 'hiragana' | 'katakana' | 'kanji'): Rec
         { id: 'calendar_time', label: 'Hari & Waktu (10)' },
         { id: 'origin_place', label: 'Asal & Tempat (2)' },
       ],
+      nature_weather: [{ id: 'all', label: 'Semua Alam & Cuaca (8)' }],
+      animals: [{ id: 'all', label: 'Semua Hewan (3)' }],
+      school_education: [{ id: 'all', label: 'Semua Sekolah & Belajar (6)' }],
+      places_transport: [{ id: 'all', label: 'Semua Tempat & Transportasi (10)' }],
       people_family: [{ id: 'all', label: 'Semua Manusia & Keluarga (9)' }],
       body_parts: [{ id: 'all', label: 'Semua Bagian Tubuh (5)' }],
       direction_size: [{ id: 'all', label: 'Semua Arah & Ukuran (9)' }],
@@ -1041,7 +1053,7 @@ function PracticeStudioContent() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-sky-500" />
-                  <span>{script === 'kanji' ? `${allCharacters.length || 48} Kanji N5` : script === 'katakana' ? '107 Katakana' : '107 Hiragana'}</span>
+                  <span>{script === 'kanji' ? `${allCharacters.length || 75} Kanji N5` : script === 'katakana' ? '107 Katakana' : '107 Hiragana'}</span>
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                   {summary.memorized_count}/{allCharacters.length} {t('nav.memorized')}

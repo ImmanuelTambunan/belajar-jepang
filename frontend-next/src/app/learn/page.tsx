@@ -170,6 +170,10 @@ export type CategoryId =
   | 'gojuon'
   | 'dakuon_handakuon'
   | 'yoon'
+  | 'nature_weather'
+  | 'animals'
+  | 'school_education'
+  | 'places_transport'
   | 'people_family'
   | 'body_parts'
   | 'direction_size'
@@ -181,13 +185,29 @@ function getRowTabsByCategory(script: 'hiragana' | 'katakana' | 'kanji'): Record
   if (script === 'kanji') {
     return {
       all: [
-        { id: 'all', label: 'Semua', sublabel: '48 Kanji N5', rowGroups: [] },
+        { id: 'all', label: 'Semua', sublabel: '75 Kanji N5', rowGroups: [] },
+        { id: 'nature_weather', label: 'Alam & Cuaca', sublabel: '8 Karakter', rowGroups: ['nature_weather'] },
+        { id: 'animals', label: 'Hewan', sublabel: '3 Karakter', rowGroups: ['animals'] },
+        { id: 'school_education', label: 'Sekolah & Belajar', sublabel: '6 Karakter', rowGroups: ['school_education'] },
+        { id: 'places_transport', label: 'Tempat & Transportasi', sublabel: '10 Karakter', rowGroups: ['places_transport'] },
         { id: 'people_family', label: 'Manusia & Keluarga', sublabel: '9 Karakter', rowGroups: ['people_family'] },
         { id: 'body_parts', label: 'Bagian Tubuh', sublabel: '5 Karakter', rowGroups: ['body_parts'] },
         { id: 'direction_size', label: 'Arah & Ukuran', sublabel: '9 Karakter', rowGroups: ['direction_size'] },
         { id: 'numbers', label: 'Angka', sublabel: '13 Karakter', rowGroups: ['numbers'] },
         { id: 'calendar_time', label: 'Hari & Waktu', sublabel: '10 Karakter', rowGroups: ['calendar_time'] },
         { id: 'origin_place', label: 'Asal & Tempat', sublabel: '2 Karakter', rowGroups: ['origin_place'] },
+      ],
+      nature_weather: [
+        { id: 'all', label: 'Semua Alam & Cuaca', sublabel: '8 Karakter (山..空)', rowGroups: ['nature_weather'] },
+      ],
+      animals: [
+        { id: 'all', label: 'Semua Hewan', sublabel: '3 Karakter (犬, 魚, 鳥)', rowGroups: ['animals'] },
+      ],
+      school_education: [
+        { id: 'all', label: 'Semua Sekolah & Belajar', sublabel: '6 Karakter (学..何)', rowGroups: ['school_education'] },
+      ],
+      places_transport: [
+        { id: 'all', label: 'Semua Tempat & Transportasi', sublabel: '10 Karakter (駅..語)', rowGroups: ['places_transport'] },
       ],
       people_family: [
         { id: 'all', label: 'Semua Manusia & Keluarga', sublabel: '9 Karakter (人..生)', rowGroups: ['people_family'] },
@@ -259,6 +279,10 @@ function getRowTabsByCategory(script: 'hiragana' | 'katakana' | 'kanji'): Record
       { id: 'bya', label: 'Bya', sublabel: isKatakana ? 'ビャ, ビュ, ビョ' : 'びゃ, びゅ, びょ', rowGroups: ['bya'] },
       { id: 'pya', label: 'Pya', sublabel: isKatakana ? 'ピャ, ピュ, ピョ' : 'ぴゃ, ぴゅ, ぴょ', rowGroups: ['pya'] },
     ],
+    nature_weather: [],
+    animals: [],
+    school_education: [],
+    places_transport: [],
     numbers: [],
     calendar_time: [],
     people_family: [],
@@ -304,7 +328,11 @@ export default function LearnPage() {
   // Category navigation tabs for Kanji
   const kanjiCategoryTabs = useMemo<{ id: CategoryId; label: string; sublabel: string; icon: string }[]>(
     () => [
-      { id: 'all', label: t('categories.kanji_all') || 'Semua (48)', sublabel: t('categories.kanji_all_count') || '48 Kanji', icon: '🎴' },
+      { id: 'all', label: t('categories.kanji_all') || 'Semua (75)', sublabel: t('categories.kanji_all_count') || '75 Kanji', icon: '🎴' },
+      { id: 'nature_weather', label: t('categories.kanji_nature') || 'Alam & Cuaca', sublabel: t('categories.kanji_nature_sub') || '8 Karakter (山 .. 空)', icon: '🏔️' },
+      { id: 'animals', label: t('categories.kanji_animals') || 'Hewan', sublabel: t('categories.kanji_animals_sub') || '3 Karakter (犬, 魚, 鳥)', icon: '🐕' },
+      { id: 'school_education', label: t('categories.kanji_school') || 'Sekolah & Belajar', sublabel: t('categories.kanji_school_sub') || '6 Karakter (学 .. 何)', icon: '🏫' },
+      { id: 'places_transport', label: t('categories.kanji_places') || 'Tempat & Transportasi', sublabel: t('categories.kanji_places_sub') || '10 Karakter (駅 .. 語)', icon: '🚆' },
       { id: 'people_family', label: t('categories.kanji_people') || 'Manusia & Keluarga', sublabel: t('categories.kanji_people_sub') || '9 Karakter (人 .. 生)', icon: '👥' },
       { id: 'body_parts', label: t('categories.kanji_body') || 'Bagian Tubuh', sublabel: t('categories.kanji_body_sub') || '5 Karakter (目 .. 足)', icon: '👁️' },
       { id: 'direction_size', label: t('categories.kanji_direction') || 'Arah & Ukuran', sublabel: t('categories.kanji_direction_sub') || '9 Karakter (上 .. 白)', icon: '🧭' },
@@ -603,8 +631,8 @@ export default function LearnPage() {
             <span>
               {script === 'kanji'
                 ? (language === 'id'
-                    ? '48 Kanji JLPT N5 • Batch 1 & 2'
-                    : '48 JLPT N5 Kanji • Batch 1 & 2')
+                    ? '75 Kanji JLPT N5 • Batch 1, 2 & 3'
+                    : '75 JLPT N5 Kanji • Batch 1, 2 & 3')
                 : `${t('categories.all_count')} • ${
                     script === 'katakana'
                       ? language === 'id'
@@ -618,14 +646,14 @@ export default function LearnPage() {
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
             {script === 'kanji'
-              ? (t('learn.title_kanji') || 'Koleksi 48 Kanji JLPT N5')
+              ? (t('learn.title_kanji') || 'Koleksi 75 Kanji JLPT N5')
               : script === 'katakana'
               ? t('learn.title_katakana')
               : t('learn.title_hiragana')}
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
             {script === 'kanji'
-              ? (t('learn.subtitle_kanji') || 'Kuasai 48 Kanji dasar JLPT N5 dengan urutan goresan presisi Hitsujun KanjiVG, bacaan On/Kun, arti dwibahasa, dan contoh jukugo.')
+              ? (t('learn.subtitle_kanji') || 'Kuasai 75 Kanji dasar JLPT N5 dengan urutan goresan presisi Hitsujun KanjiVG, bacaan On/Kun, arti dwibahasa, dan contoh jukugo.')
               : script === 'katakana'
               ? t('learn.subtitle_katakana')
               : t('learn.subtitle_hiragana')}
@@ -696,7 +724,7 @@ export default function LearnPage() {
         >
           <span className="text-base font-serif font-black text-emerald-500 dark:text-emerald-400">漢</span>
           <span>Kanji (N5)</span>
-          <span className="text-[10px] font-mono opacity-75 px-1.5 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700">48</span>
+          <span className="text-[10px] font-mono opacity-75 px-1.5 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700">{FALLBACK_KANJI.length || 75}</span>
         </button>
       </div>
 

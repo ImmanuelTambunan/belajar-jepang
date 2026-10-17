@@ -56,8 +56,16 @@ func GetKanjis(c *fiber.Ctx) error {
 			query = query.Where("`category` = ?", "body_parts")
 		case "direction_size", "direction", "size", "arah", "ukuran", "posisi", "position":
 			query = query.Where("`category` = ?", "direction_size")
-		case "origin_place", "origin", "place", "asal", "tempat":
+		case "origin_place", "origin", "place", "asal", "tempat_asal":
 			query = query.Where("`category` = ?", "origin_place")
+		case "nature_weather", "nature", "weather", "alam", "cuaca":
+			query = query.Where("`category` = ?", "nature_weather")
+		case "animals", "animal", "hewan", "binatang":
+			query = query.Where("`category` = ?", "animals")
+		case "school_education", "school", "education", "sekolah", "belajar":
+			query = query.Where("`category` = ?", "school_education")
+		case "places_transport", "transport", "places", "tempat", "transportasi", "fasilitas":
+			query = query.Where("`category` = ?", "places_transport")
 		default:
 			query = query.Where("`category` = ?", category)
 		}
