@@ -98,7 +98,7 @@ export const KanaSwitcher: React.FC<KanaSwitcherProps> = ({
             ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-200/60 dark:border-slate-700 ring-2 ring-emerald-500/20'
             : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
         }`}
-        title={t('script.kanji_desc') || 'Koleksi 23 Kanji JLPT N5 Batch 1'}
+        title={t('script.kanji_desc') || 'Koleksi 48 Kanji JLPT N5'}
         aria-pressed={script === 'kanji'}
       >
         <span className="font-serif text-sm sm:text-base leading-none text-emerald-500 dark:text-emerald-400">

@@ -48,8 +48,16 @@ func GetKanjis(c *fiber.Ctx) error {
 		switch category {
 		case "numbers", "angka", "numbers_quantity":
 			query = query.Where("`category` = ?", "numbers")
-		case "calendar_time", "waktu", "time", "time_nature":
+		case "calendar_time", "waktu", "time", "time_nature", "calendar":
 			query = query.Where("`category` = ?", "calendar_time")
+		case "people_family", "people", "manusia", "family", "keluarga":
+			query = query.Where("`category` = ?", "people_family")
+		case "body_parts", "body", "tubuh", "badan":
+			query = query.Where("`category` = ?", "body_parts")
+		case "direction_size", "direction", "size", "arah", "ukuran", "posisi", "position":
+			query = query.Where("`category` = ?", "direction_size")
+		case "origin_place", "origin", "place", "asal", "tempat":
+			query = query.Where("`category` = ?", "origin_place")
 		default:
 			query = query.Where("`category` = ?", category)
 		}

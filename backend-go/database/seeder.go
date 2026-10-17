@@ -315,7 +315,7 @@ func SeedKanjiDataset(db *gorm.DB) error {
 		seededCount++
 	}
 
-	log.Printf("✅ Seeding Kanji N5 Batch 1 berhasil (%d/%d kanji siap).", seededCount, len(items))
+	log.Printf("✅ Seeding Kanji JLPT N5 berhasil (%d/%d kanji siap).", seededCount, len(items))
 	return nil
 }
 

@@ -165,21 +165,47 @@ interface RowTab {
   rowGroups: string[]
 }
 
-export type CategoryId = 'all' | 'gojuon' | 'dakuon_handakuon' | 'yoon' | 'numbers' | 'calendar_time'
+export type CategoryId =
+  | 'all'
+  | 'gojuon'
+  | 'dakuon_handakuon'
+  | 'yoon'
+  | 'people_family'
+  | 'body_parts'
+  | 'direction_size'
+  | 'numbers'
+  | 'calendar_time'
+  | 'origin_place'
 
 function getRowTabsByCategory(script: 'hiragana' | 'katakana' | 'kanji'): Record<CategoryId, RowTab[]> {
   if (script === 'kanji') {
     return {
       all: [
-        { id: 'all', label: 'Semua', sublabel: '23 Kanji N5', rowGroups: [] },
+        { id: 'all', label: 'Semua', sublabel: '48 Kanji N5', rowGroups: [] },
+        { id: 'people_family', label: 'Manusia & Keluarga', sublabel: '9 Karakter', rowGroups: ['people_family'] },
+        { id: 'body_parts', label: 'Bagian Tubuh', sublabel: '5 Karakter', rowGroups: ['body_parts'] },
+        { id: 'direction_size', label: 'Arah & Ukuran', sublabel: '9 Karakter', rowGroups: ['direction_size'] },
         { id: 'numbers', label: 'Angka', sublabel: '13 Karakter', rowGroups: ['numbers'] },
-        { id: 'calendar_time', label: 'Waktu & Alam', sublabel: '10 Karakter', rowGroups: ['calendar_time'] },
+        { id: 'calendar_time', label: 'Hari & Waktu', sublabel: '10 Karakter', rowGroups: ['calendar_time'] },
+        { id: 'origin_place', label: 'Asal & Tempat', sublabel: '2 Karakter', rowGroups: ['origin_place'] },
+      ],
+      people_family: [
+        { id: 'all', label: 'Semua Manusia & Keluarga', sublabel: '9 Karakter (人..生)', rowGroups: ['people_family'] },
+      ],
+      body_parts: [
+        { id: 'all', label: 'Semua Bagian Tubuh', sublabel: '5 Karakter (目..足)', rowGroups: ['body_parts'] },
+      ],
+      direction_size: [
+        { id: 'all', label: 'Semua Arah & Ukuran', sublabel: '9 Karakter (上..白)', rowGroups: ['direction_size'] },
       ],
       numbers: [
         { id: 'all', label: 'Semua Angka', sublabel: '13 Karakter (一..万)', rowGroups: ['numbers'] },
       ],
       calendar_time: [
-        { id: 'all', label: 'Semua Waktu & Alam', sublabel: '10 Karakter (日..分)', rowGroups: ['calendar_time'] },
+        { id: 'all', label: 'Semua Hari & Waktu', sublabel: '10 Karakter (日..分)', rowGroups: ['calendar_time'] },
+      ],
+      origin_place: [
+        { id: 'all', label: 'Semua Asal & Tempat', sublabel: '2 Karakter (本, 国)', rowGroups: ['origin_place'] },
       ],
       gojuon: [],
       dakuon_handakuon: [],
@@ -235,6 +261,10 @@ function getRowTabsByCategory(script: 'hiragana' | 'katakana' | 'kanji'): Record
     ],
     numbers: [],
     calendar_time: [],
+    people_family: [],
+    body_parts: [],
+    direction_size: [],
+    origin_place: [],
   }
 }
 
@@ -274,9 +304,13 @@ export default function LearnPage() {
   // Category navigation tabs for Kanji
   const kanjiCategoryTabs = useMemo<{ id: CategoryId; label: string; sublabel: string; icon: string }[]>(
     () => [
-      { id: 'all', label: t('categories.kanji_all') || 'Semua (23)', sublabel: t('categories.kanji_all_count') || '23 Kanji', icon: '🎴' },
+      { id: 'all', label: t('categories.kanji_all') || 'Semua (48)', sublabel: t('categories.kanji_all_count') || '48 Kanji', icon: '🎴' },
+      { id: 'people_family', label: t('categories.kanji_people') || 'Manusia & Keluarga', sublabel: t('categories.kanji_people_sub') || '9 Karakter (人 .. 生)', icon: '👥' },
+      { id: 'body_parts', label: t('categories.kanji_body') || 'Bagian Tubuh', sublabel: t('categories.kanji_body_sub') || '5 Karakter (目 .. 足)', icon: '👁️' },
+      { id: 'direction_size', label: t('categories.kanji_direction') || 'Arah & Ukuran', sublabel: t('categories.kanji_direction_sub') || '9 Karakter (上 .. 白)', icon: '🧭' },
       { id: 'numbers', label: t('categories.kanji_numbers') || 'Angka & Kuantitas', sublabel: t('categories.kanji_numbers_sub') || '13 Angka (一 .. 万)', icon: '🔢' },
       { id: 'calendar_time', label: t('categories.kanji_calendar') || 'Hari & Waktu', sublabel: t('categories.kanji_calendar_sub') || '10 Waktu & Alam (日 .. 分)', icon: '📅' },
+      { id: 'origin_place', label: t('categories.kanji_origin') || 'Asal & Tempat', sublabel: t('categories.kanji_origin_sub') || '2 Karakter (本, 国)', icon: '🇯🇵' },
     ],
     [t]
   )
@@ -447,10 +481,8 @@ export default function LearnPage() {
 
     // Filter by selected category
     if (script === 'kanji') {
-      if (selectedCategory === 'numbers') {
-        result = result.filter((c) => c.category === 'numbers')
-      } else if (selectedCategory === 'calendar_time') {
-        result = result.filter((c) => c.category === 'calendar_time')
+      if (selectedCategory !== 'all') {
+        result = result.filter((c) => c.category === selectedCategory)
       }
     } else {
       if (selectedCategory === 'gojuon') {
@@ -571,8 +603,8 @@ export default function LearnPage() {
             <span>
               {script === 'kanji'
                 ? (language === 'id'
-                    ? '23 Kanji JLPT N5 • Batch 1: Angka & Penanggalan'
-                    : '23 JLPT N5 Kanji • Batch 1: Numbers & Calendar')
+                    ? '48 Kanji JLPT N5 • Batch 1 & 2'
+                    : '48 JLPT N5 Kanji • Batch 1 & 2')
                 : `${t('categories.all_count')} • ${
                     script === 'katakana'
                       ? language === 'id'
@@ -586,14 +618,14 @@ export default function LearnPage() {
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
             {script === 'kanji'
-              ? (t('learn.title_kanji') || 'Koleksi 23 Kanji JLPT N5')
+              ? (t('learn.title_kanji') || 'Koleksi 48 Kanji JLPT N5')
               : script === 'katakana'
               ? t('learn.title_katakana')
               : t('learn.title_hiragana')}
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-2xl">
             {script === 'kanji'
-              ? (t('learn.subtitle_kanji') || 'Kuasai 23 Kanji dasar JLPT N5 dengan urutan goresan presisi Hitsujun KanjiVG, bacaan On/Kun, arti dwibahasa, dan contoh jukugo.')
+              ? (t('learn.subtitle_kanji') || 'Kuasai 48 Kanji dasar JLPT N5 dengan urutan goresan presisi Hitsujun KanjiVG, bacaan On/Kun, arti dwibahasa, dan contoh jukugo.')
               : script === 'katakana'
               ? t('learn.subtitle_katakana')
               : t('learn.subtitle_hiragana')}
@@ -664,12 +696,12 @@ export default function LearnPage() {
         >
           <span className="text-base font-serif font-black text-emerald-500 dark:text-emerald-400">漢</span>
           <span>Kanji (N5)</span>
-          <span className="text-[10px] font-mono opacity-75 px-1.5 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700">23</span>
+          <span className="text-[10px] font-mono opacity-75 px-1.5 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-700">48</span>
         </button>
       </div>
 
       {/* CATEGORY TABS */}
-      <div className={`grid ${script === 'kanji' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'} gap-3 mb-6`}>
+      <div className={`grid ${script === 'kanji' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4' : 'grid-cols-2 lg:grid-cols-4'} gap-3 mb-6`}>
         {activeCategoryTabs.map((cat) => {
           const isSelected = selectedCategory === cat.id
           return (

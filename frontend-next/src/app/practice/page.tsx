@@ -164,25 +164,33 @@ const PRACTICE_CATEGORY_TABS = [
 ] as const
 
 const KANJI_PRACTICE_CATEGORY_TABS = [
-  { id: 'all', label: 'Semua', count: 23 },
+  { id: 'all', label: 'Semua', count: 48 },
+  { id: 'people_family', label: 'Manusia', count: 9 },
+  { id: 'body_parts', label: 'Tubuh', count: 5 },
+  { id: 'direction_size', label: 'Arah/Ukuran', count: 9 },
   { id: 'numbers', label: 'Angka', count: 13 },
   { id: 'calendar_time', label: 'Hari/Waktu', count: 10 },
+  { id: 'origin_place', label: 'Asal/Tempat', count: 2 },
 ] as const
 
 function getRowFiltersByCategory(script: 'hiragana' | 'katakana' | 'kanji'): Record<string, { id: string; label: string }[]> {
   if (script === 'kanji') {
     return {
       all: [
-        { id: 'all', label: 'Semua Kanji N5 (23)' },
+        { id: 'all', label: 'Semua Kanji N5 (48)' },
+        { id: 'people_family', label: 'Manusia & Keluarga (9)' },
+        { id: 'body_parts', label: 'Bagian Tubuh (5)' },
+        { id: 'direction_size', label: 'Arah & Ukuran (9)' },
         { id: 'numbers', label: 'Angka & Kuantitas (13)' },
         { id: 'calendar_time', label: 'Hari & Waktu (10)' },
+        { id: 'origin_place', label: 'Asal & Tempat (2)' },
       ],
-      numbers: [
-        { id: 'all', label: 'Semua Angka (13)' },
-      ],
-      calendar_time: [
-        { id: 'all', label: 'Semua Hari & Waktu (10)' },
-      ],
+      people_family: [{ id: 'all', label: 'Semua Manusia & Keluarga (9)' }],
+      body_parts: [{ id: 'all', label: 'Semua Bagian Tubuh (5)' }],
+      direction_size: [{ id: 'all', label: 'Semua Arah & Ukuran (9)' }],
+      numbers: [{ id: 'all', label: 'Semua Angka (13)' }],
+      calendar_time: [{ id: 'all', label: 'Semua Hari & Waktu (10)' }],
+      origin_place: [{ id: 'all', label: 'Semua Asal & Tempat (2)' }],
     }
   }
 
@@ -610,10 +618,8 @@ function PracticeStudioContent() {
   const sidebarCategoryCharacters = useMemo(() => {
     let list = allCharacters
     if (script === 'kanji') {
-      if (selectedCategory === 'numbers') {
-        list = list.filter((c) => c.category === 'numbers')
-      } else if (selectedCategory === 'calendar_time') {
-        list = list.filter((c) => c.category === 'calendar_time')
+      if (selectedCategory !== 'all') {
+        list = list.filter((c) => c.category === selectedCategory)
       }
       return list
     }
@@ -633,8 +639,7 @@ function PracticeStudioContent() {
     if (selectedRowGroup === 'needs_review') {
       return needsReviewList.filter((c) => {
         if (script === 'kanji') {
-          if (selectedCategory === 'numbers') return c.category === 'numbers'
-          if (selectedCategory === 'calendar_time') return c.category === 'calendar_time'
+          if (selectedCategory !== 'all') return c.category === selectedCategory
           return true
         }
         if (selectedCategory === 'gojuon') return (c.category || 'gojuon') === 'gojuon'
@@ -1036,7 +1041,7 @@ function PracticeStudioContent() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-sky-500" />
-                  <span>{script === 'kanji' ? '23 Kanji N5' : script === 'katakana' ? '107 Katakana' : '107 Hiragana'}</span>
+                  <span>{script === 'kanji' ? `${allCharacters.length || 48} Kanji N5` : script === 'katakana' ? '107 Katakana' : '107 Hiragana'}</span>
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                   {summary.memorized_count}/{allCharacters.length} {t('nav.memorized')}
