@@ -164,7 +164,10 @@ const PRACTICE_CATEGORY_TABS = [
 ] as const
 
 const KANJI_PRACTICE_CATEGORY_TABS = [
-  { id: 'all', label: 'Semua', count: 75 },
+  { id: 'all', label: 'Semua', count: 103 },
+  { id: 'verbs', label: 'Verba', count: 14 },
+  { id: 'adjectives', label: 'Sifat', count: 7 },
+  { id: 'cardinal_positions', label: 'Mata Angin', count: 7 },
   { id: 'nature_weather', label: 'Alam/Cuaca', count: 8 },
   { id: 'animals', label: 'Hewan', count: 3 },
   { id: 'school_education', label: 'Sekolah', count: 6 },
@@ -181,7 +184,10 @@ function getRowFiltersByCategory(script: 'hiragana' | 'katakana' | 'kanji'): Rec
   if (script === 'kanji') {
     return {
       all: [
-        { id: 'all', label: 'Semua Kanji N5 (75)' },
+        { id: 'all', label: 'Semua Kanji N5 (103)' },
+        { id: 'verbs', label: 'Kata Kerja / Verba (14)' },
+        { id: 'adjectives', label: 'Kata Sifat (7)' },
+        { id: 'cardinal_positions', label: 'Arah Mata Angin (7)' },
         { id: 'nature_weather', label: 'Alam & Cuaca (8)' },
         { id: 'animals', label: 'Hewan (3)' },
         { id: 'school_education', label: 'Sekolah & Belajar (6)' },
@@ -193,6 +199,9 @@ function getRowFiltersByCategory(script: 'hiragana' | 'katakana' | 'kanji'): Rec
         { id: 'calendar_time', label: 'Hari & Waktu (10)' },
         { id: 'origin_place', label: 'Asal & Tempat (2)' },
       ],
+      verbs: [{ id: 'all', label: 'Semua Kata Kerja (14)' }],
+      adjectives: [{ id: 'all', label: 'Semua Kata Sifat (7)' }],
+      cardinal_positions: [{ id: 'all', label: 'Semua Arah Mata Angin (7)' }],
       nature_weather: [{ id: 'all', label: 'Semua Alam & Cuaca (8)' }],
       animals: [{ id: 'all', label: 'Semua Hewan (3)' }],
       school_education: [{ id: 'all', label: 'Semua Sekolah & Belajar (6)' }],
@@ -1053,7 +1062,7 @@ function PracticeStudioContent() {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-sky-500" />
-                  <span>{script === 'kanji' ? `${allCharacters.length || 75} Kanji N5` : script === 'katakana' ? '107 Katakana' : '107 Hiragana'}</span>
+                  <span>{script === 'kanji' ? `${allCharacters.length || 103} Kanji N5` : script === 'katakana' ? '107 Katakana' : '107 Hiragana'}</span>
                 </span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                   {summary.memorized_count}/{allCharacters.length} {t('nav.memorized')}

@@ -49,6 +49,7 @@ export const Navbar: React.FC = () => {
   const [isCheckingBackend, setIsCheckingBackend] = useState<boolean>(false)
   const [hiraganaCount, setHiraganaCount] = useState<number>(0)
   const [katakanaCount, setKatakanaCount] = useState<number>(0)
+  const [kanjiCount, setKanjiCount] = useState<number>(0)
 
   const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
@@ -59,7 +60,7 @@ export const Navbar: React.FC = () => {
     pathname === '/exam' ||
     pathname === '/analytics'
 
-  // Read memorized counts for both Hiragana and Katakana
+  // Read memorized counts for Hiragana, Katakana, and Kanji N5
   const refreshMasteryBadge = useCallback(() => {
     if (typeof window === 'undefined') return
     try {
@@ -68,6 +69,7 @@ export const Navbar: React.FC = () => {
         const parsed = JSON.parse(stored)
         let hCount = 0
         let kCount = 0
+        let kjCount = 0
         Object.entries(parsed).forEach(([key, item]: [string, unknown]) => {
           if (
             typeof item === 'object' &&
@@ -81,18 +83,23 @@ export const Navbar: React.FC = () => {
               hCount++
             } else if (charId >= 108 && charId <= 214) {
               kCount++
+            } else if (charId >= 2001 && charId <= 2103) {
+              kjCount++
             }
           }
         })
         setHiraganaCount(hCount)
         setKatakanaCount(kCount)
+        setKanjiCount(kjCount)
       } else {
         setHiraganaCount(0)
         setKatakanaCount(0)
+        setKanjiCount(0)
       }
     } catch {
       setHiraganaCount(0)
       setKatakanaCount(0)
+      setKanjiCount(0)
     }
   }, [])
 
@@ -206,8 +213,8 @@ export const Navbar: React.FC = () => {
     setIsProfileOpen((prev) => !prev)
   }
 
-  const totalMemorized = hiraganaCount + katakanaCount
-  const overallPercentage = Math.round((totalMemorized / 214) * 100)
+  const totalMemorized = hiraganaCount + katakanaCount + kanjiCount
+  const overallPercentage = Math.round((totalMemorized / 317) * 100)
 
   return (
     <header className="sticky top-0 z-50 w-full backdrop-blur-md bg-white/85 dark:bg-slate-950/85 border-b border-slate-200/80 dark:border-slate-800/80 transition-colors">
@@ -516,10 +523,10 @@ export const Navbar: React.FC = () => {
                     <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
                       <span className="flex items-center gap-1.5">
                         <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                        <span>{language === 'id' ? 'Capaian Penguasaan Huruf' : 'Mastery Progress'}</span>
+                        <span>{language === 'id' ? 'Capaian Penguasaan Karakter' : 'Mastery Progress'}</span>
                       </span>
                       <span className="font-mono text-amber-600 dark:text-amber-400">
-                        {totalMemorized}/214 ({overallPercentage}%)
+                        {totalMemorized}/317 ({overallPercentage}%)
                       </span>
                     </div>
 
@@ -560,6 +567,27 @@ export const Navbar: React.FC = () => {
                           className="h-full bg-indigo-500 rounded-full transition-all duration-300"
                           style={{
                             width: `${Math.min(100, (katakanaCount / 107) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Progress Bar Kanji N5 */}
+                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                          <span className="font-serif font-black">漢</span>
+                          <span>Kanji (JLPT N5)</span>
+                        </span>
+                        <span className="font-mono font-bold text-slate-700 dark:text-slate-200">
+                          {kanjiCount}/103 {t('nav.memorized')}
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                          style={{
+                            width: `${Math.min(100, (kanjiCount / 103) * 100)}%`,
                           }}
                         />
                       </div>
@@ -748,7 +776,7 @@ export const Navbar: React.FC = () => {
                     Lv.{levelInfo.level} {levelInfo.title}
                   </p>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                    {totalMemorized}/214 Aksara • {levelInfo.totalXP} XP
+                    {totalMemorized}/317 Karakter • {levelInfo.totalXP} XP
                   </p>
                 </div>
               </div>
@@ -758,31 +786,43 @@ export const Navbar: React.FC = () => {
               </div>
             </div>
 
-            {/* Quick Kana Script Switcher */}
-            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-850">
+            {/* Quick Script Switcher */}
+            <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-850">
               <button
                 type="button"
                 onClick={() => setScript('hiragana')}
-                className={`py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
                   script === 'hiragana'
                     ? 'bg-white dark:bg-slate-700 text-sky-600 dark:text-sky-400 shadow-2xs font-black'
                     : 'text-slate-600 dark:text-slate-400'
                 }`}
               >
                 <span className="font-serif">あ</span>
-                <span>Hiragana ({hiraganaCount}/107)</span>
+                <span className="truncate">({hiraganaCount}/107)</span>
               </button>
               <button
                 type="button"
                 onClick={() => setScript('katakana')}
-                className={`py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
                   script === 'katakana'
                     ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-2xs font-black'
                     : 'text-slate-600 dark:text-slate-400'
                 }`}
               >
                 <span className="font-serif">ア</span>
-                <span>Katakana ({katakanaCount}/107)</span>
+                <span className="truncate">({katakanaCount}/107)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setScript('kanji')}
+                className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition flex items-center justify-center gap-1 ${
+                  script === 'kanji'
+                    ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-2xs font-black'
+                    : 'text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                <span className="font-serif font-black">漢</span>
+                <span className="truncate">({kanjiCount}/103)</span>
               </button>
             </div>
 

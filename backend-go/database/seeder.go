@@ -264,9 +264,9 @@ type RawKanjiItem struct {
 	Examples    []models.KanjiExample `json:"examples"`
 }
 
-// SeedKanjiDataset reads dataset and seeds N5 Kanji (Batch 1, 2, & 3: 75 Karakter).
+// SeedKanjiDataset reads dataset and seeds all 103 JLPT N5 Kanji (100% Complete).
 func SeedKanjiDataset(db *gorm.DB) error {
-	log.Println("🌱 Memulai Seeder: Membaca dataset Kanji N5 (Batch 1, 2, & 3)...")
+	log.Println("🌱 Memulai Seeder: Membaca dataset 103 Kanji JLPT N5 (100% Complete)...")
 
 	// Ensure binary collation so Japanese kanji symbols are treated with exact precision
 	db.Exec("ALTER TABLE `kanjis` MODIFY `character` VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL")
