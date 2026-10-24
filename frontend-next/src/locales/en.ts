@@ -1,4 +1,18 @@
 export const en = {
+  vocab: {
+    badge: 'Phase 12: Shigoto Nihongo & Industry Jukugo',
+    title: 'Practical Workplace Japanese',
+    subtitle: 'Master 30 essential terms for workplace safety (Anzen), 5S standards, Hou-Ren-So communication, and manufacturing/caregiving.',
+    search_placeholder: 'Search vocabulary (Kanji, Romaji, meaning)...',
+    all_categories: 'All Categories',
+    click_hint: 'Click card for workplace example',
+    flip_back: 'Back',
+    listen_word: 'Listen to Word',
+    listen_example: 'Listen to Sentence',
+    workplace_example: 'Workplace Real Situation Example',
+    modal_title: 'Workplace Vocabulary Details',
+  },
+
   common: {
     save: 'Save',
     cancel: 'Cancel',
@@ -50,6 +64,8 @@ export const en = {
     analytics_sub: 'Learning Stats',
     settings: 'Settings & Audio',
     settings_sub: 'Audio Manager',
+    vocab: 'Workplace Vocab',
+    vocab_sub: 'Shigoto Nihongo',
     streak: 'Days',
     streak_title: 'Daily Streak: {count} consecutive days of practice! Keep it blazing! ðŸ”¥',
     memorized: 'Mastered',

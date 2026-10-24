@@ -22,6 +22,10 @@ func SetupRoutes(app *fiber.App) {
 	api.Get("/kanjis", controllers.GetKanjis)
 	api.Get("/kanjis/:id", controllers.GetKanjiDetail)
 
+	// Practical Workplace Vocabulary endpoints (Fase 12: Shigoto Nihongo)
+	api.Get("/vocabularies", controllers.GetVocabularies)
+	api.Get("/vocabularies/:id", controllers.GetVocabularyDetail)
+
 	// User progress & practice memorization endpoints
 	progress := api.Group("/progress")
 	progress.Get("/summary", controllers.GetProgressSummary)

@@ -1,4 +1,18 @@
 export const id = {
+  vocab: {
+    badge: 'Fase 12: Shigoto Nihongo & Jukugo Industri',
+    title: 'Kosakata Kerja Praktis',
+    subtitle: 'Kuasai 30 istilah esensial untuk keselamatan kerja (Anzen), standar 5S, komunikasi Hou-Ren-So, dan industri manufaktur/kaigo.',
+    search_placeholder: 'Cari kosakata (Kanji, Romaji, arti ID/EN)...',
+    all_categories: 'Semua Kategori',
+    click_hint: 'Klik kartu untuk contoh kalimat kerja',
+    flip_back: 'Kembali',
+    listen_word: 'Dengarkan Kata',
+    listen_example: 'Dengarkan Kalimat',
+    workplace_example: 'Contoh Penggunaan di Tempat Kerja',
+    modal_title: 'Detail Kosakata Kerja',
+  },
+
   common: {
     save: 'Simpan',
     cancel: 'Batal',
@@ -50,6 +64,8 @@ export const id = {
     analytics_sub: 'Statistik Belajar',
     settings: 'Pengaturan & Audio',
     settings_sub: 'Audio Manager',
+    vocab: 'Kosakata Kerja',
+    vocab_sub: 'Shigoto Nihongo',
     streak: 'Hari',
     streak_title: 'Daily Streak: {count} hari berlatih berturut-turut! Tetap semangat! ðŸ”¥',
     memorized: 'Hafal',

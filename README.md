@@ -210,6 +210,7 @@ Proyek Nihongo Sora dikembangkan secara bertahap melalui sembilan fase iterasi t
 | **Fase 9** | Ekspansi Katakana Lengkap & Refaktor UI/UX Global | Penambahan 107 karakter Katakana lengkap (Total **214 Karakter Kana** di database), switch mode Hiragana/Katakana global, peremajaan UI/UX Navbar (Training Dropdown, Streak Mastery Popover, Icon-only Settings), serta penyederhanaan Footer yang bersih dan modern. |
 | **Fase 10** | Ekspansi Kanji JLPT N5 Lengkap (103 Karakter) | Penambahan 103 karakter Kanji JLPT N5 lengkap dalam 4 batch tematik (Total **317 Karakter**), skema tabel `kanjis`, controller `/api/kanjis`, readings On/Kun, arti ID/EN, dan kanvas kaligrafi kanji. |
 | **Fase 11** | Dynamic Atmospheric Aesthetic (Sora & Sakura) | Latar video/GIF dinamis (`animation.gif` untuk Beranda & `animation1.gif` untuk Latihan), paralaks awan berarak, frosted glass WCAG overlay, dan sistem kelopak sakura gugur 60 FPS CSS keyframe (`SakuraRain.tsx`) dengan kontrol sakelar ganda. |
+| **Fase 12** | *Modul Kosakata Kerja Praktis (Shigoto Nihongo & Jukugo)* | ? Selesai | Model & seeder ocabularies (30 entri), API /api/vocabularies, halaman /vocab interaktif, modal kalimat situasi kerja, dan filter industri. |
 
 ---
 

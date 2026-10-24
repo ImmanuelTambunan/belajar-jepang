@@ -12,6 +12,8 @@ import {
   RotateCcw,
   Filter,
   Flame,
+  Briefcase,
+  ArrowRight,
 } from 'lucide-react'
 import { CharacterData } from '@/types/character'
 import { UserProgress } from '@/types/progress'
@@ -704,6 +706,32 @@ export default function LearnPage() {
             <RotateCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
+      </div>
+
+      {/* SHIGOTO NIHONGO / WORKPLACE VOCABULARY PROMO BANNER */}
+      <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-sky-500/10 to-indigo-500/10 border border-amber-300/80 dark:border-amber-800/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-3">
+          <span className="p-2 rounded-xl bg-amber-500 text-white shadow-xs shrink-0">
+            <Briefcase className="w-4 h-4" />
+          </span>
+          <div>
+            <strong className="text-slate-900 dark:text-white font-extrabold text-sm">
+              {language === 'id' ? 'Modul Baru: Kosakata Kerja Praktis (仕事の日本語)' : 'New Module: Practical Workplace Japanese'}
+            </strong>
+            <p className="text-slate-600 dark:text-slate-400 mt-0.5">
+              {language === 'id'
+                ? 'Kuasai 30 jukugo dan istilah esensial untuk keselamatan (Anzen), 5S, Hou-Ren-So, dan manufaktur/kaigo.'
+                : 'Master 30 essential terms for workplace safety, 5S, Hou-Ren-So, and manufacturing/caregiving.'}
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/vocab"
+          className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold transition flex items-center gap-1.5 whitespace-nowrap shadow-xs cursor-pointer"
+        >
+          <span>{language === 'id' ? 'Buka Kosakata Kerja' : 'Open Workplace Vocab'}</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
       </div>
 
       {/* PRIMARY SCRIPT SWITCHER TAB BAR (HIRAGANA | KATAKANA | KANJI) */}

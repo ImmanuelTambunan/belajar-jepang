@@ -34,6 +34,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&models.UserCharacterProgress{},
 		&models.ExamResult{},
 		&models.Kanji{},
+		&models.Vocabulary{},
 	)
 	if err != nil {
 		return fmt.Errorf("gagal migrasi: %w", err)
@@ -319,7 +320,44 @@ func SeedKanjiDataset(db *gorm.DB) error {
 	return nil
 }
 
-// AutoMigrateAndSeed runs AutoMigrate, SeedHiraganaDataset, SeedKatakanaDataset, and SeedKanjiDataset sequentially.
+
+// SeedVocabularyDataset reads dataset and seeds 30 workplace vocabularies (Fase 12: Shigoto Nihongo).
+func SeedVocabularyDataset(db *gorm.DB) error {
+	log.Println("💼 Memulai Seeder: Membaca dataset 30 Kosakata Kerja Praktis (Shigoto Nihongo)...")
+
+	// Ensure binary collation for exact Japanese kana/kanji matching
+	db.Exec("ALTER TABLE `vocabularies` MODIFY `word` VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL")
+	db.Exec("ALTER TABLE `vocabularies` MODIFY `reading` VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL")
+
+	rawData, foundPath, err := loadDatasetFile("vocabularies_30.json")
+	if err != nil {
+		return err
+	}
+
+	log.Printf("📂 Memuat dataset Kosakata Kerja dari %s (%d bytes)", foundPath, len(rawData))
+
+	var items []models.Vocabulary
+	if err := json.Unmarshal(rawData, &items); err != nil {
+		return fmt.Errorf("gagal parsing JSON dataset Kosakata: %w", err)
+	}
+
+	seededCount := 0
+	for _, item := range items {
+		vocab := item
+		if err := db.Where("`id` = ? OR (`word` = ? AND `category` = ?)", vocab.ID, vocab.Word, vocab.Category).
+			Assign(vocab).
+			FirstOrCreate(&vocab).Error; err != nil {
+			log.Printf("⚠️ Gagal seeding Vocabulary #%d %s: %v", vocab.ID, vocab.Word, err)
+			continue
+		}
+		seededCount++
+	}
+
+	log.Printf("✅ Seeding Kosakata Kerja Praktis berhasil (%d/%d kosakata siap).", seededCount, len(items))
+	return nil
+}
+
+// AutoMigrateAndSeed runs AutoMigrate, SeedHiraganaDataset, SeedKatakanaDataset, SeedKanjiDataset, and SeedVocabularyDataset sequentially.
 func AutoMigrateAndSeed(db *gorm.DB) error {
 	if err := AutoMigrate(db); err != nil {
 		return err
@@ -331,6 +369,9 @@ func AutoMigrateAndSeed(db *gorm.DB) error {
 		return err
 	}
 	if err := SeedKanjiDataset(db); err != nil {
+		return err
+	}
+	if err := SeedVocabularyDataset(db); err != nil {
 		return err
 	}
 	// Clean obsolete character IDs > 214

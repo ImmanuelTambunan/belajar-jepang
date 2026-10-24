@@ -20,6 +20,7 @@ import {
   Wifi,
   WifiOff,
   Check,
+  Briefcase,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
@@ -58,7 +59,8 @@ export const Navbar: React.FC = () => {
   const isPracticeActive =
     pathname === '/practice' ||
     pathname === '/exam' ||
-    pathname === '/analytics'
+    pathname === '/analytics' ||
+    pathname === '/vocab'
 
   // Read memorized counts for Hiragana, Katakana, and Kanji N5
   const refreshMasteryBadge = useCallback(() => {
@@ -318,6 +320,23 @@ export const Navbar: React.FC = () => {
                 <span>{t('nav.learn')}</span>
               </Link>
 
+              {/* Kosakata Kerja (Fase 12) */}
+              <Link
+                href="/vocab"
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${
+                  pathname === '/vocab'
+                    ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 shadow-2xs'
+                    : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-900/60'
+                }`}
+              >
+                <Briefcase
+                  className={`w-3.5 h-3.5 ${
+                    pathname === '/vocab' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'
+                  }`}
+                />
+                <span>{language === 'id' ? 'Kosakata Kerja' : 'Workplace Vocab'}</span>
+              </Link>
+
               {/* Dropdown "Latihan" */}
               <div ref={practiceDropdownRef} className="relative">
                 <button
@@ -424,6 +443,31 @@ export const Navbar: React.FC = () => {
                         </p>
                         <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
                           {language === 'id' ? 'Statistik & histori belajar' : 'Learning stats & history'}
+                        </p>
+                      </div>
+                    </Link>
+
+                    {/* Kosakata Kerja Praktis (Fase 12) */}
+                    <Link
+                      href="/vocab"
+                      className={`flex items-center gap-3 p-2.5 rounded-xl transition-colors ${
+                        pathname === '/vocab'
+                          ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                        <Briefcase className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 overflow-hidden">
+                        <p className="text-xs font-bold leading-tight flex items-center justify-between">
+                          <span>Kosakata Kerja</span>
+                          {pathname === '/vocab' && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          )}
+                        </p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                          {language === 'id' ? 'Shigoto Nihongo & 5S Industri' : 'Workplace Japanese & 5S'}
                         </p>
                       </div>
                     </Link>
@@ -893,6 +937,18 @@ export const Navbar: React.FC = () => {
                 >
                   <BarChart3 className="w-4 h-4 text-emerald-500" />
                   <span>Dasbor Analitik</span>
+                </Link>
+
+                <Link
+                  href="/vocab"
+                  className={`flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-bold transition border ${
+                    pathname === '/vocab'
+                      ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800'
+                      : 'border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
+                  }`}
+                >
+                  <Briefcase className="w-4 h-4 text-amber-500" />
+                  <span>Kosakata Kerja (Shigoto)</span>
                 </Link>
               </div>
 

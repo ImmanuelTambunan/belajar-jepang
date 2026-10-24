@@ -7,7 +7,7 @@
 <br />
 **Dokumen Spesifikasi Produk & Arsitektur Induk — Platform Edukasi Kaligrafi Digital, Penguasaan Aksara Kana (214 Karakter) & Kanji JLPT N5 (103 Karakter)**
 
-*Versi Dokumen: 2.0.0 (Fase 11 Complete) | Status: Approved & Production Ready | Klasifikasi: Master Architecture & Product Guide*
+*Versi Dokumen: 2.0.0 (Fase 12 Complete - Shigoto Nihongo & Jukugo Industri) | Status: Approved & Production Ready | Klasifikasi: Master Architecture & Product Guide*
 
 </div>
 
@@ -55,7 +55,7 @@
    - 7.3 Kelompok Endpoint Ujian & Riwayat Kuis
    - 7.4 Kelompok Endpoint Analitik & Agregasi Data
    - 7.5 Format Standar Respon API
-8. [Rekam Jejak Evolusi Pengembangan Produk (Fase 1 s/d Fase 11)](#8-rekam-jejak-evolusi-pengembangan-produk-fase-1-sd-fase-11)
+8. [Rekam Jejak Evolusi Pengembangan Produk (Fase 1 s/d Fase 12)](#8-rekam-jejak-evolusi-pengembangan-produk-fase-1-sd-fase-11)
 9. [Panduan Operasional, Deployment & Pemulihan Sistem](#9-panduan-operasional-deployment--pemulihan-sistem)
 
 ---
@@ -352,6 +352,23 @@ interface CharacterData {
 
 ﻿---
 
+### 4.10 FR-10: Modul Kosakata Kerja Praktis & Jukugo Industri (/vocab)
+- **Tujuan**: Memfasilitasi pembelajar dan calon tenaga kerja magang/tokutei ginou dalam menguasai perbendaharaan kata spesifik lingkungan kerja Jepang (Shigoto Nihongo).
+- **Karakteristik & Fitur Antarmuka**:
+  - **Interactive Flashcards**: Menampilkan bentuk Kanji/Kana berukuran besar, Furigana presisi di atas kanji, pelafalan Romaji, dan terjemahan Bahasa Indonesia & Inggris.
+  - **Audio Pronunciation (TTS)**: Pelafalan audio native bahasa Jepang via Web Speech API (ja-JP) dengan tempo optimal (.82	imes$).
+  - **Flip & Workplace Modal**: Kartu dapat dibuka untuk menampilkan kalimat situasi kerja nyata (*Workplace Context*), contoh instruksi operasional, dan terjemahan kontekstual.
+  - **Filter Kategori Industri**: Tab filter instan tanpa reload halaman:
+    - *Semua Kosakata* (30 entri komprehensif)
+    - *Keselamatan Kerja (Anzen)*: 安全, 危険, 注意, 確認, 点検, 非常口, 禁止, ヘルメット
+    - *Instruksi Kerja & 5S*: 作業, 準備, 開始, 終了, 整理, 整頓, 清潔, 指示
+    - *Etika Kerja & Hou-Ren-So*: 報告, 連絡, 相談, 残業, 休憩, 挨拶, 了解
+    - *Manufaktur & Kaigo*: 道具, 機械, 手袋, 移動, 清掃, 体調, 介助
+  - **Integrasi Navigasi**: Akses langsung melalui navigasi utama, sub-menu 'Latihan', kartu beranda, dan banner di halaman /learn.
+  - **Resiliensi Offline-First**: Memadukan data JSON lokal (ocabularies_30.json) dengan sinkronisasi langsung ke endpoint backend jika server Go aktif.
+
+---
+
 ## 5. SPESIFIKASI PERSYARATAN NON-FUNGSIONAL (NON-FUNCTIONAL REQUIREMENTS)
 
 ### 5.1 Performa & Latensi (Performance & Latency)
@@ -456,6 +473,29 @@ erDiagram
 
 ﻿---
 
+
+#### 6.2.5 Tabel ocabularies (Kosakata Kerja & Jukugo Industri)
+Menyimpan korpus kosakata kerja praktis tempat kerja Jepang dan jukugo industri.
+
+| Nama Kolom | Tipe Data GORM | Modifiers / Constraints | Keterangan Fungsional |
+| :--- | :--- | :--- | :--- |
+| id | uint | PRIMARY KEY; AUTO_INCREMENT | Pengenal unik kosakata |
+| word | archar(100) | NOT NULL; INDEX | Bentuk Kanji/Kana kosakata (misal: '安全', '確認') |
+| 
+eading | archar(100) | NOT NULL | Cara baca Hiragana/Katakana (misal: 'あんぜん') |
+| 
+omaji | archar(100) | NOT NULL | Transliterasi Romaji (misal: 'anzen') |
+| meaning_id | archar(255) | NOT NULL | Terjemahan arti Bahasa Indonesia |
+| meaning_en | archar(255) | NOT NULL | Terjemahan arti Bahasa Inggris |
+| category | archar(100) | NOT NULL; INDEX | Kategori industri (Anzen, 5S, Hou-Ren-So, Manufaktur/Kaigo) |
+| jlpt_level | archar(20) | DEFAULT 'N5' | Estimasi tingkat JLPT |
+| example_jp | 	ext | NULL | Contoh kalimat situasi kerja praktis |
+| example_id | 	ext | NULL | Terjemahan bahasa Indonesia contoh kalimat kerja |
+| created_at | datetime(3) | NULL | Timestamp pembuatan data |
+| updated_at | datetime(3) | NULL | Timestamp pembaruan data |
+
+---
+
 ## 7. SPESIFIKASI LENGKAP KONTRAK REST API (BACKEND GOLANG FIBER)
 
 Backend berjalan secara baku pada `http://localhost:8000` dengan awalan rute `/api`:
@@ -490,7 +530,17 @@ Backend berjalan secara baku pada `http://localhost:8000` dengan awalan rute `/a
 
 ---
 
-## 8. REKAM JEJAK EVOLUSI PENGEMBANGAN PRODUK (FASE 1 S/D FASE 11)
+
+### 7.4 Kelompok Endpoint Kosakata Kerja (Shigoto Nihongo)
+
+| Metode | Endpoint URL | Parameter / Body | Deskripsi Fungsional |
+| :---: | :--- | :--- | :--- |
+| GET | /api/vocabularies | Query: ?category=...&search=... | Mengambil daftar 30 kosakata kerja praktis dengan filter kategori industri atau pencarian teks (Kanji, Romaji, Arti). |
+| GET | /api/vocabularies/:id | Path: :id (uint) | Mengambil informasi detail satu kosakata kerja beserta contoh kalimat situasionalnya. |
+
+---
+
+## 8. REKAM JEJAK EVOLUSI PENGEMBANGAN PRODUK (FASE 1 S/D FASE 12)
 
 | Fase | Nama Inisiatif | Deliverable & Pencapaian Utama |
 | :---: | :--- | :--- |
@@ -505,6 +555,7 @@ Backend berjalan secara baku pada `http://localhost:8000` dengan awalan rute `/a
 | **Fase 9** | *Ekspansi Katakana Lengkap (214 Kana) & UI Streamline* | Penambahan 107 karakter Katakana lengkap (Total 214 karakter Kana di database), pemilih aksara global (*KanaSwitcher*), peremajaan Navbar (Training Dropdown, Streak Popover), dan penyederhanaan Footer. |
 | **Fase 10** | *Ekspansi Kanji JLPT N5 Lengkap (103 Karakter)* | Perancangan model dan tabel `kanjis`, controller `/api/kanjis`, integrasi 103 Kanji N5 dalam 4 batch tematik (Angka, Tubuh, Alam, Kata Kerja), readings Onyomi/Kunyomi, terjemahan makna ID/EN, serta integrasi kanvas kaligrafi kanji. |
 | **Fase 11** | *Dynamic Atmospheric Aesthetic (Sora & Sakura Rain)* | Penambahan aset visual latar anime, komponen `SoraBackground` berbasis rute (`animation.gif` untuk Beranda & `animation1.gif` untuk Latihan), paralaks awan SVG berarak, frosted glass WCAG overlay, dan sistem partikel kelopak sakura gugur 60 FPS CSS keyframe (`SakuraRain.tsx`) dengan kontrol sakelar ganda. |
+| **Fase 12** | *Modul Kosakata Kerja Praktis (Shigoto Nihongo & Jukugo Industri)* | Perancangan model dan tabel ocabularies, otomatisasi seeder 30 kosakata industri komprehensif (Keselamatan/Anzen, Instruksi Kerja/5S, Komunikasi/Hou-Ren-So, Manufaktur/Kaigo), controller REST API /api/vocabularies, pembuatan antarmuka /vocab dengan interactive flashcards, audio TTS, modal kalimat situasi kerja, filter kategori industri, dan integrasi navigasi monorepo. |
 
 ---
 

@@ -81,3 +81,69 @@ func TestHiraganaDatasetIntegrity(t *testing.T) {
 func TestKatakanaDatasetIntegrity(t *testing.T) {
 	verifyKanaDataset(t, "katakana_107.json", "katakana")
 }
+
+
+func TestVocabularyDatasetIntegrity(t *testing.T) {
+	paths := []string{
+		"../data/vocabularies_30.json",
+		"backend-go/data/vocabularies_30.json",
+		"data/vocabularies_30.json",
+		"../../backend-go/data/vocabularies_30.json",
+	}
+
+	var data []byte
+	var err error
+	for _, p := range paths {
+		data, err = os.ReadFile(p)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		t.Fatalf("Failed to read vocabularies_30.json: %v", err)
+	}
+
+	type VocabItem struct {
+		ID        uint   `json:"id"`
+		Word      string `json:"word"`
+		Reading   string `json:"reading"`
+		Romaji    string `json:"romaji"`
+		MeaningID string `json:"meaning_id"`
+		Category  string `json:"category"`
+		ExampleJP string `json:"example_jp"`
+		ExampleID string `json:"example_id"`
+	}
+
+	var items []VocabItem
+	if err := json.Unmarshal(data, &items); err != nil {
+		t.Fatalf("Failed to unmarshal vocabularies_30.json: %v", err)
+	}
+
+	if len(items) != 30 {
+		t.Fatalf("Expected 30 vocabularies, got %d", len(items))
+	}
+
+	for i, item := range items {
+		if item.Word == "" {
+			t.Errorf("Item %d has empty word", i)
+		}
+		if item.Reading == "" {
+			t.Errorf("Item %d has empty reading", i)
+		}
+		if item.Romaji == "" {
+			t.Errorf("Item %d has empty romaji", i)
+		}
+		if item.MeaningID == "" {
+			t.Errorf("Item %d has empty meaning_id", i)
+		}
+		if item.Category == "" {
+			t.Errorf("Item %d has empty category", i)
+		}
+		if item.ExampleJP == "" {
+			t.Errorf("Item %d has empty example_jp", i)
+		}
+		if item.ExampleID == "" {
+			t.Errorf("Item %d has empty example_id", i)
+		}
+	}
+}

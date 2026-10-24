@@ -15,6 +15,7 @@ import {
   Flame,
   RefreshCw,
   Cpu,
+  Briefcase,
 } from 'lucide-react'
 import { CharacterData } from '@/types/character'
 import { UserProgress } from '@/types/progress'
@@ -752,6 +753,28 @@ export default function HomePage() {
             </div>
             <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-emerald-600 dark:text-emerald-400">
               <span>{t('nav.analytics')}</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
+
+          {/* Kosakata Kerja Praktis (Fase 12) */}
+          <Link
+            href="/vocab"
+            className="group p-6 rounded-3xl bg-white/80 dark:bg-slate-900/75 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 hover:border-amber-400 dark:hover:border-amber-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl mb-4 group-hover:scale-105 transition-transform">
+                <Briefcase className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                Kosakata Kerja (Shigoto)
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+                Kuasai 30 jukugo esensial untuk keselamatan (Anzen), standar 5S, dan komunikasi Hou-Ren-So di tempat kerja Jepang.
+              </p>
+            </div>
+            <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-amber-600 dark:text-amber-400">
+              <span>Buka Kosakata Kerja</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </Link>
