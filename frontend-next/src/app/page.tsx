@@ -278,17 +278,19 @@ export default function HomePage() {
       {/* ========================================================================= */}
       {/* 1. HERO SECTION */}
       {/* ========================================================================= */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-sky-50 via-white to-slate-50 dark:from-slate-900/90 dark:via-slate-900/50 dark:to-slate-950 border border-slate-200/80 dark:border-slate-800/80 p-8 sm:p-12 mb-10 shadow-sm dark:shadow-none">
+      <section className="relative overflow-hidden rounded-3xl bg-white/75 dark:bg-slate-900/75 backdrop-blur-md border border-sky-200/80 dark:border-sky-800/60 p-8 sm:p-12 mb-10 shadow-xl shadow-sky-500/5 transition-all">
         {/* Japanese Calligraphy Watermark in Background */}
-        <div className="absolute right-4 -bottom-10 pointer-events-none select-none text-[140px] sm:text-[220px] font-serif font-black text-slate-200/40 dark:text-slate-800/20 leading-none z-0">
+        <div className="absolute right-4 -bottom-10 pointer-events-none select-none text-[150px] sm:text-[240px] font-serif font-black text-sky-900/[0.05] dark:text-sky-200/[0.05] leading-none z-0 transition-opacity">
           空
         </div>
 
         <div className="relative z-10 max-w-3xl">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-100 dark:bg-sky-950/80 border border-sky-300 dark:border-sky-800 text-sky-800 dark:text-sky-300 text-xs font-bold mb-4 shadow-xs">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-sky-100/90 to-rose-100/90 dark:from-sky-950/80 dark:to-rose-950/80 border border-sky-200 dark:border-rose-900/60 text-sky-900 dark:text-sky-200 text-xs font-bold mb-4 shadow-xs backdrop-blur-sm">
             <Sparkles className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
             <span>{t('home.badge')}</span>
+            <span className="text-slate-300 dark:text-slate-600">•</span>
+            <span className="text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1">🌸 Sora &amp; Sakura</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
@@ -306,7 +308,7 @@ export default function HomePage() {
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-8">
             <Link
               href={`/practice?script=${script}`}
-              className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-sm shadow-md shadow-sky-600/25 flex items-center gap-2 transition active:scale-98"
+              className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-sky-600 via-indigo-600 to-rose-500 hover:from-sky-500 hover:via-indigo-500 hover:to-rose-400 text-white font-bold text-sm shadow-lg shadow-sky-600/25 flex items-center gap-2 transition active:scale-98"
             >
               <PenTool className="w-4 h-4" />
               <span>{t('home.cta_practice')} ({script === 'katakana' ? 'Katakana' : 'Hiragana'})</span>
@@ -357,7 +359,7 @@ export default function HomePage() {
       {/* ========================================================================= */}
       {/* 2. STATUS GAMIFIKASI & DAILY STREAK BANNER */}
       {/* ========================================================================= */}
-      <section className="mb-10 p-6 rounded-3xl bg-gradient-to-r from-sky-500/10 via-indigo-500/10 to-amber-500/10 border border-indigo-200/80 dark:border-indigo-800/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 shadow-xs">
+      <section className="mb-10 p-6 rounded-3xl bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-indigo-200/80 dark:border-indigo-800/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 shadow-md shadow-indigo-500/5">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-md shadow-indigo-500/20 shrink-0">
             <span>{levelInfo.icon}</span>
@@ -467,7 +469,7 @@ export default function HomePage() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Hafalan */}
-          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/75 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:border-sky-300 dark:hover:border-sky-800 transition-colors flex flex-col justify-between">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Penguasaan Huruf
@@ -506,7 +508,7 @@ export default function HomePage() {
           </div>
 
           {/* Card 2: Karakter Perlu Diulang (SRS) */}
-          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/75 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:border-sky-300 dark:hover:border-sky-800 transition-colors flex flex-col justify-between">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Perlu Diulang (SRS)
@@ -551,7 +553,7 @@ export default function HomePage() {
           </div>
 
           {/* Card 3: Rata-rata Skor Tracing */}
-          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/75 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:border-sky-300 dark:hover:border-sky-800 transition-colors flex flex-col justify-between">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Akurasi Tracing
@@ -576,7 +578,7 @@ export default function HomePage() {
           </div>
 
           {/* Card 4: Sesi Ujian Terakhir */}
-          <div className="p-5 rounded-2xl bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col justify-between">
+          <div className="p-5 rounded-2xl bg-white/80 dark:bg-slate-900/75 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:border-sky-300 dark:hover:border-sky-800 transition-colors flex flex-col justify-between">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Riwayat Ujian
@@ -605,7 +607,7 @@ export default function HomePage() {
       {/* ========================================================================= */}
       {/* 3. SPOTLIGHT KARAKTER HARI INI & QUICK PRACTICE */}
       {/* ========================================================================= */}
-      <section className="mb-12 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-sky-500/10 border border-indigo-200/80 dark:border-indigo-800/60 flex flex-col lg:flex-row items-center justify-between gap-6">
+      <section className="mb-12 p-6 sm:p-8 rounded-3xl bg-white/75 dark:bg-slate-900/75 backdrop-blur-md border border-indigo-200/80 dark:border-indigo-800/60 shadow-lg shadow-indigo-500/5 flex flex-col lg:flex-row items-center justify-between gap-6">
         <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
           {/* Big symbol preview */}
           <div className="w-24 h-24 rounded-2xl bg-white dark:bg-slate-900 shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0">
@@ -669,7 +671,7 @@ export default function HomePage() {
           {/* 1. Koleksi Huruf */}
           <Link
             href="/learn"
-            className="group p-6 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-sky-400 dark:hover:border-sky-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
+            className="group p-6 rounded-3xl bg-white/80 dark:bg-slate-900/75 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 hover:border-sky-400 dark:hover:border-sky-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
           >
             <div>
               <div className="w-12 h-12 rounded-2xl bg-sky-100 dark:bg-sky-950/80 text-sky-600 dark:text-sky-400 flex items-center justify-center text-xl mb-4 group-hover:scale-105 transition-transform">
@@ -691,7 +693,7 @@ export default function HomePage() {
           {/* 2. Studio Tracing */}
           <Link
             href="/practice"
-            className="group p-6 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
+            className="group p-6 rounded-3xl bg-white/80 dark:bg-slate-900/75 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 hover:border-indigo-400 dark:hover:border-indigo-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
           >
             <div>
               <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl mb-4 group-hover:scale-105 transition-transform">
@@ -713,7 +715,7 @@ export default function HomePage() {
           {/* 3. Arena Ujian */}
           <Link
             href="/exam"
-            className="group p-6 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-purple-400 dark:hover:border-purple-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
+            className="group p-6 rounded-3xl bg-white/80 dark:bg-slate-900/75 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 hover:border-purple-400 dark:hover:border-purple-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
           >
             <div>
               <div className="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-950/80 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl mb-4 group-hover:scale-105 transition-transform">
@@ -735,7 +737,7 @@ export default function HomePage() {
           {/* 4. Dasbor Analitik */}
           <Link
             href="/analytics"
-            className="group p-6 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
+            className="group p-6 rounded-3xl bg-white/80 dark:bg-slate-900/75 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 hover:border-emerald-400 dark:hover:border-emerald-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
           >
             <div>
               <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl mb-4 group-hover:scale-105 transition-transform">
@@ -757,7 +759,7 @@ export default function HomePage() {
           {/* 5. Pengaturan & Audio Manager */}
           <Link
             href="/settings"
-            className="group p-6 rounded-3xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
+            className="group p-6 rounded-3xl bg-white/80 dark:bg-slate-900/75 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 hover:border-amber-400 dark:hover:border-amber-500 transition-all shadow-xs hover:shadow-md flex flex-col justify-between"
           >
             <div>
               <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl mb-4 group-hover:scale-105 transition-transform">

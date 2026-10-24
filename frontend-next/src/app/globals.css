@@ -42,3 +42,85 @@
 .animate-fade-in {
   animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* ========================================================================= */
+/* FASE 11: ATMOSPHERIC SORA & SAKURA RAIN ANIMATIONS                        */
+/* ========================================================================= */
+
+@keyframes sakura-fall {
+  0% {
+    top: -10vh;
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  90% {
+    opacity: 0.9;
+  }
+  100% {
+    top: 110vh;
+    opacity: 0;
+  }
+}
+
+@keyframes sakura-sway {
+  0%, 100% {
+    transform: translateX(-35px) rotate(-22deg) rotateY(0deg);
+  }
+  50% {
+    transform: translateX(40px) rotate(25deg) rotateY(180deg);
+  }
+}
+
+@keyframes drift-clouds-slow {
+  0% {
+    transform: translate3d(-10%, 0, 0);
+  }
+  50% {
+    transform: translate3d(10%, 0, 0);
+  }
+  100% {
+    transform: translate3d(-10%, 0, 0);
+  }
+}
+
+@keyframes drift-clouds-fast {
+  0% {
+    transform: translate3d(12%, 0, 0);
+  }
+  50% {
+    transform: translate3d(-12%, 0, 0);
+  }
+  100% {
+    transform: translate3d(12%, 0, 0);
+  }
+}
+
+@keyframes sora-shimmer {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+.animate-sora-clouds-slow {
+  animation: drift-clouds-slow 90s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-sora-clouds-fast {
+  animation: drift-clouds-fast 60s ease-in-out infinite;
+  will-change: transform;
+}
+
+.animate-sora-shimmer {
+  animation: sora-shimmer 8s ease-in-out infinite;
+}
+
+.sora-glass-card {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}

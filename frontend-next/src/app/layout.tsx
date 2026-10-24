@@ -8,6 +8,8 @@ import { XPToastContainer } from '@/components/XPToastContainer'
 import { LevelUpModal } from '@/components/LevelUpModal'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
+import { SoraBackground } from '@/components/ui/SoraBackground'
+import { SakuraRain } from '@/components/ui/SakuraRain'
 
 export const metadata: Metadata = {
   title: 'Nihongo Sora (日本語の空) — Belajar Hiragana & Katakana Tracing Calligraphy',
@@ -22,7 +24,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" suppressHydrationWarning>
-      <body className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 antialiased selection:bg-sky-500 selection:text-white flex flex-col">
+      <body className="min-h-screen text-slate-900 dark:text-slate-100 transition-colors duration-300 antialiased selection:bg-sky-500 selection:text-white flex flex-col relative bg-slate-50/20 dark:bg-slate-950/40">
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -31,11 +33,20 @@ export default function RootLayout({
           <LanguageProvider>
             <ScriptProvider>
               <GamificationProvider>
-                <div className="flex min-h-screen flex-col">
+                {/* 1. Global Atmospheric Sora Anime Sky Background */}
+                <SoraBackground />
+
+                {/* 2. Global Falling Sakura Petal Particles */}
+                <SakuraRain />
+
+                {/* 3. Main App Content */}
+                <div className="flex min-h-screen flex-col relative z-10">
                   <Navbar />
                   <div className="flex-1 w-full animate-fade-in">{children}</div>
                   <Footer />
                 </div>
+
+                {/* 4. Global Modals & Notifications */}
                 <XPToastContainer />
                 <LevelUpModal />
               </GamificationProvider>

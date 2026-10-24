@@ -875,11 +875,11 @@ function PracticeStudioContent() {
   }, [selectedChar, progressMap, latestExam])
 
   return (
-    <div className="w-full min-h-[calc(100vh-4.5rem)] flex flex-col bg-slate-50 dark:bg-slate-950">
+    <div className="w-full min-h-[calc(100vh-4.5rem)] flex flex-col bg-slate-50/70 dark:bg-slate-950/75 backdrop-blur-[1.5px] transition-colors">
       {/* ========================================================================= */}
       {/* 1. STUDIO HEADER CONTROL BAR */}
       {/* ========================================================================= */}
-      <div className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 sticky top-16 z-30 backdrop-blur-md">
+      <div className="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 px-4 sm:px-6 py-3 flex items-center justify-between gap-4 sticky top-16 z-30 backdrop-blur-md">
         {/* Left: Drawer toggle & Current Character Info */}
         <div className="flex items-center gap-3">
           <button
@@ -1291,7 +1291,7 @@ function PracticeStudioContent() {
               </div>
             )}
             {/* DISTRACTION-FREE CANVAS */}
-            <div className="bg-white dark:bg-slate-900/80 rounded-3xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-sm">
+            <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md rounded-3xl border border-slate-200/80 dark:border-slate-800/80 p-4 sm:p-6 shadow-xl shadow-sky-500/5">
               {loading ? (
                 <div className="py-24 text-center">
                   <span className="w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full animate-spin inline-block mb-3" />

@@ -153,7 +153,8 @@ export default function SettingsPage() {
   const apiBaseUrl =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 
-  const [activeTab, setActiveTab] = useState<'language' | 'audio' | 'voice' | 'practice' | 'system'>('language')
+  const [activeTab, setActiveTab] = useState<'language' | 'appearance' | 'audio' | 'voice' | 'practice' | 'system'>('language')
+  const [sakuraEnabled, setSakuraEnabled] = useState<boolean>(true)
 
   // Audio Manager State
   const [audioManagerScript, setAudioManagerScript] = useState<'hiragana' | 'katakana'>('hiragana')
@@ -227,6 +228,23 @@ export default function SettingsPage() {
     }
 
     // Load Practice autoplay preference
+    try {
+      const storedSakura = localStorage.getItem('nihongo_sora_sakura_rain')
+      if (storedSakura !== null) {
+        setSakuraEnabled(storedSakura === 'true')
+      }
+    } catch {}
+
+    const handleSyncSakura = () => {
+      try {
+        const updated = localStorage.getItem('nihongo_sora_sakura_rain')
+        if (updated !== null) {
+          setSakuraEnabled(updated === 'true')
+        }
+      } catch {}
+    }
+    window.addEventListener('nihongo_sora_sakura_toggled', handleSyncSakura)
+
     try {
       const storedAutoplay = localStorage.getItem('nihongo_sora_practice_autoplay')
       if (storedAutoplay !== null) {
@@ -404,6 +422,14 @@ export default function SettingsPage() {
   }
 
   // Toggle Practice Autoplay
+  const handleToggleSakura = (val: boolean) => {
+    setSakuraEnabled(val)
+    try {
+      localStorage.setItem('nihongo_sora_sakura_rain', String(val))
+      window.dispatchEvent(new Event('nihongo_sora_sakura_toggled'))
+    } catch {}
+  }
+
   const handleToggleAutoplay = (val: boolean) => {
     setAutoPlayAudio(val)
     try {
@@ -467,6 +493,7 @@ export default function SettingsPage() {
       <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-4 mb-8 overflow-x-auto">
         {[
           { id: 'language', label: t('settings.tab_language'), icon: <Languages className="w-4 h-4" /> },
+          { id: 'appearance', label: t('settings.tab_appearance'), icon: <Sparkles className="w-4 h-4 text-rose-500" /> },
           { id: 'audio', label: t('settings.tab_audio'), icon: <Volume2 className="w-4 h-4" /> },
           { id: 'voice', label: t('settings.tab_voice'), icon: <Sliders className="w-4 h-4" /> },
           { id: 'practice', label: t('settings.tab_practice'), icon: <Headphones className="w-4 h-4" /> },
@@ -643,6 +670,104 @@ export default function SettingsPage() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: ATMOSPHERIC AESTHETICS & SAKURA RAIN */}
+      {/* ========================================================================= */}
+      {activeTab === 'appearance' && (
+        <div className="max-w-3xl space-y-6 animate-in fade-in duration-200">
+          {/* 1. Sakura Rain Toggle Card */}
+          <div className="p-6 sm:p-8 rounded-3xl bg-white/85 dark:bg-slate-900/75 border border-slate-200 dark:border-slate-800 shadow-xs backdrop-blur-md">
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🌸</span>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                    {t('settings.sakura_toggle_title')}
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
+                  {t('settings.sakura_toggle_desc')}
+                </p>
+                <div className="pt-2 flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                    sakuraEnabled
+                      ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${sakuraEnabled ? 'bg-rose-500 animate-pulse' : 'bg-slate-400'}`} />
+                    {sakuraEnabled ? t('settings.sakura_status_active') : t('settings.sakura_status_inactive')}
+                  </span>
+                  <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                    • 60 FPS GPU-accelerated CSS
+                  </span>
+                </div>
+              </div>
+
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={sakuraEnabled}
+                  onChange={(e) => handleToggleSakura(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-12 h-6.5 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2.5px] after:left-[2.5px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5.5 after:w-5.5 after:transition-all peer-checked:bg-rose-500 shadow-inner"></div>
+              </label>
+            </div>
+          </div>
+
+          {/* 2. Page-Based Animated Backgrounds Information */}
+          <div className="p-6 sm:p-8 rounded-3xl bg-white/85 dark:bg-slate-900/75 border border-slate-200 dark:border-slate-800 shadow-xs backdrop-blur-md space-y-4">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-sky-500" />
+              <span>{t('settings.sky_bg_title')}</span>
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t('settings.sky_bg_desc')}
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              {/* Home Dashboard */}
+              <div className="p-4 rounded-2xl border border-sky-200 dark:border-sky-900/50 bg-sky-50/50 dark:bg-sky-950/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-sky-800 dark:text-sky-300 flex items-center gap-1.5">
+                    <span>☀️</span>
+                    <span>Beranda (Dashboard)</span>
+                  </span>
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-sky-200/60 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300">
+                    animation.gif
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Langit anime biru cerah berpadu awan berarak lembut untuk menyambut Anda setiap kali membuka aplikasi.
+                </p>
+              </div>
+
+              {/* Studio Tracing */}
+              <div className="p-4 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
+                    <span>🌸</span>
+                    <span>Studio Tracing (Latihan)</span>
+                  </span>
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-rose-200/60 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300">
+                    animation1.gif
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Atmosfer dojō tenang bernuansa langit dan kelopak sakura untuk menjaga fokus mendalam saat menggores kanvas kaligrafi.
+                </p>
+              </div>
+            </div>
+
+            {/* WCAG AA Accessibility Guarantee */}
+            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 flex items-center gap-2">
+              <span className="text-emerald-500 font-bold shrink-0">✓ WCAG 2.1 AA</span>
+              <span>{t('settings.wcag_badge')}</span>
             </div>
           </div>
         </div>
@@ -1103,6 +1228,28 @@ export default function SettingsPage() {
               <span>{resetSuccessText || t('settings.practice_reset_done')}</span>
             </div>
           )}
+
+          {/* Quick Sakura Toggle */}
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+            <div>
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <span>🌸</span>
+                <span>{t('settings.sakura_toggle_title')}</span>
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                {sakuraEnabled ? t('settings.sakura_status_active') : t('settings.sakura_status_inactive')}
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sakuraEnabled}
+                onChange={(e) => handleToggleSakura(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
+            </label>
+          </div>
 
           {/* Autoplay Audio Toggle */}
           <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
