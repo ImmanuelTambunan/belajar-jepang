@@ -4,7 +4,7 @@
 
 ![Nihongo Sora Banner](https://img.shields.io/badge/🎌_Nihongo_Sora-日本語の空-0284c7?style=for-the-badge&labelColor=0f172a)
 <br />
-**Platform Pembelajaran Kaligrafi Digital & Penguasaan Aksara Kana (Hiragana & Katakana) Berbasis Full-Stack Modern**
+**Platform Pembelajaran Kaligrafi Digital & Penguasaan Aksara Kana (214 Karakter) & Kanji JLPT N5 (103 Karakter) Berbasis Full-Stack Modern**
 
 *"Belajar bahasa Jepang dengan gembira — santai tapi serius, serius tapi santai."*
 
@@ -17,9 +17,12 @@
 [![GORM](https://img.shields.io/badge/GORM-ORM-e53935?style=flat-square)](https://gorm.io/)
 [![MySQL 8](https://img.shields.io/badge/MySQL-Laragon_Native-4479a1?style=flat-square&logo=mysql)](https://www.mysql.com/)
 [![IndexedDB](https://img.shields.io/badge/IndexedDB-Audio_Storage-f59e0b?style=flat-square)](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)
-[![Status](https://img.shields.io/badge/Status-Fase_9_Complete_(214_Kana)-10b981?style=flat-square)](#-rekam-jejak-pengembangan-fase-1--9)
+[![Master PRD](https://img.shields.io/badge/Document-Master_PRD_(PRD.md)-0284c7?style=flat-square)](PRD.md)
+[![Status](https://img.shields.io/badge/Status-Fase_11_Complete_(317_Characters)-10b981?style=flat-square)](#-rekam-jejak-pengembangan-fase-1--11)
 
 </div>
+
+> 📘 **Master Product Requirement Document**: Untuk spesifikasi produk komprehensif, arsitektur decoupled, kamus data lengkap, dan kontrak REST API tingkat industri, silakan baca [**Master PRD (PRD.md)**](PRD.md).
 
 ---
 
@@ -29,13 +32,13 @@
 2. [Filosofi & Nilai Inti](#-filosofi--nilai-inti)
 3. [Arsitektur Sistem & Tech Stack](#-arsitektur-sistem--tech-stack-decoupled-monorepo)
 4. [Fitur-Fitur Utama](#-fitur-fitur-utama)
-   - [214 Dataset Aksara Kana Lengkap](#1-214-dataset-aksara-kana-lengkap)
+   - [317 Dataset Karakter Lengkap (Kana & Kanji N5)](#1-317-dataset-karakter-lengkap-kana--kanji-n5)
    - [Interactive Calligraphy Studio (Hitsujun Engine)](#2-interactive-calligraphy-studio-hitsujun-engine)
    - [Hybrid 3-Tier Audio Engine](#3-hybrid-3-tier-audio-engine)
    - [Gamifikasi & Spaced Repetition System (SRS)](#4-gamifikasi--spaced-repetition-system-srs)
    - [Bilingual Localization (ID / EN)](#5-bilingual-localization-id--en)
    - [Sinkronisasi Penuh & Hard Reset System](#6-sinkronisasi-penuh--hard-reset-system)
-5. [Rekam Jejak Pengembangan (Fase 1 – 9)](#-rekam-jejak-pengembangan-fase-1--9)
+5. [Rekam Jejak Pengembangan (Fase 1 – 11)](#-rekam-jejak-pengembangan-fase-1--11)
 6. [Struktur Direktori Monorepo](#-struktur-direktori-monorepo)
 7. [Dokumentasi REST API (Backend Go Fiber)](#-dokumentasi-rest-api-backend-go-fiber)
 8. [Panduan Instalasi & Menjalankan Proyek](#-panduan-instalasi--menjalankan-proyek)
@@ -44,13 +47,13 @@
 
 ## 🌟 Gambaran Umum Proyek
 
-**Nihongo Sora (日本語の空)** adalah platform edukasi interaktif full-stack generasi baru yang dirancang khusus untuk membantu pembelajar menguasai aksara bahasa Jepang (**Hiragana** dan **Katakana**) secara mendalam, presisi, dan menyenangkan.
+**Nihongo Sora (日本語の空)** adalah platform edukasi interaktif full-stack generasi baru yang dirancang khusus untuk membantu pembelajar menguasai aksara bahasa Jepang (**107 Hiragana**, **107 Katakana**, dan **103 Kanji JLPT N5** — Total 317 Karakter) secara mendalam, presisi, dan menyenangkan.
 
 Berbeda dari media pembelajaran konvensional yang pasif, Nihongo Sora menghadirkan **Studio Kaligrafi Digital** (*Hitsujun Studio*) dengan kanvas HTML5 interaktif yang memandu urutan goresan kuas (*stroke order*), mengevaluasi akurasi geometris secara waktu nyata (*real-time*), serta menyediakan arena ujian adaptif dengan sistem pengulangan berkala (*Spaced Repetition System* / SRS).
 
 Aplikasi dibangun di atas arsitektur **Decoupled Monorepo** performa tinggi:
 - **Frontend SPA/MPA**: Dibangun menggunakan **Next.js 16 (App Router)**, **React 19**, **TypeScript**, dan **Tailwind CSS v4** dengan transisi tema adaptif (*Dark/Light Mode*).
-- **Backend API**: Menggunakan **Golang Fiber v2** dan **GORM** yang langsung terhubung ke database **MySQL 8.0** lokal (Laragon) dengan latensi sub-milidetik dan automated seeder berkapasitas 214 karakter Kana.
+- **Backend API**: Menggunakan **Golang Fiber v2** dan **GORM** yang langsung terhubung ke database **MySQL 8.0** lokal (Laragon) dengan latensi sub-milidetik dan automated seeder berkapasitas 317 karakter terverifikasi (214 Kana + 103 Kanji N5).
 
 ---
 
@@ -124,7 +127,7 @@ Nihongo Sora menerapkan arsitektur *monorepo terpisah* (*decoupled monorepo*) ya
 
 ## ⚡ Fitur-Fitur Utama
 
-### 1. 214 Dataset Aksara Kana Lengkap
+### 1. 317 Dataset Karakter Lengkap (Kana & Kanji N5)
 Sistem menyimpan dan menyajikan dataset lengkap aksara bahasa Jepang baku yang terdiri atas **107 Hiragana** dan **107 Katakana** (Total: **214 Karakter**). Setiap karakter terpetakan ke dalam kategori fonetik:
 - **Gojūon (五十音)**: 46 karakter dasar per aksara (A-I-U-E-O hingga Wa-Wo-N).
 - **Dakuon (濁音)**: 20 karakter dengan tanda tenten (Ga, Za, Da, Ba, dsb.).
@@ -139,7 +142,16 @@ Studio latihan kaligrafi digital pada rute `/practice` dilengkapi teknologi eval
 - **Skor Presisi & Grading Instan**: Menghitung persentase akurasi (0–100%) dan memberikan umpan balik visual (*Perfect*, *Great*, *Good*, *Need Practice*) beserta warna goresan yang interaktif.
 - **Dukungan Multi-Input**: Berfungsi mulus untuk tetikus (*mouse*), layar sentuh (*touch screen* smartphone/tablet), maupun pena digital (*stylus / Apple Pencil*).
 
-### 3. Hybrid 3-Tier Audio Engine
+
+### 3. Dynamic Atmospheric Aesthetic (Sora & Sakura Rain)
+- **Latar Dinamis Berbasis Rute**:
+  - Halaman Beranda (`/`): Menampilkan latar animasi langit anime pastel (`animation.gif`).
+  - Studio Latihan (`/practice`): Menampilkan latar animasi gerbang kuil torii dan sakura (`animation1.gif`).
+- **Lapisan Awan Berarak (Parallax CSS)**: Dua layer awan kontinu (`animate-sora-clouds-slow` dan `animate-sora-clouds-fast`).
+- **Lapisan Frosted Glass & WCAG Accessible**: Menjamin seluruh kartu materi dan kaligrafi tetap berkontras tajam dan terbaca jelas.
+- **Partikel Kelopak Sakura Gugur (Sakura Rain)**: 12 partikel kelopak bunga sakura melayang 60 FPS CSS keyframe dengan sakelar ganda (di pojok kiri bawah dan menu pengaturan).
+
+### 4. Hybrid 3-Tier Audio Engine
 Fitur pelafalan suara (*pronunciation audio*) dirancang dengan sistem hirarki 3 lapis demi menjamin suara tetap terdengar dalam segala situasi:
 
 ```
@@ -164,24 +176,24 @@ Fitur pelafalan suara (*pronunciation audio*) dirancang dengan sistem hirarki 3 
 - **Audio Manager Modal**: Pengguna dapat mengunggah file rekaman suaranya sendiri atau suara *native speaker* kesukaannya ke browser IndexedDB.
 - **Pengaturan Vokal Sintesis**: Kecepatan laju (*Speech Rate: 0.85*) dan nada (*Pitch: 1.0*) dioptimalkan khusus untuk kejelasan fonetik bahasa Jepang.
 
-### 4. Gamifikasi & Spaced Repetition System (SRS)
+### 5. Gamifikasi & Spaced Repetition System (SRS)
 - **Sistem Level & XP**: Pengguna memperoleh Experience Points (XP) dari setiap latihan goresan kuas, penyelesaian kuis, dan kelulusan ujian. Kenaikan level ditandai dengan modal selebrasi interaktif.
 - **Daily Streak Tracker (🔥)**: Menghitung konsistensi belajar harian dan menampilkan api motivasi di bilah navigasi (*Navbar*).
 - **Streak Mastery Popover**: Popover informatif di Navbar yang merangkum capaian hafalan Hiragana (X/107) dan Katakana (X/107) secara langsung.
 - **Smart Adaptive Review (SRS)**: Sistem otomatis menandai karakter sebagai "Perlu Diulang" (*Needs Review*) jika skor akurasi goresan terakhir **< 70%** atau jika karakter tersebut **dijawab salah dalam sesi ujian**. Karakter ini otomatis diprioritaskan muncul di antrean latihan berikutnya.
 
-### 5. Bilingual Localization (ID / EN)
+### 6. Bilingual Localization (ID / EN)
 - Pengalih bahasa instan (*Instant Language Switcher*) di pojok kanan atas memungkinkan pengguna beralih antara **Bahasa Indonesia** dan **English**.
 - Seluruh instruksi antarmuka, keterangan tombol, pesan kesalahan, dan panduan belajar diterjemahkan secara rapi melalui `LanguageContext` tanpa mengubah simbol aksara asli dan bacaan romaji Jepang.
 
-### 6. Sinkronisasi Penuh & Hard Reset System
+### 7. Sinkronisasi Penuh & Hard Reset System
 - Rute `/settings` menyediakan fitur **Hard Reset** yang aman dan komprehensif.
 - Menghapus riwayat sesi, penyimpanan kuas, serta cache LocalStorage/IndexedDB di peramban.
 - Mengeksekusi query database atomik via endpoint `POST /api/progress/reset` untuk mengosongkan tabel `user_character_progress` dan `exam_results` secara instan dan aman.
 
 ---
 
-## 📈 Rekam Jejak Pengembangan (Fase 1 – 9)
+## 📈 Rekam Jejak Pengembangan (Fase 1 – 11)
 
 Proyek Nihongo Sora dikembangkan secara bertahap melalui sembilan fase iterasi terstruktur:
 
@@ -196,6 +208,8 @@ Proyek Nihongo Sora dikembangkan secara bertahap melalui sembilan fase iterasi t
 | **Fase 7** | Audio Manager, Gamifikasi & Adaptive SRS | Peluncuran sistem audio 3-tier mandiri dengan IndexedDB Custom Voice uploader, mekanisme Gamifikasi (XP, Level, Daily Streak), Spaced Repetition System (SRS) untuk karakter lemah (<70% / salah kuis), lokalisasi bilingual (ID/EN), dan fitur Reset Penuh (*Hard Reset*). |
 | **Fase 8** | Ekspansi Dataset Hiragana Penuh (107 Karakter) | Penambahan dataset Hiragana dari 5 huruf vokal menjadi 107 karakter lengkap (*Gojūon*, *Dakuon*, *Handakuon*, dan *Yōon*), implementasi filter kategori dinamis, dan pembaruan seeder database backend. |
 | **Fase 9** | Ekspansi Katakana Lengkap & Refaktor UI/UX Global | Penambahan 107 karakter Katakana lengkap (Total **214 Karakter Kana** di database), switch mode Hiragana/Katakana global, peremajaan UI/UX Navbar (Training Dropdown, Streak Mastery Popover, Icon-only Settings), serta penyederhanaan Footer yang bersih dan modern. |
+| **Fase 10** | Ekspansi Kanji JLPT N5 Lengkap (103 Karakter) | Penambahan 103 karakter Kanji JLPT N5 lengkap dalam 4 batch tematik (Total **317 Karakter**), skema tabel `kanjis`, controller `/api/kanjis`, readings On/Kun, arti ID/EN, dan kanvas kaligrafi kanji. |
+| **Fase 11** | Dynamic Atmospheric Aesthetic (Sora & Sakura) | Latar video/GIF dinamis (`animation.gif` untuk Beranda & `animation1.gif` untuk Latihan), paralaks awan berarak, frosted glass WCAG overlay, dan sistem kelopak sakura gugur 60 FPS CSS keyframe (`SakuraRain.tsx`) dengan kontrol sakelar ganda. |
 
 ---
 
